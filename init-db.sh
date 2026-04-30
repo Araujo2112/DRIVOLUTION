@@ -3,11 +3,10 @@ set -e
 
 psql -v ON_ERROR_STOP=1 --username "postgres" <<-EOSQL
     CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
-    CREATE USER "$POSTGRESQL_USER" WITH PASSWORD '$POSTGRESQL_PASSWORD';
     ALTER USER "$POSTGRESQL_USER" WITH SUPERUSER;
 EOSQL
 
-DATABASES=("texpact" "deviceData")
+DATABASES=("drivolution" "deviceData")
 
 for DB in "${DATABASES[@]}"; do
     echo "Creating regular PostgreSQL database: $DB"

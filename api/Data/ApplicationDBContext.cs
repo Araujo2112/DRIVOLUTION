@@ -21,6 +21,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<EmployeeModel> Employees { get; set; }
     public DbSet<CheckpointModel> Checkpoints { get; set; }
 
+    public DbSet<ProductionLineModel> ProductionLines { get; set; }
+
 
     // Second Part API:
 

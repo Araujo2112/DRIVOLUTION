@@ -39,7 +39,7 @@ function logout() {
   <div class="h-full min-w-60 max-w-60 py-2">
     <div class="h-full rounded-2xl flex flex-col bg-background-900 p-4">
       <div class="flex w-full px-4 py-6 object-center object-contain items-center overflow-hidden gap-0">
-        <img src="@/assets/icons/texpact-logo.png" alt="Eco build icon"/>
+        <img src="@/assets/icons/drivolution-logo.jpeg" alt="Eco build icon"/>
       </div>
 
       <div class="flex flex-col w-full h-full items-center gap-2 text-2xl overflow-y-auto overflow-x-hidden">

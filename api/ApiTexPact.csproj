@@ -1,0 +1,131 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Apache.Arrow" Version="20.0.0" />
+    <PackageReference Include="Apache.Arrow.Flight" Version="20.0.0" />
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="DotNetEnv" Version="3.1.1" />
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Cors" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="MongoDB.Driver" Version="3.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\MotionSensorController.cs" />
+    <Compile Remove="Services\Interface\IFiwareSerice.cs" />
+    <Compile Remove="Services\FiwareService.cs" />
+    <Compile Remove="Models\ContainerMovementRequestModel.cs" />
+    <Compile Remove="Models\Container\**" />
+    <Compile Remove="Models\PorticoModel.cs" />
+    <Compile Remove="Models\SectorModel.cs" />
+    <Compile Remove="Migrations\20241205192342_UpdateModel.cs" />
+    <Compile Remove="Migrations\20241205192342_UpdateModel.Designer.cs" />
+    <Compile Remove="Controllers\Factory\FactoryController.cs" />
+    <Compile
+      Remove="Controllers\ContainerLocalizationHistory\ContainerLocalizationHistoryController.cs" />
+    <Compile Remove="Services\PlantFloorSection\**" />
+    <Compile Remove="Services\Containers\**" />
+    <Compile Remove="Services\ContainerLocalization\**" />
+    <Compile Remove="Repository\MotionSensorRepository.cs" />
+    <Compile Remove="Repository\Interface\IMotionSensorRepository.cs" />
+    <Compile Remove="Services\Interface\Containers\IItemInContainerService.cs" />
+    <Compile Remove="GlorIA-1.3B\**" />
+    <Compile Remove="Gloria\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="dashboard\src\components\ContainersList.vue" />
+    <None Remove="Models\Container\**" />
+    <None Remove="Services\PlantFloorSection\**" />
+    <None Remove="Services\Containers\**" />
+    <None Remove="Services\ContainerLocalization\**" />
+    <None Remove="GlorIA-1.3B\**" />
+    <None Remove="Gloria\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="Models\Container\**" />
+    <EmbeddedResource Remove="Services\PlantFloorSection\**" />
+    <EmbeddedResource Remove="Services\Containers\**" />
+    <EmbeddedResource Remove="Services\ContainerLocalization\**" />
+    <EmbeddedResource Remove="GlorIA-1.3B\**" />
+    <EmbeddedResource Remove="Gloria\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Models\Container\**" />
+    <Content Remove="Services\PlantFloorSection\**" />
+    <Content Remove="Services\Containers\**" />
+    <Content Remove="Services\ContainerLocalization\**" />
+    <Content Remove="package-lock.json" />
+    <Content Remove="GlorIA-1.3B\**" />
+    <Content Remove="Gloria\**" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Protobuf Include="Proto/clients.proto" ProtoRoot="Proto" />
+    <Protobuf Include="Proto/containers.proto" ProtoRoot="Proto" />
+    <Protobuf Include="Proto/rawmaterials.proto" ProtoRoot="Proto" />
+    <Protobuf Include="Proto/products.proto" ProtoRoot="Proto" />
+    <Protobuf Include="Proto/plantfloorsection.proto" ProtoRoot="Proto" />
+    <Protobuf Include="Proto/checkpoint.proto" ProtoRoot="Proto" />
+    <Protobuf Include="Proto/container_localization.proto" ProtoRoot="Proto" />
+    <Protobuf Include="Proto/manufacturing.proto" ProtoRoot="Proto" />
+    <Protobuf Include="Proto/prediction.proto" ProtoRoot="Proto" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+    <Folder Include="Services\FactoryElements\Interfaces\" />
+    <Folder Include="Services\FinnishedProducts\Interfaces\" />
+    <Folder Include="Services\ManufacturingPhases\Interfaces\" />
+    <Folder Include="Services\RawMaterial\Interfaces\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\config.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\generation_config.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\GlorIA-1.3B\config.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\GlorIA-1.3B\generation_config.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\GlorIA-1.3B\special_tokens_map.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\GlorIA-1.3B\tokenizer.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\GlorIA-1.3B\tokenizer_config.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\GlorIA-1.3B\vocab.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\special_tokens_map.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\tokenizer.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\tokenizer_config.json" />
+    <_ContentIncludedByDefault Remove="GlorIA-1.3B\vocab.json" />
+  </ItemGroup>
+
+</Project>

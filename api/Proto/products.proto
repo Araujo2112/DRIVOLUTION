@@ -1,0 +1,29 @@
+syntax = "proto3";
+package texpact;
+import "clients.proto";
+
+message ProductsField {
+  string name = 1;
+}
+
+
+message Product {
+  int32 id = 1;
+  ProductsField name = 3;
+  ProductsField info = 4;
+  ProductsField productId = 5;
+}
+
+message ProductList {
+  repeated Product products = 1;
+}
+
+message ProductIdRequest {
+  int32 ProductId = 1;
+}
+
+service ProductService {
+  rpc ListProducts(Empty) returns (ProductList);
+  rpc GetProductById(ProductIdRequest) returns (Product);
+}
+

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "$schemaVersion": "0.0.1",
+  "$id": "https://smart-data-models.github.io/dataModel.ManufacturingMachine/ManufacturingMachine/schema.json",
+  "title": "Data Model Plataform",
+  "description": "Global description of data model plataform",
+  "modelTags": "",
+  "derivedFrom": "",
+  "required": [
+    "id",
+    "type",
+    "name"
+  ],
+  "license": "https://smart-data-models.github.io/dataModel.ManufacturingMachine/ManufacturingMachine/LICENSE.md",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Property. Unique identifier for the container"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "ManufacturingMachine"
+      ],
+      "description": "Property. It has to be ManufacturingMachine"
+    },
+    "name": {
+      "type": "string",
+      "description": "Property. Name of the container"
+    },
+    "volume": {
+      "type": "number",
+      "description": "Property. Volume of the container (in cubic meters or appropriate unit)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Property. Detailed description of the container."
+    }
+  }
+}

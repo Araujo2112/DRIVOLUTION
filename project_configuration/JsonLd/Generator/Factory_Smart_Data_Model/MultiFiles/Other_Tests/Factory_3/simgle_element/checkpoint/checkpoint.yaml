@@ -1,0 +1,54 @@
+components:
+  schemas:
+    Checkpoint:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - sensorGroups
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the checkpoint.
+        name:
+          type: string
+          description: Name of the checkpoint.
+        description:
+          type: string
+          description: Detailed description of the checkpoint, including its use and specifications.
+        sensorGroups:
+          type: array
+          items:
+            $ref: "./sensor_group.yaml#/components/schemas/SensorGroup"
+          description: List of sensor groups associated with the checkpoint, including the position of each group.
+
+paths:
+  /checkpoints:
+    get:
+      summary: Get a list of checkpoints.
+      responses:
+        "200":
+          description: A list of checkpoints.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Checkpoint"
+    post:
+      summary: Create a new checkpoint.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Checkpoint"
+      responses:
+        "201":
+          description: Checkpoint successfully created.
+
+info:
+  title: Smart Data Model for Checkpoints
+  version: 1.0.0
+  description: Data model for checkpoints, including sensor groups.
+openapi: "3.0.0"

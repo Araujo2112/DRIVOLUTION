@@ -1,0 +1,27 @@
+syntax = "proto3";
+package texpact;
+
+import "google/protobuf/empty.proto";
+
+message PlantFloorSectionField {
+  string name = 1;
+}
+
+message PlantFloorSection {
+  int32 sectionId = 1;
+  PlantFloorSectionField id = 2;
+  PlantFloorSectionField name = 3;
+}
+
+message PlantFloorSectionList {
+  repeated PlantFloorSection sections = 1;
+}
+
+message PlantFloorSectionIdRequest {
+  int32 sectionId = 1;
+}
+
+service PlantFloorSectionService {
+  rpc ListPlantFloorSections(google.protobuf.Empty) returns (PlantFloorSectionList);
+  rpc GetPlantFloorSectionById(PlantFloorSectionIdRequest) returns (PlantFloorSection);
+}

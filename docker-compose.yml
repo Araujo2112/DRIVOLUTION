@@ -1,0 +1,115 @@
+services:
+  api:
+    build: api/
+    ports:
+      - "8080:8080"
+
+  orion:
+    platform: linux/x86_64
+    image: fiware/orion-ld
+    hostname: orion
+    container_name: fiware--orion
+    depends_on:
+      - mongo-db
+    expose:
+      - "1026"
+    ports:
+      - "1026:1026"
+    command: -dbhost mongo-db -logLevel DEBUG
+    healthcheck:
+      test: curl --fail -s http://orion:1026/version || exit 1
+      interval: 5s
+
+  iot-agent:
+    image: quay.io/fiware/iotagent-json:latest
+    hostname: iot-agent
+    container_name: fiware-iot-agent
+    depends_on:
+      - mongo-db
+    networks:
+      - default
+    expose:
+      - '4041'
+      - '7896'
+    ports:
+      - '4041:4041'
+      - '7896:7896'
+    environment:
+      - IOTA_CB_HOST=orion
+      - IOTA_CB_PORT=1026
+      - IOTA_MQTT_DISABLED=true
+      - IOTA_AMQP_DISABLED=true
+      - IOTA_JSON_MQTT_DISABLED=true
+      - IOTA_JSON_AMQP_DISABLED=true
+      - IOTA_NORTH_PORT=4041
+      - IOTA_REGISTRY_TYPE=mongodb
+      - IOTA_LOG_LEVEL=DEBUG
+      - IOTA_TIMESTAMP=true
+      - IOTA_CB_NGSI_VERSION=ld
+      - IOTA_AUTOCAST=true
+      - IOTA_MONGO_HOST=mongo-db
+      - IOTA_MONGO_PORT=27017
+      - IOTA_MONGO_DB=iotagentjson
+      - IOTA_HTTP_PORT=7896
+      - IOTA_PROVIDER_URL=http://iot-agent:4041
+      - IOTA_DEFAULT_RESOURCE=/iot/json
+      - IOTA_JSON_LD_CONTEXT=https://ruicarvalho1.github.io/test-JsonLd/datamodels.context-ngsi.jsonld
+
+  mongo-db:
+    image: mongo:3.6
+    hostname: mongo-db
+    container_name: mongo-db
+    ports:
+      - "27017:27017"
+    networks:
+      - default
+    command: --nojournal
+    volumes:
+      - mongo-db:/data
+
+  quantumleap:
+    image: fiware/quantum-leap
+    hostname: quantumleap
+    container_name: quantumleap
+    volumes:
+      - ./quantumleap-cfg.yml:/quantumleap-cfg.yml
+    ports:
+      - "8668:8668"
+    depends_on:
+      - mongo-db
+      - orion
+      - db
+    environment:
+      - QL_CONFIG=/quantumleap-cfg.yml
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB_NAME=deviceData
+      - POSTGRES_DB_USER=texpact
+      - POSTGRES_DB_PASS=texpact
+      - LOGLEVEL=DEBUG
+
+  grafana:
+    hostname: grafana
+    container_name: grafana
+    image: grafana/grafana
+    depends_on:
+      - db
+    ports:
+      - "3003:3000"
+
+  db:
+    image: timescale/timescaledb:2.17.2-pg17-bitnami
+    hostname: db
+    container_name: texpact-db
+    ports:
+      - "0.0.0.0:5432:5432"
+    volumes:
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    environment:
+      POSTGRESQL_USER: texpact
+      POSTGRESQL_PASSWORD: texpact
+      POSTGRESQL_POSTGRES_PASSWORD: texpact
+      POSTGRES_USER: postgres
+
+volumes:
+  mongo-db: ~

@@ -1,0 +1,41 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "$schemaVersion": "0.0.1",
+    "$id": "https://smart-data-models.github.io/dataModel.IssueTracking/Section/schema.json",
+    "title": "Data Model Plataform",
+    "description": "Manage Section",
+    "modelTags": "",
+    "derivedFrom": "",
+    "required": [
+      "id",
+      "type"
+    ],
+    "license": "https://smart-data-models.github.io/dataModel.IssueTracking/Section/LICENSE.md",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Property. Unique identifier for the Section"
+      },
+      "type": {
+        "type": "string",
+        "enum": [
+          "Section"
+        ],
+        "description": "Property. It has to be Section"
+      },
+      "name": {
+        "type": "string",
+        "description": "Property. Name of the Section"
+      },
+      "statusName": {
+        "type": "boolean",
+        "description": "Property. Status of the Section"
+      }
+    },
+    "allOf": [
+      {
+        "$ref": "https://smart-data-models.github.io/data-models/common-schema.json#/definitions/GSMA-Commons"
+      }
+    ]
+  }

@@ -1,0 +1,67 @@
+openapi: "3.0.0"
+info:
+  title: "Modelo para Fábrica e Contêineres"
+  description: "Definições de entidades para modelar uma fábrica com setores e contêineres"
+  version: "1.0.0"
+
+components:
+  schemas:
+    Factory:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "Identificador único da fábrica"
+        type:
+          type: string
+          enum: ["Factory"]
+          description: "Define o tipo como 'Factory'"
+        name:
+          type: string
+          description: "Nome da fábrica"
+        location:
+          type: object
+          description: "Localização geográfica da fábrica"
+          properties:
+            type:
+              type: string
+              enum: ["Point"]
+            coordinates:
+              type: array
+              items:
+                type: number
+              description: "Coordenadas de latitude e longitude"
+        ##Now is the data integration with other parts:
+        sectors:
+          type: object
+          description: "Setores associados a esta fabrica"
+          properties:
+            setor:
+            allOf:
+              - $ref: "./sectors/sectors.yaml"
+      
+  # Caminhos de API
+paths:
+  /ngsi-ld/v1/entities:
+    get:
+      summary: "Obter entidades"
+      responses:
+        "200":
+          description: "Lista de entidades"
+          content:
+            application/ld+json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      summary: "Criar uma nova entidade"
+      requestBody:
+        description: "Dados da entidade a serem criados"
+        content:
+          application/ld+json:
+            schema:
+              $ref: "#/components/schemas/Factory"
+      responses:
+        "201":
+          description: "Entidade criada com sucesso"

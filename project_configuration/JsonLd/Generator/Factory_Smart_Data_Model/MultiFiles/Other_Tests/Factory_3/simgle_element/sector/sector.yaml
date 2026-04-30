@@ -1,0 +1,60 @@
+components:
+  schemas:
+    Sector:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - checkpoints
+        - containers
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the sector.
+        name:
+          type: string
+          description: Name of the sector.
+        description:
+          type: string
+          description: Detailed description of the sector.
+        checkpoints:
+          type: array
+          items:
+            $ref: "./checkpoint.yaml#/components/schemas/Checkpoint"
+          description: List of checkpoints within the sector.
+        containers:
+          type: array
+          items:
+            $ref: "./container.yaml#/components/schemas/Container"
+          description: List of containers within the sector.
+
+paths:
+  /sectors:
+    get:
+      summary: Get a list of sectors.
+      responses:
+        "200":
+          description: A list of sectors.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sector"
+    post:
+      summary: Create a new sector.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Sector"
+      responses:
+        "201":
+          description: Sector successfully created.
+
+info:
+  title: Smart Data Model for Sectors
+  version: 1.0.0
+  description: Data model for sectors, with checkpoints and containers.
+openapi: "3.0.0"

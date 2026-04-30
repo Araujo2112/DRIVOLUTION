@@ -1,0 +1,29 @@
+syntax = "proto3";
+package texpact;
+import "clients.proto";
+
+
+message RawNameField {
+  string name = 1;
+}
+
+
+message RawMaterial {
+  int32 rawId = 1;
+  RawNameField name = 3;
+  RawNameField info = 4;
+}
+
+message RawMaterialList {
+  repeated RawMaterial rawmaterials = 1;
+}
+
+message RawMaterialIdRequest {
+  int32 RawMaterialId = 1;
+}
+
+service RawMaterialService {
+  rpc ListRawMaterials(Empty) returns (RawMaterialList);
+  rpc GetRawMaterialById(RawMaterialIdRequest) returns (RawMaterial);
+}
+

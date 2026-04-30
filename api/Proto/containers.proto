@@ -1,0 +1,24 @@
+syntax = "proto3";
+import "clients.proto";
+package texpact;
+
+service ContainerService {
+  rpc ListContainers(Empty) returns (ContainerList);
+  rpc GetContainerById(ContainerIdRequest) returns (Container);
+}
+
+message Container {
+  int32 containerId    = 1;
+  string urn           = 2;
+  string containerName = 3;
+  int32 containerVolume= 4;
+  bool   activate      = 5;
+}
+
+message ContainerList {
+  repeated Container containers = 1;
+}
+
+message ContainerIdRequest {
+  int32 containerId = 1;
+}

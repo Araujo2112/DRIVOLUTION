@@ -1,0 +1,14 @@
+[
+  {
+    "containerCode": "CTN-001",
+    "containerName": "Container Alumínio",
+    "containerVolume": 12000,
+    "containerDescription": "Para materiais não perecíveis"
+  },
+  {
+    "containerCode": "CTN-002",
+    "containerName": "Container Refrigerado",
+    "containerVolume": 25000,
+    "containerDescription": "Para produtos alimentícios"
+  }
+]

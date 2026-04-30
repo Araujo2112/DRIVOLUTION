@@ -1,0 +1,505 @@
+components:
+  schemas:
+    Factory:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - location
+        - typeIndustry
+        - numberOfEmployees
+        - containers
+        - sectors
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the factory.
+        name:
+          type: string
+          description: Name of the factory.
+        description:
+          type: string
+          description: Detailed description of the factory.
+        location:
+          type: string
+          description: Physical location of the factory.
+        typeIndustry:
+          type: string
+          description: The type of industry the factory operates in.
+        numberOfEmployees:
+          type: integer
+          description: The number of employees working at the factory.
+        sectors:
+          type: array
+          items:
+            $ref: "https://migcruzz.github.io/Factory_Public_Sample_Server/Factory_2/factory_merged/factory_merged.yaml#/components/schemas/Sector"
+          description: List of sectors within the factory.
+          
+
+
+    Sector:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - checkpoints
+        - containers
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the sector.
+        name:
+          type: string
+          description: Name of the sector.
+        description:
+          type: string
+          description: Detailed description of the sector.
+        checkpoints:
+          type: array
+          items:
+            $ref: "https://migcruzz.github.io/Factory_Public_Sample_Server/Factory_2/factory_merged/factory_merged.yaml#/components/schemas/Checkpoint"
+          description: List of checkpoints within the sector.
+        containers:
+          type: array
+          items:
+            $ref: "https://migcruzz.github.io/Factory_Public_Sample_Server/Factory_2/factory_merged/factory_merged.yaml#/components/schemas/Container"
+          description: List of containers within the sector.
+
+
+    Container:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - capacity
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the container.
+        name:
+          type: string
+          description: Name of the container.
+        description:
+          type: string
+          description: Detailed description of the container.
+        capacity:
+          type: integer
+          description: Capacity of the container (in cubic meters or appropriate unit).
+
+
+    Checkpoint:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - sensorGroups
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the checkpoint.
+        name:
+          type: string
+          description: Name of the checkpoint.
+        description:
+          type: string
+          description: Detailed description of the checkpoint, including its use and specifications.
+        sensorGroups:
+          type: array
+          items:
+            $ref: "https://migcruzz.github.io/Factory_Public_Sample_Server/Factory_2/factory_merged/factory_merged.yaml#/components/schemas/SensorGroup"
+          description: List of sensor groups associated with the checkpoint, including the position of each group.
+
+
+    SensorGroup:
+      type: object
+      required:
+        - id
+        - name
+        - position
+        - sensors
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the sensor group.
+        name:
+          type: string
+          description: Name of the sensor group.
+        description:
+          type: string
+          description: Detailed description of the sensor group.
+        position:
+          type: string
+          enum:
+            - before
+            - middle
+            - after
+          description: Position of the sensor group in the checkpoint (e.g., before, middle, or after).
+        sensors:
+          type: array
+          items:
+            $ref: "https://migcruzz.github.io/Factory_Public_Sample_Server/Factory_2/factory_merged/factory_merged.yaml#/components/schemas/Sensor"
+          description: Array of sensors within the group.
+
+
+    Sensor:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - type
+        - state
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the sensor.
+        name:
+          type: string
+          description: Name of the sensor.
+        description:
+          type: string
+          description: Detailed description of the sensor.
+        type:
+          type: string
+          description: Type of the sensor (e.g., "position", "weight", etc.).
+        state:
+          type: string
+          enum:
+            - active
+            - inactive
+          description: State of the sensor (active or inactive).
+
+
+
+paths:
+  /factories:
+    get:
+      summary: Get a list of factories.
+      responses:
+        "200":
+          description: A list of factories.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Factory"
+    post:
+      summary: Create a new factory.
+      requestBody:
+        description: Create a new factory.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Factory"
+      responses:
+        "201":
+          description: Factory successfully created.
+    put:
+      summary: Update an existing factory.
+      requestBody:
+        description: Update an existing factory.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Factory"
+      responses:
+        "200":
+          description: Factory successfully updated.
+    delete:
+      summary: Delete a factory.
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Factory successfully deleted.
+
+  /sectors:
+    get:
+      summary: Get a list of sectors.
+      responses:
+        "200":
+          description: A list of sectors.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sector"
+    post:
+      summary: Create a new sector.
+      requestBody:
+        description: Create a new sector.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Sector"
+      responses:
+        "201":
+          description: Sector successfully created.
+    put:
+      summary: Update an existing sector.
+      requestBody:
+        description: Update an existing sector.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Sector"
+      responses:
+        "200":
+          description: Sector successfully updated.
+    delete:
+      summary: Delete a sector.
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Sector successfully deleted.
+
+  /containers:
+    get:
+      summary: Get a list of containers.
+      responses:
+        "200":
+          description: A list of containers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Container"
+    post:
+      summary: Create a new container.
+      requestBody:
+        description: Create a new container.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Container"
+      responses:
+        "201":
+          description: Container successfully created.
+    put:
+      summary: Update an existing container.
+      requestBody:
+        description: Update an existing container.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Container"
+      responses:
+        "200":
+          description: Container successfully updated.
+    patch:
+      summary: Update the sector of a container dynamically when a sensor value is changed.
+      requestBody:
+        description: Update the sector of a container dynamically when a sensor value is altered.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                containerId:
+                  type: string
+                  description: The ID of the container.
+                sectorId:
+                  type: string
+                  description: The ID of the new sector.
+      responses:
+        "200":
+          description: Container sector successfully updated.
+    delete:
+      summary: Delete a container.
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Container successfully deleted.
+
+  /checkpoints:
+    get:
+      summary: Get a list of checkpoints.
+      responses:
+        "200":
+          description: A list of checkpoints.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Checkpoint"
+    post:
+      summary: Create a new checkpoint.
+      requestBody:
+        description: Create a new checkpoint.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Checkpoint"
+      responses:
+        "201":
+          description: Checkpoint successfully created.
+    put:
+      summary: Update an existing checkpoint.
+      requestBody:
+        description: Update an existing checkpoint.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Checkpoint"
+      responses:
+        "200":
+          description: Checkpoint successfully updated.
+    delete:
+      summary: Delete a checkpoint.
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Checkpoint successfully deleted.
+
+  /sensor-groups:
+    get:
+      summary: Get a list of sensor groups.
+      responses:
+        "200":
+          description: A list of sensor groups.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SensorGroup"
+    post:
+      summary: Create a new sensor group.
+      requestBody:
+        description: Create a new sensor group.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SensorGroup"
+      responses:
+        "201":
+          description: Sensor group successfully created.
+    put:
+      summary: Update an existing sensor group.
+      requestBody:
+        description: Update an existing sensor group.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SensorGroup"
+      responses:
+        "200":
+          description: Sensor group successfully updated.
+    delete:
+      summary: Delete a sensor group.
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Sensor group successfully deleted.
+          
+  /sensors:
+    get:
+      summary: Get a list of sensors.
+      responses:
+        "200":
+          description: A list of sensors.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sensor"
+    post:
+      summary: Create a new sensor.
+      requestBody:
+        description: Create a new sensor.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Sensor"
+      responses:
+        "201":
+          description: Sensor successfully created.
+    put:
+      summary: Update an existing sensor.
+      requestBody:
+        description: Update an existing sensor.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Sensor"
+      responses:
+        "200":
+          description: Sensor successfully updated.
+    patch:
+      summary: Update a sensor dynamically.
+      requestBody:
+        description: Update a sensor dynamically based on specific data or context changes.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Sensor"
+      responses:
+        "200":
+          description: Sensor successfully updated.
+    delete:
+      summary: Delete a sensor.
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Sensor successfully deleted.
+
+
+
+info:
+  title: Smart Data Model for Factory
+  version: 1.0.0
+  description: Data model for factories, with sectors, containers, and industry type.
+openapi: "3.0.0"
+

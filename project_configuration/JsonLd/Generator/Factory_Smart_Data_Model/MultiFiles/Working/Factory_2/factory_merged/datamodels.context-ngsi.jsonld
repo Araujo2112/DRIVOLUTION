@@ -1,0 +1,28 @@
+{
+    "@context": {
+        "type": "@type",
+        "id": "@id",
+        "ngsi-ld": "https://uri.etsi.org/ngsi-ld/",
+        "fiware": "https://uri.fiware.org/ns/data-models#",
+        "schema": "https://schema.org/",
+        "Checkpoint": "fiware:Checkpoint",
+        "Container": "fiware:Container",
+        "Factory": "fiware:Factory",
+        "Sector": "fiware:Sector",
+        "Sensor": "fiware:Sensor",
+        "SensorGroup": "fiware:SensorGroup",
+        "capacity": "fiware:capacity",
+        "checkpoints": "fiware:checkpoints",
+        "containers": "fiware:containers",
+        "description": "fiware:description",
+        "location": "fiware:location",
+        "name": "fiware:name",
+        "numberOfEmployees": "fiware:numberOfEmployees",
+        "position": "fiware:position",
+        "sectors": "fiware:sectors",
+        "sensorGroups": "fiware:sensorGroups",
+        "sensors": "fiware:sensors",
+        "state": "fiware:state",
+        "typeIndustry": "fiware:typeIndustry"
+    }
+}

@@ -1,0 +1,41 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "$schemaVersion": "0.0.1",
+    "$id": ,
+    "title": "Data Model Plataform",
+    "description": "Manage Itens in Lot",
+    "modelTags": "",
+    "derivedFrom": "",
+    "required": [
+      "id",
+      "type"
+    ],
+    "license": "https://smart-data-models.github.io/ItemOfRawMaterial/LICENSE.md",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Property. Unique identifier for lot item"
+      },
+      "type": {
+        "type": "string",
+        "enum": [
+          "ItemOfRawMaterial"
+        ],
+        "description": "Property. It has to be ItemOfRawMaterial"
+      },
+      "quantity": {
+        "type": "number",
+        "description": "Property. Quantity of raw material itens"
+      },
+      "unit": {
+        "type": "string",
+        "description": "Property. Unit of itens in lot"
+      }
+    },
+    "allOf": [
+    {
+      "$ref": "https://smart-data-models.github.io/data-models/common-schema.json#/definitions/GSMA-Commons"
+    }
+  ]
+  }

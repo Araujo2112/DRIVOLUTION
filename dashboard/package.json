@@ -1,0 +1,44 @@
+{
+  "name": "dashboard",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "@popperjs/core": "^2.11.8",
+    "@types/node": "^22.9.0",
+    "axios": "^1.7.9",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "chartjs-chart-matrix": "^3.0.0",
+    "cytoscape": "^3.32.0",
+    "cytoscape-dagre": "^2.5.0",
+    "cytoscape-popper": "^4.0.1",
+    "d3": "^7.9.0",
+    "date-fns": "^4.1.0",
+    "material-symbols": "^0.27.1",
+    "tippy.js": "^6.3.7",
+    "vis-network": "^9.1.10",
+    "vue": "^3.5.12",
+    "vue-advanced-chat": "^2.1.0",
+    "vue-chartjs": "^5.3.2",
+    "vue-router": "^4.3.3",
+    "vue-uuid": "^3.0.0",
+    "vue3-chat-ui": "^1.1.5"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@vitejs/plugin-vue": "^5.1.4",
+    "@vue/compiler-sfc": "^3.5.13",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "typescript": "~5.6.2",
+    "vite": "^6.3.5",
+    "vue-tsc": "^2.1.8"
+  }
+}

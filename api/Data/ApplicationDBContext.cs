@@ -20,12 +20,16 @@ public class ApplicationDbContext : DbContext
     public DbSet<RawMaterialModel> RawMaterial { get; set; }
     public DbSet<EmployeeModel> Employees { get; set; }
     public DbSet<CheckpointModel> Checkpoints { get; set; }
+    public DbSet<DrivolutionModel> DrivolutionModels { get; set; }
+    public DbSet<DrivolutionManufacturingPhaseModel> DrivolutionManufacturingPhases { get; set; }
+    public DbSet<PhaseSequenceModel> PhaseSequences { get; set; }
+    public DbSet<PhaseWorkstationModel> PhaseWorkstations { get; set; }
 
+    // Drivolution
     public DbSet<ProductionLineModel> ProductionLines { get; set; }
-
+    public DbSet<WorkstationModel> Workstations { get; set; }
 
     // Second Part API:
-
     public DbSet<ManufacturingOrderHistoryModel> ManufacturingOrderHistories { get; set; }
     public DbSet<ClientModel> Clients { get; set; }
     public DbSet<ManufacturingOrderModel> ManufacturingOrders { get; set; }
@@ -37,27 +41,25 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProductLotModel> ProductLots { get; set; }
 
     // AI
-
     public DbSet<PredictionModel> Prediction { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         modelBuilder.Entity<ContainerLocalizationModel>()
             .HasKey(cl => cl.Id);
 
         modelBuilder.Entity<ContainerLocalizationModel>()
             .HasIndex(cl => new { cl.ContainerId, cl.SectionId })
             .IsUnique(false);
-        
+
         modelBuilder.Entity<ItemOfRawMaterialModel>()
             .HasMany(i => i.ItemLocalizations)
             .WithOne(il => il.ItemOfRawMaterial)
             .HasForeignKey(il => il.ItemRawId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        
         modelBuilder.Entity<ItemLocalizationModel>()
             .HasKey(i => i.ItemLocalizationId);
 
@@ -67,48 +69,41 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(i => i.ContainerLocalizationId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Relacionamento entre LotOfRawMaterial e RawMaterials
         modelBuilder.Entity<LotOfRawMaterialModel>()
             .HasOne(l => l.RawMaterials)
             .WithMany(r => r.LotOfRawMaterials)
             .HasForeignKey(l => l.RawMaterialId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Relacionamento entre ItemInContainer e Container
         modelBuilder.Entity<ItemInContainerModel>()
             .HasOne(i => i.Container)
             .WithMany(c => c.IteminContainers)
             .HasForeignKey(i => i.ContainerId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Relacionamento entre ContainerLocalization e Container
         modelBuilder.Entity<ContainerLocalizationModel>()
             .HasOne(c => c.Container)
             .WithMany(l => l.LocalizationHistories)
             .HasForeignKey(l => l.ContainerId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Relacionamento entre ContainerLocalization e PlantFloorSection
         modelBuilder.Entity<ContainerLocalizationModel>()
             .HasOne(p => p.PlantFloorSection)
             .WithMany(pfs => pfs.LocalizationHistories)
             .HasForeignKey(l => l.SectionId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Relacionamento entre ItemInContainer e ItemOfRawMaterial
         modelBuilder.Entity<ItemInContainerModel>()
             .HasMany(i => i.ItemsOfRawMaterial)
             .WithOne(i => i.ItemInContainer)
             .HasForeignKey(i => i.ItemInContainerId);
 
-        // Relacionamento entre ItemOfRawMaterial e LotOfRawMaterial
         modelBuilder.Entity<ItemOfRawMaterialModel>()
             .HasOne(i => i.LotOfRawMaterial)
             .WithMany(l => l.ItemOfRawMaterials)
             .HasForeignKey(i => i.LotOfRawMaterialId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // Relacionamento entre Checkpoint e PlantFloorSection
         modelBuilder.Entity<CheckpointModel>()
             .HasOne(c => c.PlantFloorSection)
             .WithMany(p => p.Checkpoints)
@@ -120,7 +115,6 @@ public class ApplicationDbContext : DbContext
             .WithMany()
             .HasForeignKey(a => a.PlantFloorSectionId);
 
-        // Manufacturing Order History
         modelBuilder.Entity<ManufacturingOrderHistoryModel>()
             .HasKey(mh => new { mh.ManufacturingOrderId, mh.PlantFloorSectionId });
 
@@ -134,7 +128,6 @@ public class ApplicationDbContext : DbContext
             .WithMany(pf => pf.OrderHistory)
             .HasForeignKey(mh => mh.PlantFloorSectionId);
 
-        // Manufacturing Order Phases
         modelBuilder.Entity<ManufacturingOrderPhaseModel>()
             .HasOne(mop => mop.ManufacturingOrder)
             .WithMany(mo => mo.ManufacturingOrderPhases)
@@ -153,7 +146,6 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(i => i.ManufacturingOrderPhaseId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Manufacturing Process
         modelBuilder.Entity<ManufacturingProcessModel>()
             .HasOne(mp => mp.Product)
             .WithMany(p => p.ManufacturingProcesses)
@@ -166,14 +158,12 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(mpp => mpp.ManufacturingProcessId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Manufacturing Phase
         modelBuilder.Entity<ManufacturingPhaseModel>()
             .HasOne(mp => mp.PlantFloorSection)
             .WithOne(pfs => pfs.ManufacturingPhase)
             .HasForeignKey<ManufacturingPhaseModel>(mp => mp.PlantFloorSectionId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // ManufacturingProcessPhase
         modelBuilder.Entity<ManufacturingProcessPhaseModel>()
             .HasKey(mpp => new { mpp.ManufacturingPhaseId, mpp.ManufacturingProcessId });
 
@@ -189,7 +179,6 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(mpp => mpp.ManufacturingProcessId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // CONSOLIDADO: Manufacturing Order relationships (removidas duplicações)
         modelBuilder.Entity<ManufacturingOrderModel>()
             .HasOne(mo => mo.Client)
             .WithMany(c => c.ManufacturingOrders)
@@ -214,14 +203,12 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(iorm => iorm.ManufacturingOrderId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Product Lot
         modelBuilder.Entity<ProductLotModel>()
             .HasOne(pl => pl.Product)
             .WithMany(p => p.ProductLots)
             .HasForeignKey(pl => pl.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Product
         modelBuilder.Entity<ProductModel>()
             .HasMany(p => p.ManufacturingProcesses)
             .WithOne(mp => mp.Product)
@@ -234,7 +221,6 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(pl => pl.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Employee relationships
         modelBuilder.Entity<EmployeeModel>()
             .HasOne(e => e.ManufacturingPhase)
             .WithMany()
@@ -258,9 +244,6 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<SectionAdminModel>()
             .HasIndex(psa => psa.PlantFloorSectionId)
             .IsUnique();
-
-        // Seed data
-        // AI
 
         modelBuilder.Entity<PredictionModel>()
             .HasIndex(p => p.Id)

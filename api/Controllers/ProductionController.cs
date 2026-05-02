@@ -32,4 +32,17 @@ public class ProductionLinesController : ControllerBase
 
         return productionLine;
     }
+
+    [HttpPost]
+    public async Task<ActionResult<ProductionLineModel>> CreateProductionLine(ProductionLineModel productionLine)
+    {
+        _context.ProductionLines.Add(productionLine);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(
+            nameof(GetProductionLine),
+            new { id = productionLine.Id },
+            productionLine
+        );
+    }
 }

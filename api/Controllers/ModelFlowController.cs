@@ -32,13 +32,7 @@ public class ModelFlowController : ControllerBase
                 order = ps.Order,
                 manufacturingPhaseId = ps.ManufacturingPhaseId,
                 phaseName = ps.ManufacturingPhase != null ? ps.ManufacturingPhase.Name : null,
-                estimatedDuration = ps.ManufacturingPhase != null ? ps.ManufacturingPhase.EstimatedDuration : null,
-
-                workstation = _context.PhaseWorkstations
-                    .Where(pw => pw.ManufacturingPhaseId == ps.ManufacturingPhaseId)
-                    .Include(pw => pw.Workstation)
-                    .Select(pw => pw.Workstation != null ? pw.Workstation.Type : null)
-                    .FirstOrDefault()
+                estimatedDuration = ps.ManufacturingPhase != null ? ps.ManufacturingPhase.EstimatedDuration : null
             })
             .ToListAsync();
 
@@ -62,13 +56,7 @@ public class ModelFlowController : ControllerBase
                 order = ps.Order,
                 manufacturingPhaseId = ps.ManufacturingPhaseId,
                 phaseName = ps.ManufacturingPhase != null ? ps.ManufacturingPhase.Name : null,
-                estimatedDuration = ps.ManufacturingPhase != null ? ps.ManufacturingPhase.EstimatedDuration ?? 0 : 0,
-
-                workstation = _context.PhaseWorkstations
-                    .Where(pw => pw.ManufacturingPhaseId == ps.ManufacturingPhaseId)
-                    .Include(pw => pw.Workstation)
-                    .Select(pw => pw.Workstation != null ? pw.Workstation.Type : null)
-                    .FirstOrDefault()
+                estimatedDuration = ps.ManufacturingPhase != null ? ps.ManufacturingPhase.EstimatedDuration : 0
             })
             .ToListAsync();
 
@@ -78,8 +66,8 @@ public class ModelFlowController : ControllerBase
         var totalDuration = steps.Sum(s => s.estimatedDuration);
 
         var bottleneck = steps
-        .OrderByDescending(s => s.estimatedDuration)
-        .First();
+            .OrderByDescending(s => s.estimatedDuration)
+            .First();
 
         return Ok(new
         {
@@ -89,8 +77,7 @@ public class ModelFlowController : ControllerBase
             bottleneck = new
             {
                 phaseName = bottleneck.phaseName,
-                duration = bottleneck.estimatedDuration,
-                workstation = bottleneck.workstation
+                duration = bottleneck.estimatedDuration
             },
             steps
         });

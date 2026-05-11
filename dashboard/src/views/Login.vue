@@ -39,7 +39,7 @@ async function login() {
 
       <div class="h-full rounded-2xl flex flex-col bg-background-900 p-4">
         <div class="flex w-full px-4 py-6 object-center object-contain  items-center overflow-hidden gap-0">
-          <img src="@/assets/icons/drivolution-logo.jpeg" alt="Eco build icon"/>
+          <img src="@/assets/icons/drivolution-logo.png" alt="Eco build icon"/>
         </div>
 
         <div class="flex flex-col items-center gap-2">

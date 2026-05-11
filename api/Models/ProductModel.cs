@@ -1,27 +1,41 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
-using ApiTexPact.Converters;
 
 namespace ApiTexPact.Models;
 
+[Table("product")]
 public class ProductModel
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column("id")]
     public int Id { get; set; }
 
-    public string Name { get; set; }
+    [Column("manufacturing_order_id")]
+    [Required]
+    public int ManufacturingOrderId { get; set; }
 
-    public string Info { get; set; }
-    
-    
-    [JsonPropertyName("ProductId")]
-    [JsonConverter(typeof(PropertyConverter))]
-    public string ProductId { get; set; }
-    
-    public ICollection<ManufacturingProcessModel> ManufacturingProcesses { get; set; }
-    
-    public ICollection<ProductLotModel> ProductLots { get; set; }
-    
+    [Column("model_id")]
+    [Required]
+    public int ModelId { get; set; }
+
+    [Column("serial_number")]
+    public string? SerialNumber { get; set; }
+
+    [Column("lot_number")]
+    public string? LotNumber { get; set; }
+
+    [Column("production_date")]
+    public DateTime? ProductionDate { get; set; }
+
+    // Navigation
+    [ForeignKey("ManufacturingOrderId")]
+    public ManufacturingOrderModel ManufacturingOrder { get; set; } = null!;
+
+    [ForeignKey("ModelId")]
+    public CarModelModel CarModel { get; set; } = null!;
+
+    public ICollection<ProductPhaseModel> ProductPhases { get; set; } = new List<ProductPhaseModel>();
+    public ICollection<QualityCheckModel> QualityChecks { get; set; } = new List<QualityCheckModel>();
+    public ICollection<SupportedProductModel> SupportedProducts { get; set; } = new List<SupportedProductModel>();
+    public ICollection<ProductConfigModel> ProductConfigs { get; set; } = new List<ProductConfigModel>();
 }

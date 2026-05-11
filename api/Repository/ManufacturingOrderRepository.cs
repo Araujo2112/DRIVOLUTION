@@ -1,92 +1,39 @@
 using ApiTexPact.Data;
-using Microsoft.EntityFrameworkCore;
 using ApiTexPact.Models;
 using ApiTexPact.Repository.Interface.ManufacturingOrder;
-
-namespace ApiTexPact.Repository
+using Microsoft.EntityFrameworkCore;
+namespace ApiTexPact.Repository;
+public class ManufacturingOrderRepository : IManufacturingOrderRepository
 {
-    public class ManufacturingOrderRepository : IManufacturingOrderRepository
+    private readonly ApplicationDbContext _context;
+    public ManufacturingOrderRepository(ApplicationDbContext context) => _context = context;
+    public async Task<IEnumerable<ManufacturingOrderModel>> GetAll() =>
+        await _context.ManufacturingOrders.Include(mo => mo.ClientOrder).ToListAsync();
+    public async Task<ManufacturingOrderModel?> GetById(int id) =>
+        await _context.ManufacturingOrders.Include(mo => mo.ClientOrder).FirstOrDefaultAsync(mo => mo.Id == id);
+    public async Task<ManufacturingOrderModel?> GetByIdWithDetails(int id) =>
+        await _context.ManufacturingOrders
+            .Include(mo => mo.ClientOrder)
+            .Include(mo => mo.Products).ThenInclude(p => p.CarModel)
+            .Include(mo => mo.Products).ThenInclude(p => p.ProductPhases).ThenInclude(pp => pp.ManufacturingPhase)
+            .FirstOrDefaultAsync(mo => mo.Id == id);
+    public async Task<IEnumerable<ManufacturingOrderModel>> GetByStatus(string status) =>
+        await _context.ManufacturingOrders.Where(mo => mo.Status == status).Include(mo => mo.ClientOrder).ToListAsync();
+    public async Task<ManufacturingOrderModel> Create(ManufacturingOrderModel entity)
     {
-        private readonly ApplicationDbContext _context;
-
-        public ManufacturingOrderRepository(ApplicationDbContext context)
-        {
-            _context = context;
-        }
-
-        public async Task<IEnumerable<ManufacturingOrderModel>> GetAll()
-        {
-            return await _context.ManufacturingOrders.ToListAsync();
-        }
-
-        public async Task<ManufacturingOrderModel> GetById(int id)
-        {
-            return await _context.ManufacturingOrders.FindAsync(id);
-        }
-
-        public async Task<ManufacturingOrderModel> Create(ManufacturingOrderModel manufacturingOrder)
-        {
-            _context.ManufacturingOrders.Add(manufacturingOrder);
-            await _context.SaveChangesAsync();
-            return manufacturingOrder;
-        }
-
-        public async Task Update(ManufacturingOrderModel manufacturingOrder)
-        {
-            _context.ManufacturingOrders.Update(manufacturingOrder);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task Delete(int id)
-        {
-            var order = await _context.ManufacturingOrders.FindAsync(id);
-            if (order != null)
-            {
-                _context.ManufacturingOrders.Remove(order);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task<bool> Exists(int id)
-        {
-            return await _context.ManufacturingOrders.AnyAsync(o => o.Id == id);
-        }
-        
-        public async Task<ManufacturingOrderModel?> GetByIdWithDetailsForGraphAsync(int manufacturingOrderId)
-        {
-            _context.ChangeTracker.Clear();
-    
-            var result = await _context.ManufacturingOrders
-                .Include(o => o.Client)
-                .Include(o => o.ProductLot)
-                .Include(o => o.ManufacturingProcess)
-                .ThenInclude(mp => mp.ManufacturingProcessPhases)
-                .ThenInclude(mpp => mpp.ManufacturingPhase)
-                .ThenInclude(mp => mp.PlantFloorSection)
-                .Include(o => o.ManufacturingOrderHistory)
-                .Include(o => o.ManufacturingOrderPhases)
-                .ThenInclude(mop => mop.ManufacturingPhase)
-                .ThenInclude(mp => mp.PlantFloorSection)
-                
-                .Include(o => o.ItemsOfRawMaterial)
-                .ThenInclude(item => item.LotOfRawMaterial)
-                .ThenInclude(lot => lot.RawMaterials)
-                
-                .Include(o => o.ItemsOfRawMaterial)
-                .ThenInclude(item => item.ItemInContainer)
-                .ThenInclude(iic => iic.Container)
-                .ThenInclude(c => c.LocalizationHistories)
-                
-                .Include(o => o.ItemsOfRawMaterial)
-                .ThenInclude(item => item.ItemLocalizations)
-        
-                .AsSplitQuery()
-                .FirstOrDefaultAsync(o => o.Id == manufacturingOrderId);
-
-            return result;
-        }
-
-
-
+        _context.ManufacturingOrders.Add(entity);
+        await _context.SaveChangesAsync();
+        return entity;
     }
+    public async Task Update(ManufacturingOrderModel entity)
+    {
+        _context.ManufacturingOrders.Update(entity);
+        await _context.SaveChangesAsync();
+    }
+    public async Task Delete(int id)
+    {
+        var entity = await _context.ManufacturingOrders.FindAsync(id);
+        if (entity != null) { _context.ManufacturingOrders.Remove(entity); await _context.SaveChangesAsync(); }
+    }
+    public async Task<bool> Exists(int id) => await _context.ManufacturingOrders.AnyAsync(mo => mo.Id == id);
 }

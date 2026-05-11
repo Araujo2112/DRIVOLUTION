@@ -1,37 +1,25 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
-using ApiTexPact.Converters;
 
 namespace ApiTexPact.Models;
 
+[Table("manufacturing_phase")]
 public class ManufacturingPhaseModel
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column("id")]
     public int Id { get; set; }
-    
-    public string PhaseInfo { get; set; }
-    
-    public int PhaseDuration { get; set; }
-    
-    
-    [JsonPropertyName("ManufacturingPhaseId")]
-    [JsonConverter(typeof(PropertyConverter))]
-    public string ManufacturingPhaseId { get; set; }
 
-    [ForeignKey("PlantFloorSection")]
-    public int PlantFloorSectionId { get; set; }
-    
-    
-    public PlantFloorSectionModel PlantFloorSection { get; set; }
-    
-    
-    public ICollection<ManufacturingOrderPhaseModel> ManufacturingOrderPhases { get; set; }
-    
-    public ICollection<ManufacturingProcessPhaseModel> ManufacturingProcessPhases { get; set; }
+    [Column("name")]
+    [Required]
+    public string Name { get; set; } = string.Empty;
 
+    [Column("estimated_duration")]
+    public int? EstimatedDuration { get; set; }
 
-
-
+    // Navigation
+    public ICollection<PhaseSequenceModel> PhaseSequences { get; set; } = new List<PhaseSequenceModel>();
+    public ICollection<ProductPhaseModel> ProductPhases { get; set; } = new List<ProductPhaseModel>();
+    public ICollection<QualityCheckModel> QualityChecks { get; set; } = new List<QualityCheckModel>();
+    public ICollection<ModelMaterialModel> ModelMaterials { get; set; } = new List<ModelMaterialModel>();
 }

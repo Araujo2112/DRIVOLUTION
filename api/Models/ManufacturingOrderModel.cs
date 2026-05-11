@@ -1,49 +1,36 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
-using ApiTexPact.Converters;
 
 namespace ApiTexPact.Models;
 
+[Table("manufacturing_order")]
 public class ManufacturingOrderModel
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column("id")]
     public int Id { get; set; }
-    
-    public int OrderNumber { get; set; }
-    
-    public DateTime SheduleInit { get; set; }
-    
-    public string Observations { get; set; }
-    
-    
-    [JsonPropertyName("ManufacturingPhaseId")]
-    [JsonConverter(typeof(PropertyConverter))]
-    public string ManufacturingOrderId { get; set; }
 
-    [ForeignKey("Client")]
-    public int ClientId { get; set; }
-    
-    [ForeignKey("ManufacturingProcess")]
-    public int ManufacturingProcessId { get; set; }
-    
-    [ForeignKey("ProductLot")]
-    public int ProductLotId { get; set; }
-    
-    
-    public ClientModel Client { get; set; }
-    
-    public ManufacturingProcessModel ManufacturingProcess { get; set; }
-    
-    public ProductLotModel ProductLot { get; set; }
-    
-    
-    public ICollection<ManufacturingOrderHistoryModel> ManufacturingOrderHistory { get; set; }
-    public ICollection<ManufacturingOrderPhaseModel> ManufacturingOrderPhases { get; set; }
-    
-    public ICollection<ItemOfRawMaterialModel> ItemsOfRawMaterial { get; set; }
+    [Column("client_order_id")]
+    [Required]
+    public int ClientOrderId { get; set; }
 
+    [Column("manufacturing_order_number")]
+    [Required]
+    public string ManufacturingOrderNumber { get; set; } = string.Empty;
 
-    
+    [Column("start_date")]
+    [Required]
+    public DateTime StartDate { get; set; }
+
+    [Column("end_date")]
+    public DateTime? EndDate { get; set; }
+
+    [Column("status")]
+    public string? Status { get; set; }
+
+    // Navigation
+    [ForeignKey("ClientOrderId")]
+    public ClientOrderModel ClientOrder { get; set; } = null!;
+
+    public ICollection<ProductModel> Products { get; set; } = new List<ProductModel>();
 }

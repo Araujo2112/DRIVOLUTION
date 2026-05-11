@@ -1,0 +1,10 @@
+using ApiTexPact.Models;
+namespace ApiTexPact.Repository.Interface.PhaseSequence;
+public interface IPhaseSequenceRepository
+{
+    Task<IEnumerable<PhaseSequenceModel>> GetByModel(int modelId);
+    Task<PhaseSequenceModel?> GetById(int id);
+    Task<PhaseSequenceModel> Create(PhaseSequenceModel entity);
+    Task Update(PhaseSequenceModel entity);
+    Task Delete(int id);
+}

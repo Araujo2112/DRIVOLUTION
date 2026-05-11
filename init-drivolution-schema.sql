@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS client_order (
     id SERIAL PRIMARY KEY,
     order_number VARCHAR(100) NOT NULL,
     order_date TIMESTAMP NOT NULL,
-    customer_name VARCHAR(150) NOT NULL
+    customer_name VARCHAR(150) NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS manufacturing_phase (
@@ -239,24 +240,29 @@ CREATE TABLE IF NOT EXISTS config (
     id SERIAL PRIMARY KEY,
     model_id INTEGER NOT NULL,
     item VARCHAR(100) NOT NULL,
-    default_value VARCHAR(255),
-
-    CONSTRAINT fk_config_model
-        FOREIGN KEY (model_id)
+    CONSTRAINT fk_config_model 
+        FOREIGN KEY (model_id) 
         REFERENCES model(id)
+);
+
+CREATE TABLE IF NOT EXISTS config_option (
+    id SERIAL PRIMARY KEY,
+    config_id INTEGER NOT NULL,
+    value VARCHAR(255) NOT NULL,
+    is_default BOOLEAN DEFAULT FALSE,
+    CONSTRAINT fk_config_option_config
+        FOREIGN KEY (config_id)
+        REFERENCES config(id)
 );
 
 CREATE TABLE IF NOT EXISTS product_config (
     id SERIAL PRIMARY KEY,
     product_id INTEGER NOT NULL,
-    config_id INTEGER NOT NULL,
-    value VARCHAR(255),
-
-    CONSTRAINT fk_product_config_product
-        FOREIGN KEY (product_id)
+    config_option_id INTEGER NOT NULL,
+    CONSTRAINT fk_product_config_product 
+        FOREIGN KEY (product_id) 
         REFERENCES product(id),
-
-    CONSTRAINT fk_product_config_config
-        FOREIGN KEY (config_id)
-        REFERENCES config(id)
+    CONSTRAINT fk_product_config_option 
+        FOREIGN KEY (config_option_id) 
+        REFERENCES config_option(id)
 );

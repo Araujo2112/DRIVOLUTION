@@ -1,58 +1,62 @@
-using ApiTexPact.Data;
+using ApiTexPact.DTO;
 using ApiTexPact.Models;
+using ApiTexPact.Repository.Interface.Workstation;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ApiTexPact.Controllers;
 
 [ApiController]
-[Route("api/workstations")]
-public class WorkstationsController : ControllerBase
+[Route("api/[controller]")]
+public class WorkstationController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-
-    public WorkstationsController(ApplicationDbContext context)
-    {
-        _context = context;
-    }
+    private readonly IWorkstationRepository _repo;
+    public WorkstationController(IWorkstationRepository repo) => _repo = repo;
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<WorkstationModel>>> GetWorkstations()
+    public async Task<IActionResult> GetAll()
     {
-        return await _context.Workstations
-            .Include(w => w.ProductionLine)
-            .ToListAsync();
+        var items = await _repo.GetAll();
+        return Ok(items.Select(w => new WorkstationDTO(w.Id, w.ProductionLineId, w.ProductionLine?.Name, w.Type)));
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<WorkstationModel>> GetWorkstation(int id)
+    public async Task<IActionResult> GetById(int id)
     {
-        var workstation = await _context.Workstations
-            .Include(w => w.ProductionLine)
-            .FirstOrDefaultAsync(w => w.Id == id);
+        var item = await _repo.GetById(id);
+        if (item == null) return NotFound();
+        return Ok(new WorkstationDTO(item.Id, item.ProductionLineId, item.ProductionLine?.Name, item.Type));
+    }
 
-        if (workstation == null)
-            return NotFound();
-
-        return workstation;
+    [HttpGet("line/{productionLineId}")]
+    public async Task<IActionResult> GetByProductionLine(int productionLineId)
+    {
+        var items = await _repo.GetByProductionLine(productionLineId);
+        return Ok(items.Select(w => new WorkstationDTO(w.Id, w.ProductionLineId, null, w.Type)));
     }
 
     [HttpPost]
-    public async Task<ActionResult<WorkstationModel>> CreateWorkstation(WorkstationModel workstation)
+    public async Task<IActionResult> Create([FromBody] CreateWorkstationDTO dto)
     {
-        var productionLineExists = await _context.ProductionLines
-            .AnyAsync(pl => pl.Id == workstation.ProductionLineId);
+        var entity = new WorkstationModel { ProductionLineId = dto.ProductionLineId, Type = dto.Type };
+        var created = await _repo.Create(entity);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, new WorkstationDTO(created.Id, created.ProductionLineId, null, created.Type));
+    }
 
-        if (!productionLineExists)
-            return BadRequest("Production line does not exist.");
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateWorkstationDTO dto)
+    {
+        var entity = await _repo.GetById(id);
+        if (entity == null) return NotFound();
+        if (dto.Type != null) entity.Type = dto.Type;
+        await _repo.Update(entity);
+        return NoContent();
+    }
 
-        _context.Workstations.Add(workstation);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(
-            nameof(GetWorkstation),
-            new { id = workstation.Id },
-            workstation
-        );
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        if (!await _repo.Exists(id)) return NotFound();
+        await _repo.Delete(id);
+        return NoContent();
     }
 }

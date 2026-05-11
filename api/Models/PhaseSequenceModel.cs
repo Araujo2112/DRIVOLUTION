@@ -11,15 +11,21 @@ public class PhaseSequenceModel
     public int Id { get; set; }
 
     [Column("order")]
+    [Required]
     public int Order { get; set; }
 
     [Column("manufacturing_phase_id")]
+    [Required]
     public int ManufacturingPhaseId { get; set; }
 
     [Column("model_id")]
+    [Required]
     public int ModelId { get; set; }
 
-    public DrivolutionManufacturingPhaseModel? ManufacturingPhase { get; set; }
+    // Navigation
+    [ForeignKey("ManufacturingPhaseId")]
+    public ManufacturingPhaseModel ManufacturingPhase { get; set; } = null!;
 
-    public DrivolutionModel? Model { get; set; }
+    [ForeignKey("ModelId")]
+    public CarModelModel CarModel { get; set; } = null!;
 }

@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.Workstation;
+namespace ApiTexPact.Repository.Interface;
 public interface IWorkstationRepository
 {
     Task<IEnumerable<WorkstationModel>> GetAll();

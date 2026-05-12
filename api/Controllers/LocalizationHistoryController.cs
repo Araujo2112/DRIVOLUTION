@@ -1,6 +1,5 @@
 using ApiTexPact.DTO;
-using ApiTexPact.Models;
-using ApiTexPact.Repository.Interface.LocalizationHistory;
+using ApiTexPact.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ApiTexPact.Controllers;
@@ -9,43 +8,32 @@ namespace ApiTexPact.Controllers;
 [Route("api/[controller]")]
 public class LocalizationHistoryController : ControllerBase
 {
-    private readonly ILocalizationHistoryRepository _repo;
-    public LocalizationHistoryController(ILocalizationHistoryRepository repo) => _repo = repo;
+    private readonly ILocalizationHistoryService _service;
+
+    public LocalizationHistoryController(ILocalizationHistoryService service)
+    {
+        _service = service;
+    }
 
     [HttpGet("support/{supportId}")]
     public async Task<IActionResult> GetBySupport(int supportId)
     {
-        var items = await _repo.GetBySupport(supportId);
-        return Ok(items.Select(lh => new LocalizationHistoryDTO(lh.Id, lh.SupportId, lh.WorkstationId, lh.Workstation?.Type, lh.DatetimeIni, lh.DatetimeEnd, lh.Status)));
+        var items = await _service.GetBySupport(supportId);
+        return Ok(items);
     }
 
     [HttpGet("support/{supportId}/current")]
     public async Task<IActionResult> GetCurrent(int supportId)
     {
-        var item = await _repo.GetCurrentBySupport(supportId);
+        var item = await _service.GetCurrent(supportId);
         if (item == null) return NotFound();
-        return Ok(new LocalizationHistoryDTO(item.Id, item.SupportId, item.WorkstationId, item.Workstation?.Type, item.DatetimeIni, item.DatetimeEnd, item.Status));
+        return Ok(item);
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateLocalizationHistoryDTO dto)
     {
-        var current = await _repo.GetCurrentBySupport(dto.SupportId);
-        if (current != null)
-        {
-            current.DatetimeEnd = DateTime.UtcNow;
-            current.Status = "completed";
-            await _repo.Update(current);
-        }
-        var entity = new LocalizationHistoryModel
-        {
-            SupportId = dto.SupportId,
-            WorkstationId = dto.WorkstationId,
-            DatetimeIni = DateTime.UtcNow,
-            Status = "active"
-        };
-        var created = await _repo.Create(entity);
-        return CreatedAtAction(nameof(GetCurrent), new { supportId = created.SupportId },
-            new LocalizationHistoryDTO(created.Id, created.SupportId, created.WorkstationId, null, created.DatetimeIni, created.DatetimeEnd, created.Status));
+        var created = await _service.Create(dto);
+        return CreatedAtAction(nameof(GetCurrent), new { supportId = created.SupportId }, created);
     }
 }

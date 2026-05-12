@@ -1,6 +1,6 @@
 using ApiTexPact.DTO;
 using ApiTexPact.Models;
-using ApiTexPact.Repository.Interface.CarModel;
+using ApiTexPact.Repository.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ApiTexPact.Controllers;

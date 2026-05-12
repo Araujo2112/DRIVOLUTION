@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.WorkstationStatus;
+namespace ApiTexPact.Repository.Interface;
 public interface IWorkstationStatusRepository
 {
     Task<IEnumerable<WorkstationStatusModel>> GetByWorkstation(int workstationId);

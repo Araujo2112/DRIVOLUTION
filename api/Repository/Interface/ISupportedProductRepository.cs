@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.SupportedProduct;
+namespace ApiTexPact.Repository.Interface;
 public interface ISupportedProductRepository
 {
     Task<IEnumerable<SupportedProductModel>> GetBySupport(int supportId);

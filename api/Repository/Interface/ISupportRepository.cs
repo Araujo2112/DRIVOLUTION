@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.Support;
+namespace ApiTexPact.Repository.Interface;
 public interface ISupportRepository
 {
     Task<IEnumerable<SupportModel>> GetAll();

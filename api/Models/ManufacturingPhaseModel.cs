@@ -17,6 +17,12 @@ public class ManufacturingPhaseModel
     [Column("estimated_duration")]
     public int? EstimatedDuration { get; set; }
 
+    [Column("max_acceptable_severity")]
+    public string MaxAcceptableSeverity { get; set; } = "none";
+
+    [Column("rework_severity")]
+    public string ReworkSeverity { get; set; } = "minor";
+
     // Navigation
     public ICollection<PhaseSequenceModel> PhaseSequences { get; set; } = new List<PhaseSequenceModel>();
     public ICollection<ProductPhaseModel> ProductPhases { get; set; } = new List<ProductPhaseModel>();

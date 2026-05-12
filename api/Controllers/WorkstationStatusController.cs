@@ -1,6 +1,7 @@
 using ApiTexPact.DTO;
 using ApiTexPact.Models;
-using ApiTexPact.Repository.Interface.WorkstationStatus;
+using ApiTexPact.Models.Constants;
+using ApiTexPact.Repository.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ApiTexPact.Controllers;
@@ -30,8 +31,14 @@ public class WorkstationStatusController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkstationStatusDTO dto)
     {
-        var entity = new WorkstationStatusModel { WorkstationId = dto.WorkstationId, Status = dto.Status, Timestamp = DateTime.UtcNow };
+        var entity = new WorkstationStatusModel 
+        { 
+            WorkstationId = dto.WorkstationId, 
+            Status = dto.Status ?? EntityStatus.Functional,
+            Timestamp = DateTime.UtcNow 
+        };
         var created = await _repo.Create(entity);
-        return CreatedAtAction(nameof(GetLatest), new { workstationId = created.WorkstationId }, new WorkstationStatusDTO(created.Id, created.WorkstationId, created.Status, created.Timestamp));
+        return CreatedAtAction(nameof(GetLatest), new { workstationId = created.WorkstationId }, 
+            new WorkstationStatusDTO(created.Id, created.WorkstationId, created.Status, created.Timestamp));
     }
 }

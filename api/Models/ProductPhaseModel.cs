@@ -16,9 +16,6 @@ public class ProductPhaseModel
     [Column("result")]
     public string? Result { get; set; }
 
-    [Column("condition")]
-    public string? Condition { get; set; }
-
     [Column("datetime_ini")]
     [Required]
     public DateTime DatetimeIni { get; set; }

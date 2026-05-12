@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.ManufacturingPhase;
+namespace ApiTexPact.Repository.Interface;
 public interface IManufacturingPhaseRepository
 {
     Task<IEnumerable<ManufacturingPhaseModel>> GetAll();

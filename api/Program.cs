@@ -2,26 +2,9 @@ using System.Text;
 using System.Text.Json.Serialization;
 using ApiTexPact.Data;
 using ApiTexPact.Repository;
-using ApiTexPact.Repository.Interface.CarModel;
-using ApiTexPact.Repository.Interface.ClientOrder;
-using ApiTexPact.Repository.Interface.Config;
-using ApiTexPact.Repository.Interface.LocalizationHistory;
-using ApiTexPact.Repository.Interface.ManufacturingOrder;
-using ApiTexPact.Repository.Interface.ManufacturingPhase;
-using ApiTexPact.Repository.Interface.Material;
-using ApiTexPact.Repository.Interface.PhaseSequence;
-using ApiTexPact.Repository.Interface.Product;
-using ApiTexPact.Repository.Interface.ProductConfig;
-using ApiTexPact.Repository.Interface.ProductPhase;
-using ApiTexPact.Repository.Interface.ProductionLine;
-using ApiTexPact.Repository.Interface.QualityCheck;
-using ApiTexPact.Repository.Interface.Resource;
-using ApiTexPact.Repository.Interface.Support;
-using ApiTexPact.Repository.Interface.SupportedProduct;
-using ApiTexPact.Repository.Interface.Workstation;
-using ApiTexPact.Repository.Interface.WorkstationAllocation;
-using ApiTexPact.Repository.Interface.WorkstationStatus;
+using ApiTexPact.Repository.Interface;
 using ApiTexPact.Services;
+using ApiTexPact.Services.Interface;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -94,6 +77,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // --- FIWARE / Orion ---
 builder.Services.AddHttpClient<OrionService>();
 builder.Services.AddScoped<OrionService>();
+
+// --- Services ---
+builder.Services.AddScoped<IClientOrderService, ClientOrderService>();
+builder.Services.AddScoped<IProductPhaseService, ProductPhaseService>();
+builder.Services.AddScoped<ILocalizationHistoryService, LocalizationHistoryService>();
+builder.Services.AddScoped<IQualityCheckService, QualityCheckService>();
+builder.Services.AddScoped<IManufacturingOrderService, ManufacturingOrderService>();
 
 // --- Repositories ---
 builder.Services.AddScoped<IProductionLineRepository, ProductionLineRepository>();

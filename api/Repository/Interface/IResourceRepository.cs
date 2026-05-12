@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.Resource;
+namespace ApiTexPact.Repository.Interface;
 public interface IResourceRepository
 {
     Task<IEnumerable<ResourceModel>> GetAll();

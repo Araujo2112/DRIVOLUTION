@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.Material;
+namespace ApiTexPact.Repository.Interface;
 public interface IMaterialRepository
 {
     Task<IEnumerable<MaterialModel>> GetAll();

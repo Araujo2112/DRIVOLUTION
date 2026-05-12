@@ -1,6 +1,6 @@
 using ApiTexPact.Data;
 using ApiTexPact.Models;
-using ApiTexPact.Repository.Interface.WorkstationStatus;
+using ApiTexPact.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 namespace ApiTexPact.Repository;
 public class WorkstationStatusRepository : IWorkstationStatusRepository

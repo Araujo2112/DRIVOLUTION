@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.WorkstationAllocation;
+namespace ApiTexPact.Repository.Interface;
 public interface IWorkstationAllocationRepository
 {
     Task<IEnumerable<WorkstationAllocationModel>> GetAll();

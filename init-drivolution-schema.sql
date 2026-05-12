@@ -32,7 +32,9 @@ CREATE TABLE IF NOT EXISTS client_order (
 CREATE TABLE IF NOT EXISTS manufacturing_phase (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    estimated_duration INTEGER
+    estimated_duration INTEGER,
+    max_acceptable_severity VARCHAR(20),
+    rework_severity VARCHAR(20)
 );
 
 CREATE TABLE IF NOT EXISTS material (
@@ -173,7 +175,6 @@ CREATE TABLE IF NOT EXISTS product_phase (
     id SERIAL PRIMARY KEY,
     notes TEXT,
     result VARCHAR(100),
-    condition VARCHAR(100),
     datetime_ini TIMESTAMP NOT NULL,
     datetime_end TIMESTAMP,
     manufacturing_phase_id INTEGER NOT NULL,
@@ -198,15 +199,15 @@ CREATE TABLE IF NOT EXISTS quality_check (
     id SERIAL PRIMARY KEY,
     product_id INTEGER NOT NULL,
     manufacturing_phase_id INTEGER NOT NULL,
+    severity VARCHAR(20) NOT NULL,
     notes TEXT,
     status VARCHAR(50),
-
-    CONSTRAINT fk_quality_check_product
+    CONSTRAINT fk_quality_check_product 
         FOREIGN KEY (product_id)
         REFERENCES product(id),
 
-    CONSTRAINT fk_quality_check_manufacturing_phase
-        FOREIGN KEY (manufacturing_phase_id)
+    CONSTRAINT fk_quality_check_manufacturing_phase 
+        FOREIGN KEY (manufacturing_phase_id) 
         REFERENCES manufacturing_phase(id)
 );
 

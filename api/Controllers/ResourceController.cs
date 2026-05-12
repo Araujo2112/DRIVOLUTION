@@ -1,6 +1,7 @@
 using ApiTexPact.DTO;
 using ApiTexPact.Models;
-using ApiTexPact.Repository.Interface.Resource;
+using ApiTexPact.Models.Constants;
+using ApiTexPact.Repository.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ApiTexPact.Controllers;
@@ -30,7 +31,11 @@ public class ResourceController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateResourceDTO dto)
     {
-        var entity = new ResourceModel { IsHuman = dto.IsHuman, Status = dto.Status };
+        var entity = new ResourceModel 
+        { 
+            IsHuman = dto.IsHuman, 
+            Status = dto.Status ?? EntityStatus.Active // Se vier vazio, assume Ativo
+        };
         var created = await _repo.Create(entity);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, new ResourceDTO(created.Id, created.IsHuman, created.Status));
     }
@@ -40,8 +45,10 @@ public class ResourceController : ControllerBase
     {
         var entity = await _repo.GetById(id);
         if (entity == null) return NotFound();
+        
         if (dto.IsHuman != null) entity.IsHuman = dto.IsHuman.Value;
         if (dto.Status != null) entity.Status = dto.Status;
+        
         await _repo.Update(entity);
         return NoContent();
     }

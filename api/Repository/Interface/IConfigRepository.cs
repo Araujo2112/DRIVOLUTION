@@ -1,6 +1,6 @@
 using ApiTexPact.Models;
 
-namespace ApiTexPact.Repository.Interface.Config;
+namespace ApiTexPact.Repository.Interface;
 
 public interface IConfigRepository
 {

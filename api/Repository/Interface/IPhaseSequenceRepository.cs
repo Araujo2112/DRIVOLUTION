@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.PhaseSequence;
+namespace ApiTexPact.Repository.Interface;
 public interface IPhaseSequenceRepository
 {
     Task<IEnumerable<PhaseSequenceModel>> GetByModel(int modelId);

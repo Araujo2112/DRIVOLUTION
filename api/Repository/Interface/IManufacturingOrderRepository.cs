@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.ManufacturingOrder;
+namespace ApiTexPact.Repository.Interface;
 public interface IManufacturingOrderRepository
 {
     Task<IEnumerable<ManufacturingOrderModel>> GetAll();

@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.ClientOrder;
+namespace ApiTexPact.Repository.Interface;
 public interface IClientOrderRepository
 {
     Task<IEnumerable<ClientOrderModel>> GetAll();
@@ -8,4 +8,5 @@ public interface IClientOrderRepository
     Task Update(ClientOrderModel entity);
     Task Delete(int id);
     Task<bool> Exists(int id);
+
 }

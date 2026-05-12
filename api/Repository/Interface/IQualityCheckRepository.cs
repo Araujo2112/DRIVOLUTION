@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.QualityCheck;
+namespace ApiTexPact.Repository.Interface;
 public interface IQualityCheckRepository
 {
     Task<IEnumerable<QualityCheckModel>> GetByProduct(int productId);

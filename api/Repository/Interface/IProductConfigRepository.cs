@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.ProductConfig;
+namespace ApiTexPact.Repository.Interface;
 public interface IProductConfigRepository
 {
     Task<IEnumerable<ProductConfigModel>> GetByProduct(int productId);

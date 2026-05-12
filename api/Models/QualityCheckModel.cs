@@ -18,6 +18,10 @@ public class QualityCheckModel
     [Required]
     public int ManufacturingPhaseId { get; set; }
 
+    [Column("severity")]
+    [Required]
+    public string Severity { get; set; } = null!;
+
     [Column("notes")]
     public string? Notes { get; set; }
 

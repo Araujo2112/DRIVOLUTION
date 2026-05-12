@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.CarModel;
+namespace ApiTexPact.Repository.Interface;
 public interface ICarModelRepository
 {
     Task<IEnumerable<CarModelModel>> GetAll();

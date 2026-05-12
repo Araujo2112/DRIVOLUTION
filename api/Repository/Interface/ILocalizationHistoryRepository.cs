@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.LocalizationHistory;
+namespace ApiTexPact.Repository.Interface;
 public interface ILocalizationHistoryRepository
 {
     Task<IEnumerable<LocalizationHistoryModel>> GetBySupport(int supportId);

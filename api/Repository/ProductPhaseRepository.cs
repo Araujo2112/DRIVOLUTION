@@ -1,6 +1,6 @@
 using ApiTexPact.Data;
 using ApiTexPact.Models;
-using ApiTexPact.Repository.Interface.ProductPhase;
+using ApiTexPact.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 namespace ApiTexPact.Repository;
 public class ProductPhaseRepository : IProductPhaseRepository

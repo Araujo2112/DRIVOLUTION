@@ -1,6 +1,6 @@
 using ApiTexPact.Data;
 using ApiTexPact.Models;
-using ApiTexPact.Repository.Interface.CarModel;
+using ApiTexPact.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 namespace ApiTexPact.Repository;
 public class CarModelRepository : ICarModelRepository

@@ -1,5 +1,5 @@
 using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface.ProductionLine;
+namespace ApiTexPact.Repository.Interface;
 public interface IProductionLineRepository
 {
     Task<IEnumerable<ProductionLineModel>> GetAll();

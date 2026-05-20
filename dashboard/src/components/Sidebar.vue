@@ -37,47 +37,30 @@ function logout() {
 
 <template>
   <div class="h-full min-w-60 max-w-60 py-2">
-    <div class="h-full rounded-2xl flex flex-col bg-background-900 p-4">
+    <div class="h-full rounded-2xl flex flex-col bg-background-100 dark:bg-background-900 p-4">
       <div class="flex w-full px-4 py-6 object-center object-contain items-center overflow-hidden gap-0">
         <img src="@/assets/icons/drivolution-logo.png" alt="Eco build icon"/>
       </div>
 
       <div class="flex flex-col w-full h-full items-center gap-2 text-2xl overflow-y-auto overflow-x-hidden">
+        <SidebarItem icon="directions_car" path="carModels">Car Models</SidebarItem>
+        <SidebarItem icon="shopping_cart" path="orders">Encomendas</SidebarItem>
+        <SidebarItem icon="assignment" path="manufacturingOrders">Manuf. Orders</SidebarItem>
+        <SidebarItem icon="conveyor_belt" path="productionLines">Prod. Lines</SidebarItem>
+
+
+
+        
         <SidebarItem icon="space_dashboard" path="/">Dashboard</SidebarItem>
         <SidebarItem icon="dashboard" path="Controlpanel">Overview</SidebarItem>
 
         <SidebarItem icon="factory" path="plantaFabrica">
           Sections and Checkpoints
-
           <template v-slot:children>
             <SidebarItem icon="factory" path="plantaFabrica">Factory Floor</SidebarItem>
             <SidebarItem icon="gate" path="portico">Gate</SidebarItem>
           </template>
         </SidebarItem>
-
-        <SidebarItem icon="package" path="product">
-          Products
-          <template v-slot:children>
-            <SidebarItem icon="package" path="product">Product</SidebarItem>
-            <SidebarItem icon="package" path="lotproduct">Product Lot</SidebarItem>
-          </template>
-        </SidebarItem>
-
-        <SidebarItem icon="package" path="manufacturingOrdersGraph">
-          Manufacturing
-          <template v-slot:children>
-            <SidebarItem icon="package" path="manufacturingOrdersGraph">Manuf. Orders Graph</SidebarItem>
-            <SidebarItem icon="factory" path="manufacturingProcess">Manuf. Process</SidebarItem>
-            <SidebarItem icon="factory" path="manufacturingPhase">Manuf. Phase</SidebarItem>
-          </template>
-        </SidebarItem>
-
-
-        <SidebarItem icon="people" path="funcionarios">Employees</SidebarItem>
-        <SidebarItem icon="person" path="clientes">Clientes</SidebarItem>
-        <SidebarItem icon="chat" path="chatbot">Chat Bot</SidebarItem>
-
-
       </div>
 
       <div class="flex w-full gap-1">

@@ -15,9 +15,24 @@ const routes = [
         meta: { requiresAuth: true },
         children: [
             {
-                path: '',
-                name: 'Index',
-                component: () => import('./views/dashboards/Index.vue'),
+                path: 'carModels',
+                name: 'CarModels',
+                component: () => import('./views/dashboards/CarModels.vue'),
+            },
+            {
+                path: 'orders',
+                name: 'Orders',
+                component: () => import('./views/dashboards/ClientOrders.vue'),
+            },
+            {
+                path: 'manufacturingOrders',
+                name: 'ManufacturingOrders',
+                component: () => import('./views/dashboards/ManufacturingOrders.vue'),
+            },
+            {
+                path: 'productionLines',
+                name: 'ProductionLines',
+                component: () => import('./views/dashboards/ProductionLines.vue'),
             },
             {
                 path: 'production-line-status',
@@ -97,12 +112,12 @@ const routes = [
             {
                 path: 'product-timeline',
                 name: 'ProductTimeline',
-                component: () => import('./views/dashboards/ProductTimeline.vue')
+                component: () => import('./views/dashboards/ProductTimeline.vue'),
             },
             {
                 path: 'wip-dashboard',
                 name: 'WipDashboard',
-                component: () => import('./views/dashboards/WipDashboard.vue')
+                component: () => import('./views/dashboards/WipDashboard.vue'),
             },
         ],
     },

@@ -4,6 +4,7 @@ using ApiTexPact.Models.Constants;
 using ApiTexPact.Repository.Interface;
 using ApiTexPact.Services.Interface;
 
+
 namespace ApiTexPact.Services;
 
 public class ManufacturingOrderService : IManufacturingOrderService
@@ -27,7 +28,41 @@ public class ManufacturingOrderService : IManufacturingOrderService
         return item == null ? null : MapToDTO(item);
     }
 
-    public async Task<object?> GetByIdWithDetails(int id) => await _repo.GetByIdWithDetails(id);
+    public async Task<ManufacturingOrderDetailDTO?> GetByIdWithDetails(int id)
+    {
+        var mo = await _repo.GetByIdWithDetails(id);
+        if (mo == null) return null;
+ 
+        return new ManufacturingOrderDetailDTO(
+            mo.Id,
+            mo.ClientOrderId,
+            mo.ClientOrder?.CustomerName ?? "",
+            mo.ManufacturingOrderNumber,
+            mo.StartDate,
+            mo.EndDate,
+            mo.Status,
+            mo.Products.Select(p => new ProductDetailDTO(
+                p.Id,
+                p.SerialNumber,
+                p.LotNumber,
+                p.CarModel?.Name,
+                p.ProductionDate,
+                p.ProductConfigs.Select(pc => new ProductConfigDetailDTO(
+                    pc.ConfigOptionId,
+                    pc.ConfigOption?.Config?.Item ?? "",
+                    pc.ConfigOption?.Value ?? ""
+                )).ToList(),
+                p.ProductPhases.Select(pp => new ProductPhaseDetailDTO(
+                    pp.Id,
+                    pp.ManufacturingPhase?.Name,
+                    pp.DatetimeIni,
+                    pp.DatetimeEnd,
+                    pp.Result,
+                    pp.Notes
+                )).ToList()
+            )).ToList()
+        );
+    }
 
     public async Task<IEnumerable<ManufacturingOrderDTO>> GetByStatus(string status)
     {
@@ -42,7 +77,7 @@ public class ManufacturingOrderService : IManufacturingOrderService
             ClientOrderId = dto.ClientOrderId,
             ManufacturingOrderNumber = dto.ManufacturingOrderNumber,
             StartDate = dto.StartDate,
-            Status = EntityStatus.Pending // USA A CONSTANTE
+            Status = EntityStatus.Pending
         };
 
         var created = await _repo.Create(entity);

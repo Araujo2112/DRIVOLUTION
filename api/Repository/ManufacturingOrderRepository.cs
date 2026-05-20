@@ -14,8 +14,15 @@ public class ManufacturingOrderRepository : IManufacturingOrderRepository
     public async Task<ManufacturingOrderModel?> GetByIdWithDetails(int id) =>
         await _context.ManufacturingOrders
             .Include(mo => mo.ClientOrder)
-            .Include(mo => mo.Products).ThenInclude(p => p.CarModel)
-            .Include(mo => mo.Products).ThenInclude(p => p.ProductPhases).ThenInclude(pp => pp.ManufacturingPhase)
+            .Include(mo => mo.Products)
+                .ThenInclude(p => p.CarModel)
+            .Include(mo => mo.Products)
+                .ThenInclude(p => p.ProductConfigs)
+                    .ThenInclude(pc => pc.ConfigOption)
+                        .ThenInclude(co => co.Config)
+            .Include(mo => mo.Products)
+                .ThenInclude(p => p.ProductPhases)
+                    .ThenInclude(pp => pp.ManufacturingPhase)
             .FirstOrDefaultAsync(mo => mo.Id == id);
     public async Task<IEnumerable<ManufacturingOrderModel>> GetByStatus(string status) =>
         await _context.ManufacturingOrders.Where(mo => mo.Status == status).Include(mo => mo.ClientOrder).ToListAsync();

@@ -4,37 +4,69 @@
 @tailwind components;
 @tailwind utilities;
 
-body{
+/* ── Tema Claro (padrão) ── */
+:root {
+  --color-bg:          #ffffff;
+  --color-surface:     #f8fafc;
+  --color-surface-2:   #f1f5f9;
+  --color-border:      #e2e8f0;
+  --color-border-soft: #cbd5e1;
+  --color-text:        #0f172a;
+  --color-text-muted:  #64748b;
+  --color-primary:     #3E55F2;
+  --color-primary-bg:  #eef0fe;
+}
+
+/* ── Tema Escuro ── */
+.dark {
+  --color-bg:          #0f172a;
+  --color-surface:     #1e293b;
+  --color-surface-2:   #334155;
+  --color-border:      #334155;
+  --color-border-soft: #475569;
+  --color-text:        #f8fafc;
+  --color-text-muted:  #94a3b8;
+  --color-primary:     #6270f5;
+  --color-primary-bg:  #1e2a6e;
+}
+
+body {
   @apply overflow-auto;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Roboto', sans-serif;
 }
 
 #app {
-  @apply flex flex-col w-screen h-screen bg-background-950 overflow-hidden;
+  @apply flex flex-col w-screen h-screen overflow-hidden;
+  background-color: var(--color-bg);
 }
 
 .material-symbols-rounded {
   font-variation-settings: 'FILL' 1;
 }
 
-table{
+/* ── Tabelas ── */
+table {
   @apply w-full rounded-xl overflow-hidden;
 
-  thead{
-    @apply bg-primary-500 text-white;
+  thead {
+    background-color: var(--color-primary);
+    @apply text-white;
   }
 
-  tbody{
-    tr{
-      @apply bg-background-800;
+  tbody {
+    tr {
+      background-color: var(--color-surface);
 
-      &:nth-child(odd){
-        @apply bg-background-900
+      &:nth-child(odd) {
+        background-color: var(--color-surface-2);
       }
 
-      td{
+      td {
         @apply p-2;
 
-        div{
+        div {
           @apply flex items-center gap-2;
         }
       }
@@ -42,7 +74,18 @@ table{
   }
 }
 
+/* ── Inputs ── */
 input,
-select{
-  @apply bg-gray-100 w-full p-2 rounded-md;
+select {
+  @apply w-full p-2 rounded-md;
+  background-color: var(--color-surface);
+  border: 0.5px solid var(--color-border);
+  color: var(--color-text);
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
 }

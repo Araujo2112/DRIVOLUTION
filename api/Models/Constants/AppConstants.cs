@@ -1,7 +1,7 @@
 namespace ApiTexPact.Models.Constants;
 
-    // Para a tabela ManufacturingPhase e QualityCheck
-public static class AppConstants
+// Para a tabela ManufacturingPhase e QualityCheck
+public static class Severity 
 {
     public const string None = "none";
     public const string Minor = "minor";
@@ -11,10 +11,10 @@ public static class AppConstants
     // Método auxiliar para ajudar o Service a decidir
     public static int GetWeight(string severity) => severity.ToLower() switch
     {
-        None => 0,
-        Minor => 1,
-        Major => 2,
-        Critical => 3,
+        "none" => 0,
+        "minor" => 1,
+        "major" => 2,
+        "critical" => 3,
         _ => 99
     };
 }

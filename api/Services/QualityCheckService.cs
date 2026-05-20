@@ -51,9 +51,9 @@ public class QualityCheckService : IQualityCheckService
             throw new KeyNotFoundException("Fase de fabrico não encontrada.");
 
         // 2. Lógica de Decisão Automática usando os pesos das Constantes
-        int weightObserved = AppConstants.GetWeight(dto.Severity);
-        int weightMax = AppConstants.GetWeight(phase.MaxAcceptableSeverity);
-        int weightRework = AppConstants.GetWeight(phase.ReworkSeverity);
+        int weightObserved = Severity.GetWeight(dto.Severity);
+        int weightMax = Severity.GetWeight(phase.MaxAcceptableSeverity);
+        int weightRework = Severity.GetWeight(phase.ReworkSeverity);
 
         string finalStatus;
 

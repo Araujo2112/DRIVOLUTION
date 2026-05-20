@@ -20,21 +20,9 @@ const routes = [
                 component: () => import('./views/dashboards/Index.vue'),
             },
             {
-                path: 'conta',
-                name: 'Account',
-                component: () => import('./views/dashboards/Employee.vue'),
-                beforeEnter: (to, from, next) => {
-                    const userData = JSON.parse(localStorage.getItem('texpact_user_data'));
-                    if (userData && userData.id) {
-                        to.params.id = userData.id;
-                    }
-                    next();
-                },
-            },
-            {
-                path: 'settings',
-                name: 'Settings',
-                component: () => import('./views/dashboards/Settings.vue'),
+                path: 'production-line-status',
+                name: 'ProductionLineStatus',
+                component: () => import('./views/dashboards/ProductionLineStatus.vue'),
             },
             {
                 path: 'plantaFabrica',
@@ -47,44 +35,9 @@ const routes = [
                 component: () => import('./views/dashboards/Checkpoint.vue'),
             },
             {
-                path: 'contentores',
-                name: 'Containers',
-                component: () => import('./views/dashboards/Containers.vue'),
-            },
-            {
-                path: 'contentores/:id',
-                name: 'Container',
-                component: () => import('./components/FactoryFloorItems/Containers/ContainerView.vue'),
-            },
-            {
-                path: 'historicoContentor',
-                name: 'ContainerHistory',
-                component: () => import('./views/dashboards/ContainerHistory.vue'),
-            },
-            {
-                path: 'itens',
-                name: 'ItemInContainer',
-                component: () => import('./views/dashboards/ItemInContainer.vue'),
-            },
-            {
-                path: 'itens/historico',
-                name: 'ItemHistory',
-                component: () => import('./views/dashboards/ItemHistory.vue'),
-            },
-            {
-                path: 'lote',
-                name: 'LotOfRawMaterial',
-                component: () => import('./views/dashboards/LotOfRawMaterial.vue'),
-            },
-            {
-                path: 'lote/material',
-                name: 'RawMaterial',
-                component: () => import('./views/dashboards/RawMaterial.vue'),
-            },
-            {
-                path: 'itemMaterialNaoProcessado',
-                name: 'ItemOfRawMaterial',
-                component: () => import('./views/dashboards/ItemOfRawMaterial.vue'),
+                path: 'clientes',
+                name: 'Clientes',
+                component: () => import('./views/dashboards/Client.vue'),
             },
             {
                 path: 'funcionarios',
@@ -97,57 +50,60 @@ const routes = [
                 component: () => import('./views/dashboards/Employee.vue'),
             },
             {
-                path:'manufacturingOrderHistory',
+                path: 'manufacturingOrderHistory',
                 name: 'ManufacturingOrderHistory',
                 component: () => import('./views/dashboards/ManufacturingOrderHistory.vue'),
             },
             {
-                path: 'clientes',
-                name: 'Clientes',
-                component: () => import('./views/dashboards/Client.vue')
-            },
-            {
                 path: 'manufacturingProcess',
-                name:"ManufacturingProcess",
-                component: () => import('./views/dashboards/ManufacturingProcess.vue')
+                name: 'ManufacturingProcess',
+                component: () => import('./views/dashboards/ManufacturingProcess.vue'),
             },
             {
                 path: 'manufacturingPhase',
-                name:"ManufacturingPhase",
-                component: () => import('./views/dashboards/ManufacturingPhase.vue')
+                name: 'ManufacturingPhase',
+                component: () => import('./views/dashboards/ManufacturingPhase.vue'),
             },
             {
                 path: 'product',
-                name:"Product",
-                component: () => import('./views/dashboards/Product.vue')
+                name: 'Product',
+                component: () => import('./views/dashboards/Product.vue'),
             },
             {
                 path: 'lotproduct',
-                name:"ProductLot",
-                component: () => import('./views/dashboards/ProductLot.vue')
+                name: 'ProductLot',
+                component: () => import('./views/dashboards/ProductLot.vue'),
             },
             {
-                path:'ordensManufatura',
+                path: 'ordensManufatura',
                 name: 'OrdensManufatura',
                 component: () => import('./views/dashboards/ManufacturingOrder.vue'),
             },
             {
-                path:'manufacturingOrdersGraph',
-                name: 'manufacturingOrdersGraph',
+                path: 'manufacturingOrdersGraph',
+                name: 'ManufacturingOrdersGraph',
                 component: () => import('./views/dashboards/ManufacturingOrderGraphVisualization.vue'),
             },
             {
                 path: 'chatbot',
                 name: 'ChatBot',
-                component: () => import('@/views/dashboards/ChatBot.vue')
+                component: () => import('./views/dashboards/ChatBot.vue'),
             },
             {
                 path: 'Controlpanel',
                 name: 'ControlPanel',
-                component: () => import('@/views/dashboards/ControlPanel.vue')
+                component: () => import('./views/dashboards/ControlPanel.vue'),
             },
-
-
+            {
+                path: 'product-timeline',
+                name: 'ProductTimeline',
+                component: () => import('./views/dashboards/ProductTimeline.vue')
+            },
+            {
+                path: 'wip-dashboard',
+                name: 'WipDashboard',
+                component: () => import('./views/dashboards/WipDashboard.vue')
+            },
         ],
     },
     { path: '/login', component: Login },

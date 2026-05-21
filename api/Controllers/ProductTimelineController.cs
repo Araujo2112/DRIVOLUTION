@@ -41,7 +41,6 @@ public class ProductTimelineController : ControllerBase
                         ELSE EXTRACT(EPOCH FROM (pp.datetime_end - pp.datetime_ini))::INT
                     END AS "DurationSeconds",
                     pp.result AS "Result",
-                    pp.condition AS "Condition",
                     pp.notes AS "Notes"
                 FROM product_phase pp
                 JOIN product p ON p.id = pp.product_id
@@ -77,7 +76,6 @@ public class ProductTimelineController : ControllerBase
         public DateTime? EndedAt { get; set; }
         public int? DurationSeconds { get; set; }
         public string? Result { get; set; }
-        public string? Condition { get; set; }
         public string? Notes { get; set; }
     }
 }

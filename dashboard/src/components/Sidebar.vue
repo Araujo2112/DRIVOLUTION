@@ -39,7 +39,7 @@ function logout() {
   <div class="h-full min-w-60 max-w-60 py-2">
     <div class="h-full rounded-2xl flex flex-col bg-background-100 dark:bg-background-900 p-4">
       <div class="flex w-full px-4 py-6 object-center object-contain items-center overflow-hidden gap-0">
-        <img src="@/assets/icons/drivolution-logo.png" alt="Eco build icon"/>
+        <img src="@/assets/icons/drivolution-logo.png" alt="Drivolution logo" />
       </div>
 
       <div class="flex flex-col w-full h-full items-center gap-2 text-2xl overflow-y-auto overflow-x-hidden">
@@ -48,28 +48,15 @@ function logout() {
         <SidebarItem icon="assignment" path="manufacturingOrders">Manuf. Orders</SidebarItem>
         <SidebarItem icon="conveyor_belt" path="productionLines">Prod. Lines</SidebarItem>
 
-
-
-        
-        <SidebarItem icon="space_dashboard" path="/">Dashboard</SidebarItem>
-        <SidebarItem icon="dashboard" path="Controlpanel">Overview</SidebarItem>
-
-        <SidebarItem icon="factory" path="plantaFabrica">
-          Sections and Checkpoints
-          <template v-slot:children>
-            <SidebarItem icon="factory" path="plantaFabrica">Factory Floor</SidebarItem>
-            <SidebarItem icon="gate" path="portico">Gate</SidebarItem>
-          </template>
-        </SidebarItem>
+        <SidebarItem icon="monitoring" path="production-line-status">Estado da Linha</SidebarItem>
+        <SidebarItem icon="timeline" path="product-timeline">Timeline</SidebarItem>
+        <SidebarItem icon="dashboard" path="wip-dashboard">WIP Dashboard</SidebarItem>
       </div>
 
       <div class="flex w-full gap-1">
-        <SidebarItem icon="account_circle" path="conta">{{ userData ? userData.firstName : "" }}</SidebarItem>
-        <SidebarItem icon="settings" path="settings" />
-        <SidebarItem icon="logout" @click="logout()" danger/>
+        <SidebarItem icon="logout" @click="logout()" danger />
       </div>
     </div>
-
   </div>
 </template>
 

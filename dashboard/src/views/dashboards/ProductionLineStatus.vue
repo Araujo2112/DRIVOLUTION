@@ -1,103 +1,89 @@
 <template>
-  <div class="p-6">
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-3xl font-bold">
-        Visualizador de Linha de Produção
-      </h1>
+  <div class="p-8 w-full">
 
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-8">
+      <div>
+        <h1 class="text-2xl font-medium text-background-900 dark:text-background-50">
+          {{ t('lineStatus.title') }}
+        </h1>
+        <p class="text-sm text-background-600 dark:text-background-400 mt-1">
+          {{ t('lineStatus.subtitle') }}
+        </p>
+      </div>
       <button
-        class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
         @click="loadStatus"
+        class="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
       >
-        Atualizar
+        <span class="material-symbols-rounded text-base">refresh</span>
+        {{ t('common.refresh') }}
       </button>
     </div>
 
-    <!-- KPIs -->
-    <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-      <div class="rounded bg-white p-4 shadow">
-        <p class="text-sm text-gray-500">Linhas Ativas</p>
-        <p class="text-3xl font-bold text-green-600">
-          {{ activeLines }}
-        </p>
-      </div>
-
-      <div class="rounded bg-white p-4 shadow">
-        <p class="text-sm text-gray-500">Produtos em Produção</p>
-        <p class="text-3xl font-bold text-blue-600">
-          {{ productsInProduction }}
-        </p>
-      </div>
-
-      <div class="rounded bg-white p-4 shadow">
-        <p class="text-sm text-gray-500">Workstations Livres</p>
-        <p class="text-3xl font-bold text-gray-700">
-          {{ freeStations }}
-        </p>
-      </div>
+    <div v-if="loading" class="flex items-center gap-2 text-background-500 text-sm py-12">
+      <span class="material-symbols-rounded animate-spin text-lg">autorenew</span>
+      {{ t('common.loading') }}
     </div>
 
-    <!-- Tabela -->
-    <div class="overflow-x-auto rounded bg-white shadow">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="p-4 text-left">Linha</th>
-            <th class="p-4 text-left">Workstation</th>
-            <th class="p-4 text-left">Produto</th>
-            <th class="p-4 text-left">Fase Atual</th>
-            <th class="p-4 text-left">Estado</th>
-            <th class="p-4 text-left">Início</th>
-            <th class="p-4 text-left">Previsão de Fim</th>
-            <th class="p-4 text-left">Tempo Restante</th>
-          </tr>
-        </thead>
+    <div v-else>
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-3 gap-4 mb-8">
+        <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-5">
+          <p class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.activeLines') }}</p>
+          <p class="text-3xl font-medium text-success-500 mt-2">{{ activeLines }}</p>
+        </div>
+        <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-5">
+          <p class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.inProduction') }}</p>
+          <p class="text-3xl font-medium text-primary-500 mt-2">{{ productsInProduction }}</p>
+        </div>
+        <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-5">
+          <p class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.freeStations') }}</p>
+          <p class="text-3xl font-medium text-background-600 dark:text-background-300 mt-2">{{ freeStations }}</p>
+        </div>
+      </div>
 
-        <tbody>
-          <tr
-            v-for="item in status"
-            :key="item.workstationId"
-            class="border-t hover:bg-gray-50"
+      <!-- Tabela -->
+      <div class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
+        <div class="grid grid-cols-8 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.fields.line') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.fields.workstation') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.fields.product') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.fields.phase') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.fields.status') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.fields.start') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.fields.estimatedEnd') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('lineStatus.fields.remaining') }}</span>
+        </div>
+      </div>
+
+      <div v-if="status.length === 0" class="text-center py-12 text-background-500">
+        <span class="material-symbols-rounded text-4xl block mb-2">factory</span>
+        <p class="text-sm">{{ t('lineStatus.empty') }}</p>
+      </div>
+
+      <div
+        v-for="item in status"
+        :key="item.workstationId"
+        class="grid grid-cols-8 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
+      >
+        <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ item.productionLineName }}</span>
+        <span class="text-sm text-background-600 dark:text-background-400">{{ item.workstationType }}</span>
+        <span class="text-sm text-background-600 dark:text-background-400">{{ item.serialNumber || '—' }}</span>
+        <span class="text-sm text-background-600 dark:text-background-400">{{ item.currentPhase || '—' }}</span>
+        <div>
+          <span
+            class="text-xs font-medium px-2 py-1 rounded-full"
+            :class="statusClass(item)"
           >
-            <td class="p-4 font-medium">
-              {{ item.productionLineName }}
-            </td>
-
-            <td class="p-4">
-              {{ item.workstationType }}
-            </td>
-
-            <td class="p-4">
-              {{ item.serialNumber || '—' }}
-            </td>
-
-            <td class="p-4">
-              {{ item.currentPhase || '—' }}
-            </td>
-
-            <td class="p-4">
-              <span
-                class="rounded px-3 py-1 text-xs font-semibold text-white"
-                :class="getStatusColor(item)"
-              >
-                {{ getStatusText(item) }}
-              </span>
-            </td>
-
-            <td class="p-4">
-              {{ formatDate(item.startedAt) }}
-            </td>
-
-            <td class="p-4">
-              {{ formatDate(item.estimatedFinish) }}
-            </td>
-
-            <td class="p-4 font-medium">
-              {{ getRemainingTime(item.estimatedFinish) }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            {{ statusText(item) }}
+          </span>
+        </div>
+        <span class="text-sm text-background-500">{{ formatDate(item.startedAt) }}</span>
+        <span class="text-sm text-background-500">{{ formatDate(item.estimatedFinish) }}</span>
+        <span class="text-sm font-medium" :class="isLate(item) ? 'text-danger-500' : 'text-background-700 dark:text-background-300'">
+          {{ getRemainingTime(item.estimatedFinish) }}
+        </span>
+      </div>
     </div>
   </div>
 </template>
@@ -105,6 +91,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import axios from '@/axios'
+import { useI18n } from 'vue-i18n'
+import { toast } from '@/plugins/toast'
+
+const { t } = useI18n()
 
 type ProductionLineStatus = {
   productionLineId: number
@@ -122,88 +112,66 @@ type ProductionLineStatus = {
 }
 
 const status = ref<ProductionLineStatus[]>([])
+const loading = ref(false)
 
 async function loadStatus() {
-  const response = await axios.get('/production-lines/status')
-  status.value = response.data
+  loading.value = true
+  try {
+    const response = await axios.get('/api/production-lines/status')
+    status.value = response.data?.$values ?? response.data ?? []
+  } catch {
+    toast.error(t('errors.loadFailed'))
+  } finally {
+    loading.value = false
+  }
 }
 
 function formatDate(value: string | null) {
   if (!value) return '—'
-
   return new Date(value).toLocaleString('pt-PT')
+}
+
+function isLate(item: ProductionLineStatus) {
+  if (!item.estimatedFinish) return false
+  return new Date(item.estimatedFinish).getTime() < new Date().getTime()
 }
 
 function getRemainingTime(date: string | null) {
   if (!date) return '—'
-
-  const now = new Date().getTime()
-  const end = new Date(date).getTime()
-
-  const diff = end - now
-
-  if (diff <= 0) {
-    return 'Atrasado'
-  }
-
+  const diff = new Date(date).getTime() - new Date().getTime()
+  if (diff <= 0) return t('lineStatus.late')
   const seconds = Math.floor(diff / 1000)
-
+  const minutes = Math.floor(seconds / 60)
+  if (minutes > 0) return `${minutes}m ${seconds % 60}s`
   return `${seconds}s`
 }
 
-function getStatusText(item: ProductionLineStatus) {
-  if (!item.productId) return 'Livre'
-
-  const now = new Date().getTime()
-  const end = item.estimatedFinish
-    ? new Date(item.estimatedFinish).getTime()
-    : 0
-
-  if (end < now) return 'Atrasado'
-
-  return 'Em Produção'
+function statusText(item: ProductionLineStatus) {
+  if (!item.productId) return t('lineStatus.status.free')
+  if (isLate(item)) return t('lineStatus.status.late')
+  return t('lineStatus.status.inProduction')
 }
 
-function getStatusColor(item: ProductionLineStatus) {
-  if (!item.productId) {
-    return 'bg-gray-500'
-  }
-
-  const now = new Date().getTime()
-  const end = item.estimatedFinish
-    ? new Date(item.estimatedFinish).getTime()
-    : 0
-
-  if (end < now) {
-    return 'bg-red-600'
-  }
-
-  return 'bg-green-600'
+function statusClass(item: ProductionLineStatus) {
+  if (!item.productId) return 'bg-background-200 dark:bg-background-700 text-background-600 dark:text-background-400'
+  if (isLate(item)) return 'bg-danger-100 text-danger-700'
+  return 'bg-success-100 text-success-700'
 }
 
 const activeLines = computed(() =>
-  status.value.filter(x => x.productId).length
+  new Set(status.value.filter(x => x.productId).map(x => x.productionLineId)).size
 )
 
 const productsInProduction = computed(() =>
-  status.value.filter(x => x.productId).length
+  new Set(status.value.filter(x => x.productId).map(x => x.productId)).size
 )
 
 const freeStations = computed(() =>
   status.value.filter(x => !x.productId).length
 )
 
-let interval: number
-
 onMounted(() => {
   loadStatus()
-
-  interval = window.setInterval(() => {
-    loadStatus()
-  }, 5000)
 })
 
-onUnmounted(() => {
-  clearInterval(interval)
-})
 </script>

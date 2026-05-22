@@ -1,180 +1,127 @@
-<script setup lang="ts">
-import { onMounted, ref } from "vue";
-import axios from "@/axios";
-
-const loading = ref(false);
-const errorMessage = ref("");
-
-const summary = ref({
-  totalProducts: 0,
-  inProgress: 0,
-  completed: 0,
-});
-
-const items = ref<any[]>([]);
-
-async function loadWip() {
-  try {
-    loading.value = true;
-    errorMessage.value = "";
-
-    const response = await axios.get("/production-lines/wip");
-
-    summary.value = {
-      totalProducts: response.data.totalProducts ?? 0,
-      inProgress: response.data.inProgress ?? 0,
-      completed: response.data.completed ?? 0,
-    };
-
-    items.value = response.data.items?.$values ?? response.data.items ?? [];
-  } catch (error: any) {
-    console.error(error);
-    errorMessage.value =
-      error?.response?.data || "Erro ao carregar dashboard WIP.";
-  } finally {
-    loading.value = false;
-  }
-}
-
-function formatDate(date: string | null) {
-  if (!date) return "-";
-  return new Date(date).toLocaleString("pt-PT");
-}
-
-function formatDuration(seconds: number | null) {
-  if (seconds === null || seconds === undefined) return "-";
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
-
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m ${remainingSeconds}s`;
-
-  return `${remainingSeconds}s`;
-}
-
-function statusLabel(status: string | null) {
-  if (status === "in_progress") return "Em produção";
-  if (status === "completed") return "Concluído";
-  return status || "-";
-}
-</script>
-
 <template>
-  <div class="p-6">
-    <div class="flex items-center justify-between mb-6">
+  <div class="p-8 w-full">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-8">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">
-          Dashboard WIP
+        <h1 class="text-2xl font-medium text-background-900 dark:text-background-50">
+          {{ t('wip.title') }}
         </h1>
-        <p class="text-sm text-gray-500 mt-1">
-          Produtos atualmente em curso na linha de produção.
+        <p class="text-sm text-background-600 dark:text-background-400 mt-1">
+          {{ t('wip.subtitle') }}
         </p>
       </div>
-
       <button
-        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         @click="loadWip"
+        class="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
       >
-        Atualizar
+        <span class="material-symbols-rounded text-base">refresh</span>
+        {{ t('common.refresh') }}
       </button>
     </div>
 
-    <div v-if="loading" class="text-gray-500">
-      A carregar dashboard...
-    </div>
-
-    <div v-else-if="errorMessage" class="bg-red-100 text-red-700 p-4 rounded-lg">
-      {{ errorMessage }}
+    <!-- Loading -->
+    <div v-if="loading" class="flex items-center gap-2 text-background-500 text-sm py-12">
+      <span class="material-symbols-rounded animate-spin text-lg">autorenew</span>
+      {{ t('common.loading') }}
     </div>
 
     <div v-else>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-white rounded-xl shadow p-5">
-          <p class="text-sm text-gray-500">Total de Produtos</p>
-          <p class="text-3xl font-bold text-gray-800 mt-2">
-            {{ summary.totalProducts }}
-          </p>
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-3 gap-4 mb-8">
+        <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-5">
+          <p class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.totalProducts') }}</p>
+          <p class="text-3xl font-medium text-background-900 dark:text-background-50 mt-2">{{ summary.totalProducts }}</p>
         </div>
-
-        <div class="bg-white rounded-xl shadow p-5">
-          <p class="text-sm text-gray-500">Em Produção</p>
-          <p class="text-3xl font-bold text-blue-600 mt-2">
-            {{ summary.inProgress }}
-          </p>
+        <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-5">
+          <p class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.inProduction') }}</p>
+          <p class="text-3xl font-medium text-primary-500 mt-2">{{ summary.inProgress }}</p>
         </div>
-
-        <div class="bg-white rounded-xl shadow p-5">
-          <p class="text-sm text-gray-500">Concluídos</p>
-          <p class="text-3xl font-bold text-green-600 mt-2">
-            {{ summary.completed }}
-          </p>
+        <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-5">
+          <p class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.completed') }}</p>
+          <p class="text-3xl font-medium text-success-500 mt-2">{{ summary.completed }}</p>
         </div>
       </div>
 
-      <div class="bg-white rounded-xl shadow overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-700 text-white">
-            <tr>
-              <th class="px-4 py-3 text-left">Produto</th>
-              <th class="px-4 py-3 text-left">Linha</th>
-              <th class="px-4 py-3 text-left">Workstation</th>
-              <th class="px-4 py-3 text-left">Fase Atual</th>
-              <th class="px-4 py-3 text-left">Estado</th>
-              <th class="px-4 py-3 text-left">Início</th>
-              <th class="px-4 py-3 text-left">Tempo Atual</th>
-            </tr>
-          </thead>
+      <!-- Tabela -->
+      <div class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
+        <div class="grid grid-cols-7 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider col-span-2">{{ t('wip.fields.product') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.line') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.workstation') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.phase') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.start') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.elapsed') }}</span>
+        </div>
 
-          <tbody>
-            <tr
-              v-for="item in items"
-              :key="item.productId + '-' + item.currentPhase"
-              class="border-b hover:bg-gray-50"
-            >
-              <td class="px-4 py-3 font-semibold">
-                {{ item.serialNumber }}
-              </td>
+        <div v-if="items.length === 0" class="text-center py-12 text-background-500">
+          <span class="material-symbols-rounded text-4xl block mb-2">inventory_2</span>
+          <p class="text-sm">{{ t('wip.empty') }}</p>
+        </div>
 
-              <td class="px-4 py-3">
-                {{ item.productionLineName }}
-              </td>
-
-              <td class="px-4 py-3">
-                {{ item.workstation }}
-              </td>
-
-              <td class="px-4 py-3">
-                {{ item.currentPhase }}
-              </td>
-
-              <td class="px-4 py-3">
-                <span
-                  class="px-2 py-1 rounded-full text-xs font-medium"
-                  :class="item.wipStatus === 'completed'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-yellow-100 text-yellow-700'"
-                >
-                  {{ statusLabel(item.wipStatus) }}
-                </span>
-              </td>
-
-              <td class="px-4 py-3">
-                {{ formatDate(item.startedAt) }}
-              </td>
-
-              <td class="px-4 py-3">
-                {{ formatDuration(item.elapsedSeconds) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div v-if="items.length === 0" class="p-4 text-gray-500">
-          Não existem produtos em produção.
+        <div
+          v-for="item in items"
+          :key="item.productId + '-' + item.currentPhase"
+          class="grid grid-cols-7 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
+        >
+          <div class="col-span-2">
+            <div class="text-sm font-medium text-background-900 dark:text-background-50">{{ item.serialNumber }}</div>
+          </div>
+          <span class="text-sm text-background-600 dark:text-background-400">{{ item.productionLineName }}</span>
+          <span class="text-sm text-background-600 dark:text-background-400">{{ item.workstation }}</span>
+          <span class="text-sm text-background-600 dark:text-background-400">{{ item.currentPhase }}</span>
+          <span class="text-sm text-background-500">{{ formatDate(item.startedAt) }}</span>
+          <span class="text-sm font-medium text-primary-500">{{ formatDuration(item.elapsedSeconds) }}</span>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import axios from '@/axios'
+import { useI18n } from 'vue-i18n'
+import { toast } from '@/plugins/toast'
+
+const { t } = useI18n()
+
+const loading = ref(false)
+const errorMessage = ref('')
+const summary = ref({ totalProducts: 0, inProgress: 0, completed: 0 })
+const items = ref<any[]>([])
+
+async function loadWip() {
+  loading.value = true
+  try {
+    const response = await axios.get('/api/production-lines/wip')
+    summary.value = {
+      totalProducts: response.data.totalProducts ?? 0,
+      inProgress: response.data.inProgress ?? 0,
+      completed: response.data.completed ?? 0,
+    }
+    items.value = response.data.items?.$values ?? response.data.items ?? []
+  } catch {
+    toast.error(t('errors.loadFailed'))
+  } finally {
+    loading.value = false
+  }
+}
+
+function formatDate(date: string | null) {
+  if (!date) return '-'
+  return new Date(date).toLocaleString('pt-PT')
+}
+
+function formatDuration(seconds: number | null) {
+  if (seconds === null || seconds === undefined) return '-'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const remainingSeconds = seconds % 60
+  if (hours > 0) return `${hours}h ${minutes}m`
+  if (minutes > 0) return `${minutes}m ${remainingSeconds}s`
+  return `${remainingSeconds}s`
+}
+
+onMounted(() => loadWip())
+</script>

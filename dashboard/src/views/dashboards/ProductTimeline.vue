@@ -105,7 +105,7 @@ async function loadTimeline() {
   timeline.value = []
   product.value = null
   try {
-    const response = await axios.get(`/api/products/${productId.value}/timeline`)
+    const response = await axios.get(`/products/${productId.value}/timeline`)
     product.value = {
       id: response.data.productId,
       serialNumber: response.data.serialNumber,

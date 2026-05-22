@@ -117,7 +117,7 @@ const loading = ref(false)
 async function loadStatus() {
   loading.value = true
   try {
-    const response = await axios.get('/api/production-lines/status')
+    const response = await axios.get('/production-lines/status')
     status.value = response.data?.$values ?? response.data ?? []
   } catch {
     toast.error(t('errors.loadFailed'))

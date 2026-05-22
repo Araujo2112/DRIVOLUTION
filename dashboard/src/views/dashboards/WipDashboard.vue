@@ -94,7 +94,7 @@ const items = ref<any[]>([])
 async function loadWip() {
   loading.value = true
   try {
-    const response = await axios.get('/api/production-lines/wip')
+    const response = await axios.get('/production-lines/wip')
     summary.value = {
       totalProducts: response.data.totalProducts ?? 0,
       inProgress: response.data.inProgress ?? 0,

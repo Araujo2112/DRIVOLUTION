@@ -38,22 +38,42 @@ export interface CreateConfigOptionDTO {
 }
 
 export const carModelService = {
-  getAll: () => axios.get<CarModel[]>('/api/CarModel'),
-  getById: (id: number) => axios.get<CarModel>(`/api/CarModel/${id}`),
-  getConfigs: (id: number) => axios.get<Config[]>(`/api/CarModel/${id}/configs`),
-  create: (dto: CreateCarModelDTO) => axios.post<CarModel>('/api/CarModel', dto),
-  update: (id: number, dto: Partial<CreateCarModelDTO>) => axios.put(`/api/CarModel/${id}`, dto),
-  delete: (id: number) => axios.delete(`/api/CarModel/${id}`),
+  getAll: () => axios.get<CarModel[]>('/CarModel'),
+
+  getById: (id: number) =>
+    axios.get<CarModel>(`/CarModel/${id}`),
+
+  getConfigs: (id: number) =>
+    axios.get<Config[]>(`/CarModel/${id}/configs`),
+
+  create: (dto: CreateCarModelDTO) =>
+    axios.post<CarModel>('/CarModel', dto),
+
+  update: (id: number, dto: Partial<CreateCarModelDTO>) =>
+    axios.put(`/CarModel/${id}`, dto),
+
+  delete: (id: number) =>
+    axios.delete(`/CarModel/${id}`),
 }
 
 export const configService = {
-  getByModel: (modelId: number) => axios.get<Config[]>(`/api/Config/model/${modelId}`),
-  create: (dto: CreateConfigDTO) => axios.post<Config>('/api/Config', dto),
-  delete: (id: number) => axios.delete(`/api/Config/${id}`),
+  getByModel: (modelId: number) =>
+    axios.get<Config[]>(`/Config/model/${modelId}`),
+
+  create: (dto: CreateConfigDTO) =>
+    axios.post<Config>('/Config', dto),
+
+  delete: (id: number) =>
+    axios.delete(`/Config/${id}`),
 }
 
 export const configOptionService = {
-  getAll: () => axios.get<ConfigOption[]>('/api/ConfigOption'),
-  create: (dto: CreateConfigOptionDTO) => axios.post<ConfigOption>('/api/ConfigOption', dto),
-  delete: (id: number) => axios.delete(`/api/ConfigOption/${id}`),
+  getAll: () =>
+    axios.get<ConfigOption[]>('/ConfigOption'),
+
+  create: (dto: CreateConfigOptionDTO) =>
+    axios.post<ConfigOption>('/ConfigOption', dto),
+
+  delete: (id: number) =>
+    axios.delete(`/ConfigOption/${id}`),
 }

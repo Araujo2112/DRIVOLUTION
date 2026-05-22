@@ -16,9 +16,9 @@ export interface UpdateManufacturingOrderDTO {
 }
 
 export const manufacturingOrderService = {
-  getAll: () => axios.get<ManufacturingOrder[]>('/api/ManufacturingOrder'),
-  getById: (id: number) => axios.get<ManufacturingOrder>(`/api/ManufacturingOrder/${id}`),
-  getByStatus: (status: string) => axios.get<ManufacturingOrder[]>(`/api/ManufacturingOrder/status/${status}`),
-  update: (id: number, dto: UpdateManufacturingOrderDTO) => axios.put(`/api/ManufacturingOrder/${id}`, dto),
-  delete: (id: number) => axios.delete(`/api/ManufacturingOrder/${id}`),
+  getAll: () => axios.get<ManufacturingOrder[]>('/ManufacturingOrder'),
+  getById: (id: number) => axios.get<ManufacturingOrder>(`/ManufacturingOrder/${id}`),
+  getByStatus: (status: string) => axios.get<ManufacturingOrder[]>(`/ManufacturingOrder/status/${status}`),
+  update: (id: number, dto: UpdateManufacturingOrderDTO) => axios.put(`/ManufacturingOrder/${id}`, dto),
+  delete: (id: number) => axios.delete(`/ManufacturingOrder/${id}`),
 }

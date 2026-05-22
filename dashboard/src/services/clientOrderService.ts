@@ -31,8 +31,8 @@ export interface CreateClientOrderResult {
 }
 
 export const clientOrderService = {
-  getAll: () => axios.get<ClientOrder[]>('/api/ClientOrder'),
-  getById: (id: number) => axios.get<ClientOrder>(`/api/ClientOrder/${id}`),
-  create: (dto: CreateClientOrderDTO) => axios.post<CreateClientOrderResult>('/api/ClientOrder', dto),
-  delete: (id: number) => axios.delete(`/api/ClientOrder/${id}`),
+  getAll: () => axios.get<ClientOrder[]>('/ClientOrder'),
+  getById: (id: number) => axios.get<ClientOrder>(`/ClientOrder/${id}`),
+  create: (dto: CreateClientOrderDTO) => axios.post<CreateClientOrderResult>('/ClientOrder', dto),
+  delete: (id: number) => axios.delete(`/ClientOrder/${id}`),
 }

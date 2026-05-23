@@ -54,35 +54,73 @@
         </div>
 
         <!-- Rows -->
-        <div
-          v-for="order in filteredOrders"
-          :key="order.id"
-          class="grid grid-cols-6 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
-        >
-          <div class="col-span-2">
-            <div class="text-sm font-medium text-background-900 dark:text-background-50">{{ order.manufacturingOrderNumber }}</div>
-            <div class="text-xs text-background-400 mt-0.5">ID #{{ order.id }}</div>
+        <template v-for="order in filteredOrders" :key="order.id">
+          <div
+            class="grid grid-cols-6 px-4 py-3 border-b border-background-200 dark:border-background-700 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center cursor-pointer"
+            @click="toggleOrder(order)"
+          >
+            <div class="col-span-2 flex items-center gap-2">
+              <span
+                class="material-symbols-rounded text-background-400 text-base transition-transform duration-200"
+                :class="expandedOrderId === order.id ? 'rotate-180' : ''"
+              >expand_more</span>
+              <div>
+                <div class="text-sm font-medium text-background-900 dark:text-background-50">{{ order.manufacturingOrderNumber }}</div>
+                <div class="text-xs text-background-400 mt-0.5">ID #{{ order.id }}</div>
+              </div>
+            </div>
+            <span class="text-sm text-background-700 dark:text-background-300">{{ order.customerName }}</span>
+            <span class="text-sm text-background-500">{{ formatDate(order.startDate) }}</span>
+            <div>
+              <span class="text-xs font-medium px-2 py-1 rounded-full" :class="statusClass(order.status)">
+                {{ statusLabel(order.status) }}
+              </span>
+            </div>
+            <div class="flex justify-end gap-1" @click.stop>
+              <button
+                @click="openUpdateStatus(order)"
+                class="p-1.5 rounded-lg text-background-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-background-700 transition-colors"
+                :title="t('mo.updateStatus')"
+              >
+                <span class="material-symbols-rounded text-base">edit</span>
+              </button>
+            </div>
           </div>
-          <span class="text-sm text-background-700 dark:text-background-300">{{ order.customerName }}</span>
-          <span class="text-sm text-background-500">{{ formatDate(order.startDate) }}</span>
-          <div>
-            <span
-              class="text-xs font-medium px-2 py-1 rounded-full"
-              :class="statusClass(order.status)"
-            >
-              {{ statusLabel(order.status) }}
-            </span>
+
+          <!-- Expand: Produtos -->
+          <div
+            v-if="expandedOrderId === order.id"
+            class="border-b border-background-200 dark:border-background-700 bg-background-100 dark:bg-background-750 px-8 py-4"
+          >
+            <div v-if="loadingDetails[order.id]" class="flex items-center gap-2 text-background-400 text-xs py-2">
+              <span class="material-symbols-rounded animate-spin text-sm">autorenew</span>
+              {{ t('common.loading') }}
+            </div>
+
+            <div v-else class="flex flex-col gap-3">
+              <div
+                v-for="product in detailsByOrder[order.id]?.products"
+                :key="product.id"
+                class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-lg px-4 py-3"
+              >
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="material-symbols-rounded text-primary-500 text-base">directions_car</span>
+                  <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ product.serialNumber }}</span>
+                  <span class="text-xs text-background-400">{{ product.modelName }}</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <span
+                    v-for="config in product.configs"
+                    :key="config.configOptionId"
+                    class="text-xs px-2 py-1 rounded-full bg-background-200 dark:bg-background-700 border border-background-300 dark:border-background-600 text-background-600 dark:text-background-400"
+                  >
+                    <span class="text-background-400 dark:text-background-500">{{ config.configItem }}:</span> {{ config.optionValue }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="flex justify-end gap-1">
-            <button
-              @click="openUpdateStatus(order)"
-              class="p-1.5 rounded-lg text-background-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-background-700 transition-colors"
-              :title="t('mo.updateStatus')"
-            >
-              <span class="material-symbols-rounded text-base">edit</span>
-            </button>
-          </div>
-        </div>
+        </template>
       </div>
     </div>
 
@@ -124,7 +162,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { manufacturingOrderService } from '@/services/manufacturingOrderService'
 import type { ManufacturingOrder } from '@/services/manufacturingOrderService'
 import { toast } from '@/plugins/toast'
@@ -138,6 +176,9 @@ const activeFilter = ref('all')
 const showStatusModal = ref(false)
 const selectedOrder = ref<ManufacturingOrder | null>(null)
 const newStatus = ref('pending')
+const expandedOrderId = ref<number | null>(null)
+const detailsByOrder = reactive<Record<number, any>>({})
+const loadingDetails = reactive<Record<number, boolean>>({})
 
 const statusFilters = computed(() => [
   { value: 'all', label: t('mo.status.all'), dot: 'bg-background-400' },
@@ -170,6 +211,25 @@ async function loadOrders() {
     toast.error(t('errors.loadFailed'))
   } finally {
     loading.value = false
+  }
+}
+
+async function toggleOrder(order: ManufacturingOrder) {
+  if (expandedOrderId.value === order.id) {
+    expandedOrderId.value = null
+    return
+  }
+  expandedOrderId.value = order.id
+  if (!detailsByOrder[order.id]) {
+    loadingDetails[order.id] = true
+    try {
+      const res = await manufacturingOrderService.getDetails(order.id)
+      detailsByOrder[order.id] = res.data
+    } catch {
+      toast.error(t('errors.loadFailed'))
+    } finally {
+      loadingDetails[order.id] = false
+    }
   }
 }
 

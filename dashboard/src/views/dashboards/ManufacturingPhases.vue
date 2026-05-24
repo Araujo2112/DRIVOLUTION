@@ -156,9 +156,14 @@ const phases = ref<ManufacturingPhase[]>([])
 const showModal = ref(false)
 const editingPhase = ref<ManufacturingPhase | null>(null)
 
-const form = reactive({
+const form = reactive<{
+  name: string
+  estimatedDuration: number | undefined
+  maxAcceptableSeverity: string
+  reworkSeverity: string
+}>({
   name: '',
-  estimatedDuration: undefined as number | undefined,
+  estimatedDuration: undefined,
   maxAcceptableSeverity: Severity.None,
   reworkSeverity: Severity.Minor,
 })

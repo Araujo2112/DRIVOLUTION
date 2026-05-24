@@ -38,18 +38,18 @@
         class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden bg-background-50 dark:bg-background-800"
       >
         <div
-          class="grid grid-cols-5 px-5 py-3 bg-background-800 dark:bg-background-900 border-b border-background-300 dark:border-background-700"
+          class="grid grid-cols-5 px-5 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700"
         >
-          <span class="text-xs font-medium text-background-50 uppercase tracking-wider col-span-2">
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider col-span-2">
             {{ t('products.fields.serial') }}
           </span>
-          <span class="text-xs font-medium text-background-50 uppercase tracking-wider">
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">
             {{ t('products.fields.model') }}
           </span>
-          <span class="text-xs font-medium text-background-50 uppercase tracking-wider">
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">
             {{ t('products.fields.lot') }}
           </span>
-          <span class="text-xs font-medium text-background-50 uppercase tracking-wider">
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">
             {{ t('products.fields.productionDate') }}
           </span>
         </div>

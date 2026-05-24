@@ -54,7 +54,8 @@ const routes = [
                 component: () => import('./views/dashboards/WipDashboard.vue'),
             },
             { path: 'products', name: 'Products', component: () => import('./views/dashboards/Products.vue') },
-            { path: 'phases', name: 'ManufacturingPhases', component: () => import('./views/dashboards/ManufacturingPhases.vue') }
+            { path: 'phases', name: 'ManufacturingPhases', component: () => import('./views/dashboards/ManufacturingPhases.vue') },
+            { path: 'settings', component: () => import('@/views/dashboards/Settings.vue') }
         ],
     },
     {

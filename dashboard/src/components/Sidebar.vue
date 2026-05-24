@@ -37,7 +37,7 @@ function logout() {
 
 <template>
   <div class="h-full min-w-60 max-w-60 py-2">
-    <div class="h-full rounded-2xl flex flex-col bg-background-100 dark:bg-background-900 p-4">
+    <div class="h-full rounded-2xl flex flex-col bg-background-200 dark:bg-background-950 p-4">
       <div class="flex w-full px-4 py-6 object-center object-contain items-center overflow-hidden gap-0">
         <img src="@/assets/icons/drivolution-logo.png" alt="Drivolution logo" />
       </div>
@@ -47,7 +47,6 @@ function logout() {
         <SidebarItem icon="shopping_cart" path="orders">Encomendas</SidebarItem>
         <SidebarItem icon="assignment" path="manufacturingOrders">Manuf. Orders</SidebarItem>
         <SidebarItem icon="conveyor_belt" path="productionLines">Prod. Lines</SidebarItem>
-
         <SidebarItem icon="monitoring" path="production-line-status">Estado da Linha</SidebarItem>
         <SidebarItem icon="timeline" path="product-timeline">Timeline</SidebarItem>
         <SidebarItem icon="dashboard" path="wip-dashboard">WIP Dashboard</SidebarItem>
@@ -57,6 +56,7 @@ function logout() {
 
       <div class="flex w-full gap-1">
         <SidebarItem icon="logout" @click="logout()" danger />
+        <SidebarItem icon="settings" path="settings"></SidebarItem>
       </div>
     </div>
   </div>

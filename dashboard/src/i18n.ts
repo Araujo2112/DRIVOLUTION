@@ -14,6 +14,16 @@ export const messages = {
       unknown: 'Desconhecido',
       noData: 'Sem dados',
     },
+    settings: {
+      title: 'Definições',
+      subtitle: 'Preferências da aplicação',
+      appearance: 'Aparência',
+      theme: 'Tema',
+      themeLight: 'Modo claro',
+      themeDark: 'Modo escuro',
+      language: 'Idioma',
+      languageLabel: 'Língua da interface',
+    },
     errors: {
       loadFailed: 'Erro ao carregar dados.',
       saveFailed: 'Erro ao guardar.',
@@ -274,6 +284,16 @@ export const messages = {
       search: 'Search',
       unknown: 'Unknown',
       noData: 'No data',
+    },
+    settings: {
+      title: 'Settings',
+      subtitle: 'Application preferences',
+      appearance: 'Appearance',
+      theme: 'Theme',
+      themeLight: 'Light mode',
+      themeDark: 'Dark mode',
+      language: 'Language',
+      languageLabel: 'Interface language',
     },
     errors: {
       loadFailed: 'Failed to load data.',

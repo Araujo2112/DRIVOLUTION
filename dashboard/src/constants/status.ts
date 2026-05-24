@@ -8,12 +8,15 @@ export const EntityStatus = {
   Functional: 'functional',
   Maintenance: 'maintenance',
   Broken: 'broken',
+  Unknown: 'unknown',
 } as const
 
 export const QualityStatus = {
   Passed: 'passed',
-  Rework: 'rework',
-  Scrapped: 'scrapped',
+  Completed: 'completed',
+  InProgress: 'in_progress',
+  Rework: 'failed_rework',
+  Scrapped: 'failed_scrapped',
 } as const
 
 export const Severity = {

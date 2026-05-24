@@ -2,6 +2,7 @@ using ApiTexPact.DTO;
 using ApiTexPact.Models;
 using ApiTexPact.Repository.Interface;
 using ApiTexPact.Services.Interface;
+using ApiTexPact.Models.Constants;
 
 namespace ApiTexPact.Services;
 
@@ -33,7 +34,7 @@ public class LocalizationHistoryService : ILocalizationHistoryService
         if (current != null)
         {
             current.DatetimeEnd = DateTime.UtcNow;
-            current.Status = "completed";
+            current.Status = EntityStatus.Completed;
             await _repo.Update(current);
         }
 
@@ -42,7 +43,7 @@ public class LocalizationHistoryService : ILocalizationHistoryService
             SupportId = dto.SupportId,
             WorkstationId = dto.WorkstationId,
             DatetimeIni = DateTime.UtcNow,
-            Status = "active"
+            Status = EntityStatus.Active
         };
 
         var created = await _repo.Create(entity);

@@ -150,6 +150,7 @@ import { productService } from '@/services/productService'
 import type { Product } from '@/services/productService'
 import { toast } from '@/plugins/toast'
 import { useI18n } from 'vue-i18n'
+import { EntityStatus, QualityStatus } from '@/constants/status'
 
 const { t } = useI18n()
 
@@ -216,15 +217,15 @@ function formatDuration(seconds: number | null, endedAt: string | null) {
 
 function statusLabel(status: string | null) {
   switch (status) {
-    case 'completed': return t('timeline.status.completed')
-    case 'in_progress': return t('timeline.status.inProgress')
+    case EntityStatus.Completed: return t('timeline.status.completed')
+    case EntityStatus.InProgress: return t('timeline.status.inProgress')
     default: return t('mo.status.unknown')
   }
 }
 
 function resultLabel(result: string | null) {
   switch (result) {
-    case 'passed': return t('timeline.result.passed')
+    case QualityStatus.Passed: return t('timeline.result.passed')
     case 'failed_rework': return t('timeline.result.rework')
     case 'failed_scrapped': return t('timeline.result.scrapped')
     default: return t('timeline.inProgress')
@@ -233,7 +234,7 @@ function resultLabel(result: string | null) {
 
 function resultClass(result: string | null) {
   switch (result) {
-    case 'passed': return 'bg-success-100 text-success-700'
+    case QualityStatus.Passed: return 'bg-success-100 text-success-700'
     case 'failed_scrapped': return 'bg-danger-100 text-danger-700'
     case 'failed_rework': return 'bg-warning-100 text-warning-700'
     default: return 'bg-warning-100 text-warning-700'

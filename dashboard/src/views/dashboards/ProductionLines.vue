@@ -221,6 +221,7 @@ import { productionLineService, workstationService } from '@/services/production
 import type { ProductionLine, Workstation } from '@/services/productionLineService'
 import { toast } from '@/plugins/toast'
 import { useI18n } from 'vue-i18n'
+import { EntityStatus } from '@/constants/status'
 
 const { t } = useI18n()
 
@@ -236,7 +237,7 @@ const showStatusModal = ref(false)
 
 const lineForm = reactive({ name: '', location: '', capacity: undefined as number | undefined })
 const wsForm = reactive({ type: '', lineId: 0 })
-const statusForm = reactive({ lineId: 0, status: 'functional' })
+const statusForm = reactive<{ lineId: number, status: string }>({ lineId: 0, status: EntityStatus.Functional })
 
 onMounted(async () => {
   await loadLines()
@@ -289,7 +290,7 @@ async function submitCreateLine() {
     await productionLineService.create({
       name: lineForm.name,
       location: lineForm.location || undefined,
-      status: 'functional',
+      status: EntityStatus.Functional,
       capacity: lineForm.capacity,
     })
     showLineModal.value = false
@@ -312,7 +313,7 @@ async function deleteLine(line: ProductionLine) {
 
 function openEditStatus(line: ProductionLine) {
   statusForm.lineId = line.id
-  statusForm.status = line.status ?? 'functional'
+  statusForm.status = line.status ?? EntityStatus.Functional
   showStatusModal.value = true
 }
 
@@ -359,10 +360,10 @@ async function deleteWorkstation(ws: Workstation, lineId: number) {
 
 function lineStatusClass(status: string) {
   switch (status) {
-    case 'functional': return 'bg-success-100 text-success-700'
-    case 'maintenance': return 'bg-warning-100 text-warning-700'
-    case 'broken': return 'bg-danger-100 text-danger-700'
-    case 'inactive': return 'bg-background-200 text-background-500'
+    case EntityStatus.Functional: return 'bg-success-100 text-success-700'
+    case EntityStatus.Maintenance: return 'bg-warning-100 text-warning-700'
+    case EntityStatus.Broken: return 'bg-danger-100 text-danger-700'
+    case EntityStatus.Inactive: return 'bg-background-200 text-background-500'
     default: return 'bg-background-200 text-background-600'
   }
 }

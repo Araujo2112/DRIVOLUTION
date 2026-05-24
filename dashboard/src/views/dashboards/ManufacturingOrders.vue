@@ -167,6 +167,8 @@ import { manufacturingOrderService } from '@/services/manufacturingOrderService'
 import type { ManufacturingOrder } from '@/services/manufacturingOrderService'
 import { toast } from '@/plugins/toast'
 import { useI18n } from 'vue-i18n'
+import { EntityStatus } from '@/constants/status'
+
 
 const { t } = useI18n()
 
@@ -175,17 +177,17 @@ const orders = ref<ManufacturingOrder[]>([])
 const activeFilter = ref('all')
 const showStatusModal = ref(false)
 const selectedOrder = ref<ManufacturingOrder | null>(null)
-const newStatus = ref('pending')
+const newStatus = ref<string>(EntityStatus.Pending)
 const expandedOrderId = ref<number | null>(null)
 const detailsByOrder = reactive<Record<number, any>>({})
 const loadingDetails = reactive<Record<number, boolean>>({})
 
 const statusFilters = computed(() => [
   { value: 'all', label: t('mo.status.all'), dot: 'bg-background-400' },
-  { value: 'pending', label: t('mo.status.pending'), dot: 'bg-warning-500' },
-  { value: 'in_progress', label: t('mo.status.inProgress'), dot: 'bg-primary-500' },
-  { value: 'completed', label: t('mo.status.completed'), dot: 'bg-success-500' },
-  { value: 'cancelled', label: t('mo.status.cancelled'), dot: 'bg-danger-500' },
+  { value: EntityStatus.Pending, label: t('mo.status.pending'), dot: 'bg-warning-500' },
+  { value: EntityStatus.InProgress, label: t('mo.status.inProgress'), dot: 'bg-primary-500' },
+  { value: EntityStatus.Completed, label: t('mo.status.completed'), dot: 'bg-success-500' },
+  { value: EntityStatus.Cancelled, label: t('mo.status.cancelled'), dot: 'bg-danger-500' },
 ])
 
 const filteredOrders = computed(() => {
@@ -239,7 +241,7 @@ function setFilter(status: string) {
 
 function openUpdateStatus(order: ManufacturingOrder) {
   selectedOrder.value = order
-  newStatus.value = order.status ?? 'pending'
+  newStatus.value = order.status ?? EntityStatus.Pending
   showStatusModal.value = true
 }
 
@@ -261,20 +263,20 @@ function formatDate(dateStr: string) {
 
 function statusClass(status: string | null) {
   switch (status) {
-    case 'pending': return 'bg-warning-100 text-warning-700'
-    case 'in_progress': return 'bg-primary-50 text-primary-600'
-    case 'completed': return 'bg-success-100 text-success-700'
-    case 'cancelled': return 'bg-danger-100 text-danger-700'
+    case EntityStatus.Pending: return 'bg-warning-100 text-warning-700'
+    case EntityStatus.InProgress: return 'bg-primary-50 text-primary-600'
+    case EntityStatus.Completed: return 'bg-success-100 text-success-700'
+    case EntityStatus.Cancelled: return 'bg-danger-100 text-danger-700'
     default: return 'bg-background-200 text-background-600'
   }
 }
 
 function statusLabel(status: string | null) {
   switch (status) {
-    case 'pending': return t('mo.status.pending')
-    case 'in_progress': return t('mo.status.inProgress')
-    case 'completed': return t('mo.status.completed')
-    case 'cancelled': return t('mo.status.cancelled')
+    case EntityStatus.Pending: return t('mo.status.pending')
+    case EntityStatus.InProgress: return t('mo.status.inProgress')
+    case EntityStatus.Completed: return t('mo.status.completed')
+    case EntityStatus.Cancelled: return t('mo.status.cancelled')
     default: return t('mo.status.unknown')
   }
 }

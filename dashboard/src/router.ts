@@ -53,7 +53,8 @@ const routes = [
                 name: 'WipDashboard',
                 component: () => import('./views/dashboards/WipDashboard.vue'),
             },
-            { path: 'products', name: 'Products', component: () => import('./views/dashboards/Products.vue') }
+            { path: 'products', name: 'Products', component: () => import('./views/dashboards/Products.vue') },
+            { path: 'phases', name: 'ManufacturingPhases', component: () => import('./views/dashboards/ManufacturingPhases.vue') }
         ],
     },
     {

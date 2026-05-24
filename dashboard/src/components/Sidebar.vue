@@ -52,6 +52,7 @@ function logout() {
         <SidebarItem icon="timeline" path="product-timeline">Timeline</SidebarItem>
         <SidebarItem icon="dashboard" path="wip-dashboard">WIP Dashboard</SidebarItem>
         <SidebarItem icon="directions_car" path="products">Produtos</SidebarItem>
+        <SidebarItem icon="precision_manufacturing" path="phases">Fases</SidebarItem>
       </div>
 
       <div class="flex w-full gap-1">

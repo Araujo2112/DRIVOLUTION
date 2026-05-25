@@ -16,7 +16,7 @@ public class WorkstationController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var items = await _repo.GetAll();
-        return Ok(items.Select(w => new WorkstationDTO(w.Id, w.ProductionLineId, w.ProductionLine?.Name, w.Type)));
+        return Ok(items.Select(w => ToDTO(w)));
     }
 
     [HttpGet("{id}")]
@@ -24,22 +24,29 @@ public class WorkstationController : ControllerBase
     {
         var item = await _repo.GetById(id);
         if (item == null) return NotFound();
-        return Ok(new WorkstationDTO(item.Id, item.ProductionLineId, item.ProductionLine?.Name, item.Type));
+        return Ok(ToDTO(item));
     }
 
     [HttpGet("line/{productionLineId}")]
     public async Task<IActionResult> GetByProductionLine(int productionLineId)
     {
         var items = await _repo.GetByProductionLine(productionLineId);
-        return Ok(items.Select(w => new WorkstationDTO(w.Id, w.ProductionLineId, null, w.Type)));
+        return Ok(items.Select(w => ToDTO(w)));
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkstationDTO dto)
     {
-        var entity = new WorkstationModel { ProductionLineId = dto.ProductionLineId, Type = dto.Type };
+        var entity = new WorkstationModel
+        {
+            ProductionLineId = dto.ProductionLineId,
+            Type = dto.Type,
+            ManufacturingPhaseId = dto.ManufacturingPhaseId,
+        };
         var created = await _repo.Create(entity);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, new WorkstationDTO(created.Id, created.ProductionLineId, null, created.Type));
+        // Reload para incluir navegação (fase)
+        var full = await _repo.GetById(created.Id);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToDTO(full!));
     }
 
     [HttpPut("{id}")]
@@ -48,6 +55,7 @@ public class WorkstationController : ControllerBase
         var entity = await _repo.GetById(id);
         if (entity == null) return NotFound();
         if (dto.Type != null) entity.Type = dto.Type;
+        if (dto.ManufacturingPhaseId.HasValue) entity.ManufacturingPhaseId = dto.ManufacturingPhaseId;
         await _repo.Update(entity);
         return NoContent();
     }
@@ -59,4 +67,13 @@ public class WorkstationController : ControllerBase
         await _repo.Delete(id);
         return NoContent();
     }
+
+    private static WorkstationDTO ToDTO(WorkstationModel w) => new(
+        w.Id,
+        w.ProductionLineId,
+        w.ProductionLine?.Name,
+        w.Type,
+        w.ManufacturingPhaseId,
+        w.ManufacturingPhase?.Name
+    );
 }

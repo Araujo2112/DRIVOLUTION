@@ -120,18 +120,25 @@
                 :key="ws.id"
                 class="flex items-center justify-between bg-background-100 dark:bg-background-700 border border-background-300 dark:border-background-600 rounded-lg px-3 py-2"
               >
-                <div class="flex items-center gap-2">
-                  <span class="material-symbols-rounded text-background-400 text-base">precision_manufacturing</span>
-                  <div>
-                    <div class="text-xs font-medium text-background-800 dark:text-background-100">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="material-symbols-rounded text-background-400 text-base shrink-0">precision_manufacturing</span>
+                  <div class="min-w-0">
+                    <div class="text-xs font-medium text-background-800 dark:text-background-100 truncate">
                       {{ ws.type ?? t('productionLines.unknownType') }}
+                    </div>
+                    <!-- Fase associada -->
+                    <div v-if="ws.phaseName" class="text-xs text-primary-500 truncate">
+                      {{ ws.phaseName }}
+                    </div>
+                    <div v-else class="text-xs text-background-400">
+                      {{ t('productionLines.noPhase') }}
                     </div>
                     <div class="text-xs text-background-400">ID #{{ ws.id }}</div>
                   </div>
                 </div>
                 <button
                   @click="deleteWorkstation(ws, line.id)"
-                  class="text-background-300 hover:text-danger-500 transition-colors"
+                  class="text-background-300 hover:text-danger-500 transition-colors shrink-0 ml-1"
                 >
                   <span class="material-symbols-rounded text-sm">close</span>
                 </button>
@@ -199,10 +206,24 @@
           <h2 class="text-base font-medium text-background-900 dark:text-background-50">{{ t('productionLines.addWorkstation') }}</h2>
           <button @click="showWorkstationModal = false" class="text-background-500 hover:text-background-700"><span class="material-symbols-rounded">close</span></button>
         </div>
-        <div class="px-5 py-4">
+        <div class="px-5 py-4 flex flex-col gap-4">
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('productionLines.fields.wsType') }}</label>
             <input v-model="wsForm.type" type="text" :placeholder="t('productionLines.fields.wsTypePlaceholder')" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('productionLines.fields.wsPhase') }}</label>
+            <select v-model="wsForm.manufacturingPhaseId">
+              <option :value="null">{{ t('productionLines.fields.wsPhasePlaceholder') }}</option>
+              <option
+                v-for="phase in allPhases"
+                :key="phase.id"
+                :value="phase.id"
+              >
+                {{ phase.name }}
+              </option>
+            </select>
+            <p class="text-xs text-background-400">{{ t('productionLines.phaseHint') }}</p>
           </div>
         </div>
         <div class="flex justify-end gap-2 px-5 py-4 border-t border-background-300 dark:border-background-700">
@@ -219,6 +240,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { productionLineService, workstationService } from '@/services/productionLineService'
 import type { ProductionLine, Workstation } from '@/services/productionLineService'
+import { manufacturingPhaseService } from '@/services/manufacturingPhaseService'
+import type { ManufacturingPhase } from '@/services/manufacturingPhaseService'
 import { toast } from '@/plugins/toast'
 import { useI18n } from 'vue-i18n'
 import { EntityStatus } from '@/constants/status'
@@ -230,17 +253,22 @@ const lines = ref<ProductionLine[]>([])
 const workstationsByLine = reactive<Record<number, Workstation[]>>({})
 const loadingWorkstations = reactive<Record<number, boolean>>({})
 const expandedLineId = ref<number | null>(null)
+const allPhases = ref<ManufacturingPhase[]>([])
 
 const showLineModal = ref(false)
 const showWorkstationModal = ref(false)
 const showStatusModal = ref(false)
 
 const lineForm = reactive({ name: '', location: '', capacity: undefined as number | undefined })
-const wsForm = reactive({ type: '', lineId: 0 })
-const statusForm = reactive<{ lineId: number, status: string }>({ lineId: 0, status: EntityStatus.Functional })
+const wsForm = reactive<{ type: string; lineId: number; manufacturingPhaseId: number | null }>({
+  type: '',
+  lineId: 0,
+  manufacturingPhaseId: null,
+})
+const statusForm = reactive<{ lineId: number; status: string }>({ lineId: 0, status: EntityStatus.Functional })
 
 onMounted(async () => {
-  await loadLines()
+  await Promise.all([loadLines(), loadAllPhases()])
 })
 
 async function loadLines() {
@@ -255,11 +283,22 @@ async function loadLines() {
   }
 }
 
+async function loadAllPhases() {
+  try {
+    const res = await manufacturingPhaseService.getAll()
+    const raw = res.data as any
+    allPhases.value = raw?.$values ?? res.data ?? []
+  } catch {
+    allPhases.value = []
+  }
+}
+
 async function loadWorkstations(lineId: number) {
   loadingWorkstations[lineId] = true
   try {
     const res = await workstationService.getByLine(lineId)
-    workstationsByLine[lineId] = res.data
+    const raw = res.data as any
+    workstationsByLine[lineId] = raw?.$values ?? res.data ?? []
   } catch {
     workstationsByLine[lineId] = []
   } finally {
@@ -331,6 +370,7 @@ async function submitEditStatus() {
 function openCreateWorkstation(lineId: number) {
   wsForm.type = ''
   wsForm.lineId = lineId
+  wsForm.manufacturingPhaseId = null
   showWorkstationModal.value = true
 }
 
@@ -339,6 +379,7 @@ async function submitCreateWorkstation() {
     await workstationService.create({
       productionLineId: wsForm.lineId,
       type: wsForm.type || undefined,
+      manufacturingPhaseId: wsForm.manufacturingPhaseId,
     })
     showWorkstationModal.value = false
     toast.success(t('productionLines.workstationCreated'))

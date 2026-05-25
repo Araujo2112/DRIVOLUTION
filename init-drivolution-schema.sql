@@ -47,10 +47,16 @@ CREATE TABLE IF NOT EXISTS workstation (
     id SERIAL PRIMARY KEY,
     production_line_id INTEGER NOT NULL,
     type VARCHAR(100),
-
+    manufacturing_phase_id INTEGER,
+ 
     CONSTRAINT fk_workstation_production_line
         FOREIGN KEY (production_line_id)
-        REFERENCES production_line(id)
+        REFERENCES production_line(id),
+ 
+    CONSTRAINT fk_workstation_manufacturing_phase
+        FOREIGN KEY (manufacturing_phase_id)
+        REFERENCES manufacturing_phase(id)
+        ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS support (

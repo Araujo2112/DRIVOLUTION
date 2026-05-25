@@ -1,5 +1,6 @@
 using ApiTexPact.DTO;
 using ApiTexPact.Models;
+using ApiTexPact.Models.Constants;
 using ApiTexPact.Repository.Interface;
 using ApiTexPact.Services.Interface;
 
@@ -8,10 +9,17 @@ namespace ApiTexPact.Services;
 public class ProductPhaseService : IProductPhaseService
 {
     private readonly IProductPhaseRepository _repo;
+    private readonly IProductRepository _productRepo;
+    private readonly IManufacturingOrderRepository _moRepo;
 
-    public ProductPhaseService(IProductPhaseRepository repo)
+    public ProductPhaseService(
+        IProductPhaseRepository repo,
+        IProductRepository productRepo,
+        IManufacturingOrderRepository moRepo)
     {
         _repo = repo;
+        _productRepo = productRepo;
+        _moRepo = moRepo;
     }
 
     public async Task<IEnumerable<ProductPhaseDTO>> GetByProduct(int productId)
@@ -46,6 +54,10 @@ public class ProductPhaseService : IProductPhaseService
         };
 
         var created = await _repo.Create(entity);
+
+        // ── Atualizar status da MO para InProgress ────────────────────────────
+        await UpdateMoStatus(dto.ProductId);
+
         return ToDTO(created);
     }
 
@@ -59,9 +71,47 @@ public class ProductPhaseService : IProductPhaseService
         entity.QualityId = dto.QualityId;
 
         await _repo.Update(entity);
+
+        // ── Verificar se todos os produtos da MO estão concluídos ─────────────
+        await UpdateMoStatus(entity.ProductId);
     }
 
-    // --- Auxiliar ---
+    // ── Lógica de atualização automática do status da MO ─────────────────────
+    private async Task UpdateMoStatus(int productId)
+    {
+        var product = await _productRepo.GetById(productId);
+        if (product == null) return;
+
+        var mo = await _moRepo.GetByIdWithDetails(product.ManufacturingOrderId);
+        if (mo == null) return;
+
+        // Se já está concluída ou cancelada, não tocar
+        if (mo.Status == EntityStatus.Completed || mo.Status == EntityStatus.Cancelled) return;
+
+        var allProducts = mo.Products.ToList();
+
+        // Verificar se todos os produtos têm pelo menos uma fase aberta (sem DatetimeEnd)
+        bool anyInProgress = allProducts.Any(p =>
+            p.ProductPhases.Any(pp => pp.DatetimeEnd == null));
+
+        // Verificar se todos os produtos têm fases e todas fechadas
+        bool allCompleted = allProducts.All(p =>
+            p.ProductPhases.Any() &&
+            p.ProductPhases.All(pp => pp.DatetimeEnd != null));
+
+        if (allCompleted)
+        {
+            mo.Status = EntityStatus.Completed;
+            mo.EndDate = DateTime.UtcNow;
+        }
+        else if (anyInProgress)
+        {
+            mo.Status = EntityStatus.InProgress;
+        }
+
+        await _moRepo.Update(mo);
+    }
+
     private static ProductPhaseDTO ToDTO(ProductPhaseModel pp) =>
         new(pp.Id, pp.ProductId, pp.ManufacturingPhaseId, pp.ManufacturingPhase?.Name ?? "",
             pp.WorkstationId, pp.Notes, pp.Result, pp.DatetimeIni, pp.DatetimeEnd, pp.QualityId);

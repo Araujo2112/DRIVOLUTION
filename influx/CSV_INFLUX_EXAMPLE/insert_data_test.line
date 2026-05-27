@@ -1,6 +1,0 @@
-sensor_data,location=Room1 temperature=22.5,humidity=45.2,pressure=1012 1698144000000000000
-sensor_data,location=Room1 temperature=22.7,humidity=45.1,pressure=1011 1698144060000000000
-sensor_data,location=Room2 temperature=23.1,humidity=46.0,pressure=1013 1698144120000000000
-sensor_data,location=Room2 temperature=23.0,humidity=46.3,pressure=1011 1698144180000000000
-sensor_data,location=Room3 temperature=21.8,humidity=44.5,pressure=1010 1698144240000000000
-sensor_data,location=Room3 temperature=21.9,humidity=44.8,pressure=1012 1698144300000000000

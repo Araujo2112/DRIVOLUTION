@@ -13,6 +13,11 @@ using Microsoft.OpenApi.Models;
 
 Env.Load();
 
+// ── Solução global para DateTime UTC com Npgsql ───────────────────────────────
+// Garante que todos os DateTime lidos da BD são tratados como UTC,
+// eliminando o erro "Cannot write DateTime with Kind=Unspecified"
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? throw new InvalidOperationException("JWT_ISSUER not set");
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? throw new InvalidOperationException("JWT_AUDIENCE not set");
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? throw new InvalidOperationException("JWT_SECRET not set");
@@ -106,7 +111,7 @@ builder.Services.AddScoped<IProductPhaseRepository, ProductPhaseRepository>();
 builder.Services.AddScoped<IQualityCheckRepository, QualityCheckRepository>();
 builder.Services.AddScoped<IProductConfigRepository, ProductConfigRepository>();
 builder.Services.AddScoped<IConfigOptionRepository, ConfigOptionRepository>();
-
+builder.Services.AddScoped<IProductTimelineRepository, ProductTimelineRepository>();
 
 // --- JWT Authentication ---
 builder.Services.AddAuthentication(options =>

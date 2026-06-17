@@ -59,6 +59,7 @@ services:
       - IOTA_PROVIDER_URL=http://iot-agent:4041
       - IOTA_DEFAULT_RESOURCE=/iot/json
       - IOTA_JSON_LD_CONTEXT=https://ruicarvalho1.github.io/test-JsonLd/datamodels.context-ngsi.jsonld
+      - IOTA_DEFAULT_TRANSPORT=HTTP
 
   mongo-db:
     image: mongo:4.4

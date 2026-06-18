@@ -23,7 +23,15 @@ public class ProductPhaseRepository : IProductPhaseRepository
             .Where(pp => pp.ProductId == productId && pp.DatetimeEnd == null)
             .Include(pp => pp.ManufacturingPhase)
             .Include(pp => pp.Workstation)
+            .OrderByDescending(pp => pp.DatetimeIni)
             .FirstOrDefaultAsync();
+
+   
+    public async Task<IEnumerable<ProductPhaseModel>> GetAllOpenByProduct(int productId) =>
+        await _context.ProductPhases
+            .Where(pp => pp.ProductId == productId && pp.DatetimeEnd == null)
+            .OrderBy(pp => pp.DatetimeIni)
+            .ToListAsync();
 
     public async Task<ProductPhaseModel?> GetById(int id) =>
         await _context.ProductPhases.FindAsync(id);

@@ -105,7 +105,13 @@
               >
                 <div class="flex items-center gap-2 mb-2">
                   <span class="material-symbols-rounded text-primary-500 text-base">directions_car</span>
-                  <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ product.serialNumber }}</span>
+                  <button
+                    @click.stop="goToProductTimeline(product.id)"
+                    class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                    :title="t('mo.goToTimeline')"
+                  >
+                    {{ product.serialNumber }}
+                  </button>
                   <span class="text-xs text-background-400">{{ product.modelName }}</span>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -163,6 +169,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { manufacturingOrderService } from '@/services/manufacturingOrderService'
 import type { ManufacturingOrder } from '@/services/manufacturingOrderService'
 import { toast } from '@/plugins/toast'
@@ -171,6 +178,7 @@ import { EntityStatus } from '@/constants/status'
 
 
 const { t } = useI18n()
+const router = useRouter()
 
 const loading = ref(true)
 const orders = ref<ManufacturingOrder[]>([])
@@ -255,6 +263,11 @@ async function submitUpdateStatus() {
   } catch {
     toast.error(t('errors.saveFailed'))
   }
+}
+
+// Navega para a Timeline do produto clicado (vindo da lista expandida de uma MO)
+function goToProductTimeline(productId: number) {
+  router.push({ name: 'ProductTimeline', query: { id: String(productId) } })
 }
 
 function formatDate(dateStr: string) {

@@ -103,6 +103,7 @@ export const messages = {
       empty: 'Nenhuma ordem encontrada.',
       updateStatus: 'Atualizar Estado',
       statusUpdated: 'Estado atualizado.',
+      goToTimeline: 'Ver timeline deste produto',
       fields: {
         number: 'Número da Ordem',
         customer: 'Cliente',
@@ -253,6 +254,7 @@ export const messages = {
       inProduction: 'Em Produção',
       completed: 'Concluídos',
       empty: 'Não existem produtos em produção.',
+      goToTimeline: 'Ver timeline deste produto',
       fields: {
         product: 'Produto',
         line: 'Linha',
@@ -480,6 +482,7 @@ export const messages = {
       subtitle: 'Track the status of each manufacturing order.',
       empty: 'No orders found.',
       updateStatus: 'Update Status',
+      goToTimeline: 'View this product\'s timeline',
       statusUpdated: 'Status updated.',
       fields: {
         number: 'Order Number',
@@ -631,6 +634,7 @@ export const messages = {
       inProduction: 'In Production',
       completed: 'Completed',
       empty: 'No products currently in production.',
+      goToTimeline: 'View this product\'s timeline',
       fields: {
         product: 'Product',
         line: 'Line',

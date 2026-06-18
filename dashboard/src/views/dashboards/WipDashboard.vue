@@ -65,7 +65,13 @@
           class="grid grid-cols-7 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
         >
           <div class="col-span-2">
-            <div class="text-sm font-medium text-background-900 dark:text-background-50">{{ item.serialNumber }}</div>
+            <button
+              @click="goToProduct(item.productId)"
+              class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline hover:text-primary-700 dark:hover:text-primary-300 transition-colors text-left"
+              :title="t('wip.goToTimeline')"
+            >
+              {{ item.serialNumber }}
+            </button>
           </div>
           <span class="text-sm text-background-600 dark:text-background-400">{{ item.productionLineName }}</span>
           <span class="text-sm text-background-600 dark:text-background-400">{{ item.workstation }}</span>
@@ -80,11 +86,13 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from '@/axios'
 import { useI18n } from 'vue-i18n'
 import { toast } from '@/plugins/toast'
 
 const { t } = useI18n()
+const router = useRouter()
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -106,6 +114,10 @@ async function loadWip() {
   } finally {
     loading.value = false
   }
+}
+
+function goToProduct(productId: number) {
+  router.push({ name: 'ProductTimeline', query: { id: String(productId) } })
 }
 
 function formatDate(date: string | null) {

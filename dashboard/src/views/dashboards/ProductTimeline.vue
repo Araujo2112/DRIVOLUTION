@@ -207,6 +207,7 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import * as d3 from 'd3'
 import axios from '@/axios'
 import { useI18n } from 'vue-i18n'
@@ -215,6 +216,7 @@ import { phaseSequenceService } from '@/services/manufacturingPhaseService'
 import type { PhaseSequence } from '@/services/manufacturingPhaseService'
 
 const { t } = useI18n()
+const route = useRoute()
 
 // ── State ──────────────────────────────────────────────────────────────────────
 const loading       = ref(false)
@@ -1045,7 +1047,15 @@ function resultLabel(result: string | null) {
   }
 }
 
-onMounted(() => loadTimeline())
+onMounted(() => {
+  // Se a navegação trouxe um ID via query string (ex: vindo do WIP Dashboard),
+  // usa-o em vez do valor padrão antes de carregar a timeline.
+  const queryId = route.query.id
+  if (queryId && !isNaN(Number(queryId))) {
+    productId.value = Number(queryId)
+  }
+  loadTimeline()
+})
 
 // Re-renderizar o grafo quando a janela for redimensionada (debounced)
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null

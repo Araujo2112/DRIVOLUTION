@@ -36,12 +36,16 @@ public class ProductPhaseService : IProductPhaseService
 
     public async Task<ProductPhaseDTO> Create(CreateProductPhaseDTO dto)
     {
-        // Fechar a fase atual antes de abrir uma nova
-        var current = await _repo.GetCurrentByProduct(dto.ProductId);
-        if (current != null)
+        // Fechar TODAS as fases ainda em aberto deste produto antes de abrir uma nova.
+        // Importante: usa GetAllOpenByProduct (não GetCurrentByProduct) porque, devido a
+        // uma condição de corrida já observada em produção, é possível existir mais do
+        // que uma fase em aberto para o mesmo produto. Fechar só "a primeira que aparecer"
+        // deixava as restantes órfãs para sempre, agravando o problema a cada novo evento.
+        var openPhases = await _repo.GetAllOpenByProduct(dto.ProductId);
+        foreach (var open in openPhases)
         {
-            current.DatetimeEnd = DateTime.UtcNow;
-            await _repo.Update(current);
+            open.DatetimeEnd = DateTime.UtcNow;
+            await _repo.Update(open);
         }
 
         var entity = new ProductPhaseModel

@@ -17,6 +17,11 @@ public class FiwareNotificationController : ControllerBase
     private readonly ILocalizationHistoryService _localizationService;
     private readonly IProductPhaseService _productPhaseService;
     private readonly ISupportedProductRepository _supportedProductRepo;
+    private readonly IProductPhaseRepository _productPhaseRepo;
+    private readonly IPhaseSequenceRepository _phaseSequenceRepo;
+    private readonly IProductRepository _productRepo;
+    private readonly IAlertRepository _alertRepo;
+    private readonly IAlertService _alertService;
     private readonly ILogger<FiwareNotificationController> _logger;
 
     public FiwareNotificationController(
@@ -25,6 +30,11 @@ public class FiwareNotificationController : ControllerBase
         ILocalizationHistoryService localizationService,
         IProductPhaseService productPhaseService,
         ISupportedProductRepository supportedProductRepo,
+        IProductPhaseRepository productPhaseRepo,
+        IPhaseSequenceRepository phaseSequenceRepo,
+        IProductRepository productRepo,
+        IAlertRepository alertRepo,
+        IAlertService alertService,
         ILogger<FiwareNotificationController> logger)
     {
         _supportRepo          = supportRepo;
@@ -32,6 +42,11 @@ public class FiwareNotificationController : ControllerBase
         _localizationService  = localizationService;
         _productPhaseService  = productPhaseService;
         _supportedProductRepo = supportedProductRepo;
+        _productPhaseRepo     = productPhaseRepo;
+        _phaseSequenceRepo    = phaseSequenceRepo;
+        _productRepo          = productRepo;
+        _alertRepo            = alertRepo;
+        _alertService         = alertService;
         _logger               = logger;
     }
 
@@ -42,7 +57,6 @@ public class FiwareNotificationController : ControllerBase
         {
             _logger.LogInformation("Notificação FIWARE recebida: {Body}", body.ToString());
 
-            // O Orion envia um array de entidades modificadas em "data"
             if (!body.TryGetProperty("data", out var dataArray))
             {
                 _logger.LogWarning("Notificação sem campo 'data'.");
@@ -59,13 +73,12 @@ public class FiwareNotificationController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao processar notificação FIWARE.");
-            return Ok(); // Devolver sempre 200 ao Orion para não repetir notificações
+            return Ok();
         }
     }
 
     private async Task ProcessSkidEvent(JsonElement entity)
     {
-        // Extrair supportId e currentWorkstation da entidade NGSI-LD
         if (!TryGetPropertyValue(entity, "supportId", out int supportId) ||
             !TryGetPropertyValue(entity, "currentWorkstation", out int workstationId))
         {
@@ -92,10 +105,8 @@ public class FiwareNotificationController : ControllerBase
             "Skid {Tag} detectado na workstation {WsId} ({Phase})",
             support.RfidTag, workstationId, workstation.ManufacturingPhase?.Name ?? "?");
 
-        // 1. Criar LocalizationHistory (regista onde o skid está fisicamente)
         await _localizationService.Create(new CreateLocalizationHistoryDTO(supportId, workstationId));
 
-        // 2. Se o skid tem um produto associado, criar ProductPhase
         var supportedProduct = await _supportedProductRepo.GetCurrentBySupport(supportId);
         if (supportedProduct?.ProductId == null)
         {
@@ -109,8 +120,7 @@ public class FiwareNotificationController : ControllerBase
             return;
         }
 
-        // Criar ProductPhase (regista que o produto entrou nesta fase)
-        await _productPhaseService.Create(new CreateProductPhaseDTO(
+        var newPhase = await _productPhaseService.Create(new CreateProductPhaseDTO(
             ProductId:            supportedProduct.ProductId.Value,
             ManufacturingPhaseId: workstation.ManufacturingPhaseId.Value,
             WorkstationId:        workstationId,
@@ -120,20 +130,128 @@ public class FiwareNotificationController : ControllerBase
         _logger.LogInformation(
             "ProductPhase criado para produto {ProductId} na fase {Phase}.",
             supportedProduct.ProductId, workstation.ManufacturingPhase?.Name);
+
+        await CheckSequenceAndAlert(
+            supportedProduct.ProductId.Value,
+            newPhase.Id,
+            workstation.ManufacturingPhaseId.Value);
     }
 
-    // Extrai o valor de um atributo NGSI-LD.
-    // O Orion envia { "atributo": { "type": "Property", "value": X } }
+    // Verifica se a transição de fase respeita a sequência esperada do modelo.
+    // Considera o conjunto de fases já visitadas (não só a última), para distinguir
+    // corretamente saltos (buracos novos) de correções (preencher buracos antigos).
+    private async Task CheckSequenceAndAlert(int productId, int newPhaseId, int newManufacturingPhaseId)
+    {
+        try
+        {
+            var product = await _productRepo.GetById(productId);
+            if (product == null) return;
+
+            var allPhases = await _productPhaseRepo.GetByProduct(productId);
+            var closedPhases = allPhases
+                .Where(pp => pp.DatetimeEnd != null && pp.Id != newPhaseId)
+                .OrderBy(pp => pp.DatetimeIni)
+                .ToList();
+
+            var expectedSequence = await _phaseSequenceRepo.GetByModel(product.ModelId);
+            var orderedSequence = expectedSequence.OrderBy(ps => ps.Order).ToList();
+
+            var newPhaseOrder = orderedSequence
+                .FirstOrDefault(ps => ps.ManufacturingPhaseId == newManufacturingPhaseId)?.Order;
+
+            if (newPhaseOrder == null) return; // fase fora do modelo, não há o que comparar
+
+            if (!closedPhases.Any())
+            {
+                // primeira fase do produto — só é válida se for a fase order=1
+                if (newPhaseOrder.Value != 1)
+                {
+                    await CreateSequenceAlert(productId, newPhaseId, newManufacturingPhaseId, 0, newPhaseOrder.Value, orderedSequence);
+                }
+                return;
+            }
+
+            // Conjunto de orders já visitados (histórico completo, não só a última fase)
+            var visitedOrders = closedPhases
+                .Select(p => orderedSequence.FirstOrDefault(ps => ps.ManufacturingPhaseId == p.ManufacturingPhaseId)?.Order)
+                .Where(o => o != null)
+                .Select(o => o!.Value)
+                .ToHashSet();
+
+            var maxVisited = visitedOrders.Count > 0 ? visitedOrders.Max() : 0;
+
+            if (visitedOrders.Contains(newPhaseOrder.Value))
+            {
+                // Repetição da mesma fase — sem alerta de sequência (caso já tratado visualmente como "repeated")
+                return;
+            }
+
+            if (newPhaseOrder.Value == maxVisited + 1)
+            {
+                // Avanço correto para a fronteira imediatamente seguinte
+                await ResolvePendingSequenceAlerts(productId);
+                return;
+            }
+
+            if (newPhaseOrder.Value < maxVisited)
+            {
+                // Está a preencher um buraco deixado atrás — correção válida de um salto anterior
+                await ResolvePendingSequenceAlerts(productId);
+                return;
+            }
+
+            // Saltou para a frente, criando um buraco novo
+            await CreateSequenceAlert(productId, newPhaseId, newManufacturingPhaseId, maxVisited, newPhaseOrder.Value, orderedSequence);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao verificar sequência para produto {ProductId}", productId);
+        }
+    }
+
+    private async Task CreateSequenceAlert(
+        int productId, int newPhaseId, int newManufacturingPhaseId,
+        int fromOrder, int toOrder, List<Models.PhaseSequenceModel> orderedSequence)
+    {
+        var alreadyExists = await _alertRepo.ExistsOpenForPhaseAsync(newPhaseId, "wrong_sequence");
+        if (alreadyExists) return;
+
+        var product = await _productRepo.GetById(productId);
+        var newManufacturingPhase = orderedSequence
+            .FirstOrDefault(ps => ps.ManufacturingPhaseId == newManufacturingPhaseId)?.ManufacturingPhase;
+
+        await _alertService.CreateAsync(
+            type: "wrong_sequence",
+            productId: productId,
+            productPhaseId: newPhaseId,
+            productSerial: product?.SerialNumber ?? productId.ToString(),
+            phaseName: newManufacturingPhase?.Name ?? "?",
+            orderFrom: fromOrder,
+            orderTo: toOrder
+        );
+
+        _logger.LogWarning(
+            "Alerta de sequência gerado para produto {ProductId}: order {From} → {To}",
+            productId, fromOrder, toOrder);
+    }
+
+    private async Task ResolvePendingSequenceAlerts(int productId)
+    {
+        var pendingAlerts = await _alertRepo.GetPendingByProductAndTypeAsync(productId, "wrong_sequence");
+        foreach (var alert in pendingAlerts)
+        {
+            await _alertService.ResolveAsync(alert.Id);
+        }
+    }
+
     private static bool TryGetPropertyValue<T>(JsonElement entity, string propertyName, out T value)
     {
         value = default!;
         if (!entity.TryGetProperty(propertyName, out var prop)) return false;
 
-        // Tentar obter o "value" dentro do objeto NGSI-LD
         JsonElement valueElement;
         if (prop.ValueKind == JsonValueKind.Object && prop.TryGetProperty("value", out valueElement))
         {
-            // é um atributo NGSI-LD { type, value }
         }
         else
         {

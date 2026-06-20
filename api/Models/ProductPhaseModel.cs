@@ -50,4 +50,5 @@ public class ProductPhaseModel
 
     [ForeignKey("QualityId")]
     public QualityCheckModel? QualityCheck { get; set; }
+    public ICollection<AlertModel> Alerts { get; set; } = new List<AlertModel>();
 }

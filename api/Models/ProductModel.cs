@@ -38,4 +38,6 @@ public class ProductModel
     public ICollection<QualityCheckModel> QualityChecks { get; set; } = new List<QualityCheckModel>();
     public ICollection<SupportedProductModel> SupportedProducts { get; set; } = new List<SupportedProductModel>();
     public ICollection<ProductConfigModel> ProductConfigs { get; set; } = new List<ProductConfigModel>();
+
+    public ICollection<AlertModel> Alerts { get; set; } = new List<AlertModel>();
 }

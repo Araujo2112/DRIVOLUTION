@@ -60,6 +60,7 @@
           <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('timeline.legend.title') }}</span>
           <div class="flex items-center gap-1.5"><div class="w-4 h-1 rounded-full bg-success-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.correct') }}</span></div>
           <div class="flex items-center gap-1.5"><div class="w-4 h-1 rounded-full bg-warning-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.repeated') }}</span></div>
+          <div class="flex items-center gap-1.5"><div class="w-4 h-1 rounded-full bg-blue-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.corrected') }}</span></div>
           <div class="flex items-center gap-1.5"><div class="w-4 h-1 rounded-full bg-danger-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.skipped1') }}</span></div>
           <div class="flex items-center gap-1.5"><div class="w-4 h-1 rounded-full bg-purple-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.skippedN') }}</span></div>
           <div class="flex items-center gap-1.5"><div class="w-4 h-1 rounded-full bg-background-400"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.unknown') }}</span></div>
@@ -148,6 +149,7 @@
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('timeline.legend.title') }}</span>
               <div class="flex items-center gap-1.5"><div class="w-6 h-0.5 rounded-full bg-success-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.correct') }}</span></div>
               <div class="flex items-center gap-1.5"><div class="w-6 h-0.5 rounded-full bg-warning-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.repeated') }}</span></div>
+              <div class="flex items-center gap-1.5"><div class="w-6 h-0.5 rounded-full bg-blue-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.corrected') }}</span></div>
               <div class="flex items-center gap-1.5"><div class="w-6 h-0.5 rounded-full bg-danger-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.skipped1') }}</span></div>
               <div class="flex items-center gap-1.5"><div class="w-6 h-0.5 rounded-full bg-purple-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.skippedN') }}</span></div>
               <div class="flex items-center gap-1.5"><div class="w-6 h-0.5 rounded-full bg-background-400"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.unknown') }}</span></div>
@@ -343,6 +345,7 @@ function initHierarchyGraph() {
     warning:     '#eab308',
     danger:      '#ef4444',
     purple:      '#a855f7',
+    corrected:   '#3b82f6',
     statusActive:'#3b82f6',
     // Cores por tipo
     client:      '#7c3aed',
@@ -373,9 +376,9 @@ function initHierarchyGraph() {
     typeLabel: string; nameLabel: string; subLabel?: string
     x: number; y: number
     tooltipRows?: { label: string; value: string }[]
-    statusDot?: string // cor do badge de status
+    statusDot?: string
     occurrenceCount?: number
-    isActivePulse?: boolean // verdadeiro se a fase está atualmente em curso (sem endedAt)
+    isActivePulse?: boolean
   }
   interface HEdge {
     source: string; target: string; label?: string; color?: string
@@ -485,7 +488,7 @@ function initHierarchyGraph() {
   })
   addEdge({ source: 'product', target: 'modelprocess', label: t('timeline.graphEdges.process') })
 
-  // Skid — adicionado mas sem aresta ainda (será ligado à fase ativa abaixo)
+  // Skid
   if (skidData.value) {
     addNode({
       id: 'skid', type: 'skid', typeLabel: t('timeline.graphNodes.skid'),
@@ -497,6 +500,28 @@ function initHierarchyGraph() {
         { label: 'Tipo', value: skidData.value.type },
       ],
     })
+  }
+
+  // ── Classificação de transição entre fases por 'order', considerando histórico completo ──
+  // (mesma lógica do backend: avanço correto / repetição / correção de buraco / salto)
+  const sortedOrders = phaseSequence.value.map(s => s.order).sort((a, b) => a - b)
+
+  function occurredOrders(): Set<number> {
+    const set = new Set<number>()
+    for (const s of phaseSequence.value) {
+      if ((phaseOccurrences[s.manufacturingPhaseId] ?? []).length > 0) set.add(s.order)
+    }
+    return set
+  }
+
+  function classifyOrderEdge(targetOrder: number, visitedBefore: Set<number>): string {
+    if (visitedBefore.size === 0) return targetOrder === sortedOrders[0] ? C.success : C.danger
+    const maxVisited = Math.max(...visitedBefore)
+    if (visitedBefore.has(targetOrder)) return C.warning // repetição
+    if (targetOrder === maxVisited + 1) return C.success // avanço correto
+    if (targetOrder < maxVisited) return C.corrected      // preencheu buraco
+    if (targetOrder === maxVisited + 2) return C.danger    // saltou 1
+    return C.purple                                        // saltou várias
   }
 
   for (const seq of phaseSequence.value) {
@@ -524,25 +549,28 @@ function initHierarchyGraph() {
       ],
     })
 
-    // Aresta modelprocess → fase 1, fase N-1 → fase N
-    // Cor segue a mesma lógica da timeline: correct/repeated/skipped1/skippedN/unknown
     const prevSeq = phaseSequence.value.find(s => s.order === seq.order - 1)
     const srcId = seq.order === 1
       ? 'modelprocess'
       : `phase-${prevSeq?.manufacturingPhaseId}`
 
-    const prevOccs = prevSeq ? (phaseOccurrences[prevSeq.manufacturingPhaseId] ?? []) : []
     let edgeColor = C.edgeNeutral
     if (occs.length > 0) {
-      // Esta fase teve ocorrência(s) real(is) — verificar se a transição anterior→esta foi respeitada
-      if (seq.order === 1) edgeColor = C.success
-      else if (prevOccs.length > 0) edgeColor = C.success
-      else edgeColor = C.danger // fase ocorreu mas a anterior na sequência nunca ocorreu = saltou
+      // 'visitedBefore' = orders com ocorrências, EXCLUINDO esta fase
+      // (aproximação: usamos o conjunto global de orders ocorridos antes de esta ter
+      // a sua primeira ocorrência, comparando timestamps)
+      const firstOccStart = occs[0]?.startedAt
+      const visitedBefore = new Set<number>()
+      for (const s2 of phaseSequence.value) {
+        if (s2.manufacturingPhaseId === seq.manufacturingPhaseId) continue
+        const occs2 = phaseOccurrences[s2.manufacturingPhaseId] ?? []
+        if (occs2.some(o => o.startedAt < firstOccStart)) visitedBefore.add(s2.order)
+      }
+      edgeColor = classifyOrderEdge(seq.order, visitedBefore)
     }
 
     addEdge({ source: srcId, target: phId, label: `${t('timeline.graphEdges.step')} ${seq.order}`, color: edgeColor })
 
-    // Workstation por baixo da fase
     const wsName = phaseToWs[seq.manufacturingPhaseId]
       ? `WS ${phaseToWs[seq.manufacturingPhaseId]}`
       : t('timeline.notVisited')
@@ -559,7 +587,6 @@ function initHierarchyGraph() {
 
   // Aresta Skid → fase ativa (ou última fase visitada se não há ativa)
   if (skidData.value) {
-    // Encontrar a fase onde o skid está agora: ativa, ou a última com ocorrências
     let skidAtSeq: PhaseSequence | null = null
     if (activeSeq) {
       skidAtSeq = activeSeq
@@ -571,27 +598,17 @@ function initHierarchyGraph() {
     }
     const skidTargetId = skidAtSeq ? `phase-${skidAtSeq.manufacturingPhaseId}` : null
 
-    // Cor da aresta skid→fase segue a mesma lógica da legenda:
-    // verifica a transição entre a fase anterior concluída e esta fase do skid
     let skidEdgeColor = C.edgeNeutral
     if (skidAtSeq) {
-      const prevConcludedOrder = (() => {
-        // maior 'order' com ocorrências concluídas antes da fase atual do skid
-        let maxOrder = 0
-        for (const s of phaseSequence.value) {
-          if (s.order < skidAtSeq!.order && (phaseOccurrences[s.manufacturingPhaseId] ?? []).length > 0) {
-            maxOrder = Math.max(maxOrder, s.order)
-          }
-        }
-        return maxOrder
-      })()
-      const delta = skidAtSeq.order - prevConcludedOrder
-      if (prevConcludedOrder === 0) skidEdgeColor = C.success // primeira fase, sem histórico anterior
-      else if (delta === 1) skidEdgeColor = C.success
-      else if (delta === 0) skidEdgeColor = C.warning
-      else if (delta === 2) skidEdgeColor = C.danger
-      else if (delta > 2) skidEdgeColor = C.purple
-      else skidEdgeColor = C.edgeNeutral
+      const occsOfTarget = phaseOccurrences[skidAtSeq.manufacturingPhaseId] ?? []
+      const firstOccStart = occsOfTarget[0]?.startedAt
+      const visitedBefore = new Set<number>()
+      for (const s2 of phaseSequence.value) {
+        if (s2.manufacturingPhaseId === skidAtSeq.manufacturingPhaseId) continue
+        const occs2 = phaseOccurrences[s2.manufacturingPhaseId] ?? []
+        if (occs2.some(o => o.startedAt < firstOccStart)) visitedBefore.add(s2.order)
+      }
+      skidEdgeColor = classifyOrderEdge(skidAtSeq.order, visitedBefore)
     }
 
     if (skidTargetId) {
@@ -600,25 +617,16 @@ function initHierarchyGraph() {
   }
 
   // ── Layout LEFT-TO-RIGHT ────────────────────────────────────────────────────
-  const BOX  = 90   // tamanho do nó (quadrado)
-  const ICON = 36   // tamanho do ícone dentro do nó
-  const GAP_X = 160 // espaçamento horizontal entre colunas
-  const GAP_Y = 140 // espaçamento vertical entre fases
-  const GAP_WS = 130 // deslocamento horizontal da WS relativamente à fase
-
-  // Colunas X (left → right)
-  // Col 0: client, order, mo, product, modelprocess (empilhados verticalmente no lado esquerdo)
-  // Col 1: fase 1 (e por baixo WS 1)
-  // Col 2: fase 2 (e por baixo WS 2)
-  // ...
-  // O skid fica por cima da fase ativa (acima no eixo Y)
+  const BOX  = 90
+  const ICON = 36
+  const GAP_X = 160
+  const GAP_Y = 140
+  const GAP_WS = 130
 
   const nPhases = phaseSequence.value.length
 
-  // ── Linha horizontal principal: Client → Order → MO → Product → ModelProcess
-  // Ficam todos na mesma linha Y, distribuídos em X
   const mainNodeIds = ['client', 'order', 'mo', 'product', 'modelprocess']
-  const MAIN_ROW_Y = 80 + BOX / 2  // Y da linha principal (centros dos nós)
+  const MAIN_ROW_Y = 80 + BOX / 2
   const MAIN_START_X = 60 + BOX / 2
 
   mainNodeIds.forEach((id, i) => {
@@ -629,23 +637,19 @@ function initHierarchyGraph() {
     }
   })
 
-  // X de início das fases: logo após o último nó da linha principal
   const lastMainX = MAIN_START_X + (mainNodeIds.length - 1) * GAP_X
   const phaseStartX = lastMainX + GAP_X
-  const phaseColCenterY = MAIN_ROW_Y  // o centro vertical das fases alinha com a linha principal
+  const phaseColCenterY = MAIN_ROW_Y
 
-  // Altura total das fases empilhadas
   const phaseColH = nPhases * BOX + (nPhases - 1) * (GAP_Y - BOX)
   const phaseStartY = phaseColCenterY - phaseColH / 2 + BOX / 2
 
-  // Posicionar fases verticalmente à direita
   const phaseNodes = nodes.filter(n => n.type === 'phase')
   phaseNodes.forEach((ph, i) => {
     ph.x = phaseStartX
     ph.y = phaseStartY + i * GAP_Y
   })
 
-  // WS à direita de cada fase
   for (const ph of phaseNodes) {
     const wsId = ph.id.replace('phase-', 'ws-')
     const ws = nodes.find(n => n.id === wsId)
@@ -655,8 +659,6 @@ function initHierarchyGraph() {
     }
   }
 
-  // Skid: à esquerda da fase ativa, entre a coluna principal e as fases
-  // Se não há fase ativa, usa a última fase com ocorrências
   const skidNode = nodes.find(n => n.id === 'skid')
   const skidTargetNode = activePhaseNodeId
     ? nodes.find(n => n.id === activePhaseNodeId)
@@ -670,10 +672,8 @@ function initHierarchyGraph() {
       })()
 
   if (skidNode && skidTargetNode) {
-    // Posicionar skid acima da fase alvo, no mesmo X das fases
     skidNode.x = phaseStartX
     skidNode.y = skidTargetNode.y - GAP_Y
-    // Se ficar demasiado perto de outro nó, afastar para a esquerda
     if (skidNode.y > phaseStartY - GAP_Y / 2) {
       skidNode.x = phaseStartX - GAP_WS
       skidNode.y = skidTargetNode.y
@@ -697,23 +697,20 @@ function initHierarchyGraph() {
     .attr('width', viewW)
     .attr('height', viewH)
 
-  // Fundo cobre tudo — mesma cor do canvas
   svg.append('rect')
     .attr('width', viewW).attr('height', viewH)
     .attr('fill', C.canvasBg)
 
-  // Zoom + pan
   const zoomG = svg.append('g').attr('class', 'zoom-layer')
   const zoom = d3.zoom<SVGSVGElement, unknown>()
     .scaleExtent([0.2, 3])
     .on('zoom', (event) => { zoomG.attr('transform', event.transform) })
   d3.select(svgEl).call(zoom)
 
-  // Defs: marcadores de seta + filtro sombra
   const defs = zoomG.append('defs')
   const arrowDefs: Record<string, string> = {
     edge: C.edge, edgeNeutral: C.edgeNeutral, success: C.success,
-    warning: C.warning, danger: C.danger, purple: C.purple, ws: C.ws,
+    warning: C.warning, danger: C.danger, purple: C.purple, ws: C.ws, corrected: C.corrected,
   }
   for (const [name, color] of Object.entries(arrowDefs)) {
     defs.append('marker')
@@ -727,19 +724,18 @@ function initHierarchyGraph() {
     if (color === C.warning) return 'warning'
     if (color === C.danger) return 'danger'
     if (color === C.purple) return 'purple'
+    if (color === C.corrected) return 'corrected'
     if (color === C.ws) return 'ws'
     if (color === C.edgeNeutral) return 'edgeNeutral'
     return 'edge'
   }
 
-  // Filtro sombra
   const filter = defs.append('filter').attr('id', 'node-shadow')
     .attr('x', '-20%').attr('y', '-20%').attr('width', '140%').attr('height', '140%')
   filter.append('feDropShadow')
     .attr('dx', 0).attr('dy', 2).attr('stdDeviation', 4)
     .attr('flood-color', isDark ? 'rgba(0,0,0,0.6)' : 'rgba(100,116,139,0.2)')
 
-  // ── Arestas ─────────────────────────────────────────────────────────────────
   const edgesG = zoomG.append('g').attr('class', 'edges')
 
   for (const edge of edges) {
@@ -750,7 +746,6 @@ function initHierarchyGraph() {
     const color = edge.color ?? C.edge
     const arrowId = colorToArrowId(color)
 
-    // Determinar direção da aresta pelo delta entre nós
     const dx = tgt.x - src.x
     const dy = tgt.y - src.y
     const isMainlyHoriz = Math.abs(dx) > Math.abs(dy)
@@ -758,13 +753,11 @@ function initHierarchyGraph() {
     let x1: number, y1: number, x2: number, y2: number, path: string
 
     if (isMainlyHoriz) {
-      // Saída pelo lado direito do src, entrada pelo lado esquerdo do tgt
       x1 = src.x + BOX / 2; y1 = src.y
       x2 = tgt.x - BOX / 2; y2 = tgt.y
       const mx = (x1 + x2) / 2
       path = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`
     } else {
-      // Saída pelo lado inferior do src, entrada pelo lado superior do tgt
       x1 = src.x; y1 = src.y + BOX / 2
       x2 = tgt.x; y2 = tgt.y - BOX / 2
       const my = (y1 + y2) / 2
@@ -791,31 +784,22 @@ function initHierarchyGraph() {
     }
   }
 
-  // ── Nós ─────────────────────────────────────────────────────────────────────
   const nodesG = zoomG.append('g').attr('class', 'nodes')
 
-  // Drag individual nos nós
   const drag = d3.drag<SVGGElement, HNode>()
     .on('start', function() { d3.select(this).raise() })
     .on('drag', function(event, d) {
       d.x += event.dx; d.y += event.dy
       d3.select(this).attr('transform', `translate(${d.x - BOX / 2}, ${d.y - BOX / 2})`)
-      // Atualizar arestas
-      edgesG.selectAll<SVGPathElement, HNode>('path').attr('d', function() {
-        // Re-render completo das arestas — mais simples que tracking individual
-        return d3.select(this).attr('d')
-      })
       redrawEdges()
     })
 
-  // Armazenar grupos para redraw
   const nodeMap = new Map<string, HNode>()
   nodes.forEach(n => nodeMap.set(n.id, n))
 
   function redrawEdges() {
     edgesG.selectAll('*').remove()
 
-    // Re-adicionar marcadores
     for (const [name, color] of Object.entries(arrowDefs)) {
       zoomG.select('defs').append('marker')
         .attr('id', `ha-${name}`).attr('markerWidth', 8).attr('markerHeight', 8)
@@ -867,14 +851,12 @@ function initHierarchyGraph() {
     .attr('cursor', 'grab')
     .call(drag)
 
-  // Tipo label acima do nó
   nodeGroups.append('text')
     .attr('x', BOX / 2).attr('y', -10)
     .attr('text-anchor', 'middle')
     .attr('font-size', '10').attr('fill', C.typeLabel)
     .text(d => d.typeLabel)
 
-  // Anel pulsante para fases ativas (em curso agora)
   nodeGroups.filter(d => !!d.isActivePulse)
     .append('rect')
     .attr('x', -4).attr('y', -4)
@@ -898,7 +880,6 @@ function initHierarchyGraph() {
         .attr('repeatCount', 'indefinite')
     })
 
-  // Caixa principal (quadrado com cantos arredondados)
   nodeGroups.append('rect')
     .attr('width', BOX).attr('height', BOX).attr('rx', 12)
     .attr('fill', C.nodeBg)
@@ -906,7 +887,6 @@ function initHierarchyGraph() {
     .attr('stroke-width', d => d.isActivePulse ? 2.5 : 1.8)
     .attr('filter', 'url(#node-shadow)')
 
-  // Ícone SVG no centro do nó
   nodeGroups.append('g')
     .attr('transform', `translate(${(BOX - ICON) / 2}, ${(BOX - ICON) / 2 - 8})`)
     .each(function(d) {
@@ -919,7 +899,6 @@ function initHierarchyGraph() {
         .attr('opacity', 0.85)
     })
 
-  // Nome do nó por baixo do ícone
   nodeGroups.append('text')
     .attr('x', BOX / 2).attr('y', BOX - 18)
     .attr('text-anchor', 'middle')
@@ -935,7 +914,6 @@ function initHierarchyGraph() {
       }
     })
 
-  // Sub-label (modelo, tag, etc.)
   nodeGroups.filter(d => !!d.subLabel)
     .append('text')
     .attr('x', BOX / 2).attr('y', BOX - 6)
@@ -943,14 +921,12 @@ function initHierarchyGraph() {
     .attr('font-size', '8').attr('fill', C.nodeSubText)
     .text(d => d.subLabel!.length > 16 ? d.subLabel!.slice(0, 15) + '…' : d.subLabel!)
 
-  // Badge de status (ponto colorido no canto superior direito)
   nodeGroups.filter(d => !!d.statusDot)
     .append('circle')
     .attr('cx', BOX - 8).attr('cy', 8).attr('r', 5)
     .attr('fill', d => d.statusDot!)
     .attr('stroke', C.nodeBg).attr('stroke-width', 1.5)
 
-  // Badge de ocorrências (fases repetidas)
   nodeGroups.filter(d => d.type === 'phase' && (d.occurrenceCount ?? 0) > 1)
     .append('g')
     .each(function(d) {
@@ -963,7 +939,6 @@ function initHierarchyGraph() {
         .text(`${d.occurrenceCount}×`)
     })
 
-  // Tooltip
   nodeGroups
     .on('mouseenter', function(event: MouseEvent, d: HNode) {
       if (!d.tooltipRows?.length) return
@@ -974,7 +949,6 @@ function initHierarchyGraph() {
     })
     .on('mouseleave', () => { tooltip.value.visible = false })
 
-  // Zoom inicial — escalar para caber no viewport e centrar
   const scaleX = (viewW - 40) / canvasW
   const scaleY = (viewH - 40) / canvasH
   const initialScale = Math.min(scaleX, scaleY, 1)
@@ -983,7 +957,6 @@ function initHierarchyGraph() {
   const initialTransform = d3.zoomIdentity.translate(tx, ty).scale(initialScale)
   d3.select(svgEl).call(zoom.transform, initialTransform)
 
-  // Guardar para o botão "Reset view"
   savedZoomBehavior = zoom
   savedInitialTransform = initialTransform
 }
@@ -998,34 +971,62 @@ function expectedOrderLabel(i: number): string | null {
   const ei = getExpectedIndex(i)
   return ei === -1 ? null : `${phaseSequence.value[ei].order}`
 }
-function sequenceStatus(i: number) {
-  if (i === 0) return 'first'
-  const prev = getExpectedIndex(i - 1); const curr = getExpectedIndex(i)
-  if (prev === -1 || curr === -1) return 'unknown'
-  const d = curr - prev
-  if (d === 1) return 'correct'; if (d === 0) return 'repeated'
-  if (d === 2) return 'skipped1'; if (d > 2) return 'skippedN'
+
+// Conjunto de 'order' já visitados (0..i inclusive)
+function visitedOrdersUpTo(i: number): Set<number> {
+  const visited = new Set<number>()
+  for (let k = 0; k <= i; k++) {
+    const idx = getExpectedIndex(k)
+    if (idx !== -1) visited.add(phaseSequence.value[idx].order)
+  }
+  return visited
+}
+
+// Classifica a transição que LEVOU à fase no índice i, com base no histórico 0..i-1
+type SeqClass = 'first' | 'correct' | 'repeated' | 'corrected' | 'skipped1' | 'skippedN' | 'unknown'
+function classifyTransition(i: number): SeqClass {
+  if (i <= 0) return 'first'
+
+  const currIdx = getExpectedIndex(i)
+  if (currIdx === -1) return 'unknown'
+  const currOrder = phaseSequence.value[currIdx].order
+
+  const visitedBefore = visitedOrdersUpTo(i - 1)
+  if (visitedBefore.size === 0) return 'unknown'
+
+  const maxVisited = Math.max(...visitedBefore)
+
+  if (visitedBefore.has(currOrder)) return 'repeated'
+  if (currOrder === maxVisited + 1) return 'correct'
+  if (currOrder < maxVisited) return 'corrected'
+  if (currOrder === maxVisited + 2) return 'skipped1'
+  if (currOrder > maxVisited + 2) return 'skippedN'
   return 'unknown'
 }
-function transitionStatus(i: number) {
-  const curr = getExpectedIndex(i); const next = getExpectedIndex(i + 1)
-  if (curr === -1 || next === -1) return 'unknown'
-  const d = next - curr
-  if (d === 1) return 'correct'; if (d === 0) return 'repeated'
-  if (d === 2) return 'skipped1'; if (d > 2) return 'skippedN'
-  return 'unknown'
+
+function sequenceStatus(i: number): SeqClass {
+  return classifyTransition(i)
+}
+function transitionStatus(i: number): SeqClass {
+  return classifyTransition(i + 1)
 }
 function connectorClass(i: number) {
   const s = transitionStatus(i)
-  return { correct: 'bg-success-500', repeated: 'bg-warning-500', skipped1: 'bg-danger-500', skippedN: 'bg-purple-500', unknown: 'bg-background-400' }[s] ?? 'bg-background-400'
+  return {
+    correct: 'bg-success-500', repeated: 'bg-warning-500', corrected: 'bg-blue-500',
+    skipped1: 'bg-danger-500', skippedN: 'bg-purple-500', unknown: 'bg-background-400', first: 'bg-background-400',
+  }[s] ?? 'bg-background-400'
 }
 function connectorTextClass(i: number) {
   const s = transitionStatus(i)
-  return { correct: 'text-success-600', repeated: 'text-warning-600', skipped1: 'text-danger-600', skippedN: 'text-purple-600', unknown: 'text-background-400' }[s] ?? 'text-background-400'
+  return {
+    correct: 'text-success-600', repeated: 'text-warning-600', corrected: 'text-blue-600',
+    skipped1: 'text-danger-600', skippedN: 'text-purple-600', unknown: 'text-background-400', first: 'text-background-400',
+  }[s] ?? 'text-background-400'
 }
 function connectorLabel(i: number) {
   const s = transitionStatus(i)
-  return t(`timeline.transition.${s === 'unknown' ? 'unknown' : s}`)
+  return t(`timeline.transition.${s === 'first' ? 'unknown' : s}`)
 }
 
 // ── Formatação ─────────────────────────────────────────────────────────────────
@@ -1048,8 +1049,6 @@ function resultLabel(result: string | null) {
 }
 
 onMounted(() => {
-  // Se a navegação trouxe um ID via query string (ex: vindo do WIP Dashboard),
-  // usa-o em vez do valor padrão antes de carregar a timeline.
   const queryId = route.query.id
   if (queryId && !isNaN(Number(queryId))) {
     productId.value = Number(queryId)
@@ -1057,7 +1056,6 @@ onMounted(() => {
   loadTimeline()
 })
 
-// Re-renderizar o grafo quando a janela for redimensionada (debounced)
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
 function handleResize() {
   if (viewMode.value !== 'graph') return

@@ -23,6 +23,9 @@ public class ManufacturingPhaseModel
     [Column("rework_severity")]
     public string ReworkSeverity { get; set; } = "minor";
 
+    [Column("time_threshold_pct")]
+    public int TimeThresholdPct { get; set; } = 150;
+
     // Navigation
     public ICollection<PhaseSequenceModel> PhaseSequences { get; set; } = new List<PhaseSequenceModel>();
     public ICollection<ProductPhaseModel> ProductPhases { get; set; } = new List<ProductPhaseModel>();

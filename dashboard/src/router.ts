@@ -29,6 +29,7 @@ const routes = [
             { path: 'wip-dashboard',        name: 'WipDashboard',         component: () => import('./views/dashboards/WipDashboard.vue') },
             { path: 'product-timeline',     name: 'ProductTimeline',      component: () => import('./views/dashboards/ProductTimeline.vue') },
             { path: 'settings',             name: 'Settings',             component: () => import('./views/dashboards/Settings.vue') },
+            { path: 'alerts',               name: 'AlertsHistory',        component: () => import('./views/dashboards/AlertsHistory.vue') },
         ],
     },
     {

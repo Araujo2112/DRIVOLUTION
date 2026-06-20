@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS manufacturing_phase (
     name VARCHAR(100) NOT NULL,
     estimated_duration INTEGER,
     max_acceptable_severity VARCHAR(20),
-    rework_severity VARCHAR(20)
+    rework_severity VARCHAR(20),
+    time_threshold_pct INTEGER NOT NULL DEFAULT 150
 );
 
 CREATE TABLE IF NOT EXISTS material (
@@ -272,4 +273,24 @@ CREATE TABLE IF NOT EXISTS product_config (
     CONSTRAINT fk_product_config_option 
         FOREIGN KEY (config_option_id) 
         REFERENCES config_option(id)
+);
+
+CREATE TABLE IF NOT EXISTS alert (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    product_id INTEGER NOT NULL,
+    product_phase_id INTEGER NOT NULL,
+    triggered_at TIMESTAMP NOT NULL,
+    acknowledged_at TIMESTAMP,
+    resolved_at TIMESTAMP,
+    notes TEXT,
+
+    CONSTRAINT fk_alert_product
+        FOREIGN KEY (product_id)
+        REFERENCES product(id),
+
+    CONSTRAINT fk_alert_product_phase
+        FOREIGN KEY (product_phase_id)
+        REFERENCES product_phase(id)
 );

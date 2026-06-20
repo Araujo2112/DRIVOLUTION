@@ -36,6 +36,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<SupportedProductModel> SupportedProducts { get; set; }
     public DbSet<ProductConfigModel> ProductConfigs { get; set; }
 
+    // --- Alertas ---
+    public DbSet<AlertModel> Alerts { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -229,6 +232,20 @@ public class ApplicationDbContext : DbContext
             .HasOne(pc => pc.ConfigOption)
             .WithMany() 
             .HasForeignKey(pc => pc.ConfigOptionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Product → Alert (1:N)
+        modelBuilder.Entity<AlertModel>()
+            .HasOne(a => a.Product)
+            .WithMany(p => p.Alerts)
+            .HasForeignKey(a => a.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ProductPhase → Alert (1:N)
+        modelBuilder.Entity<AlertModel>()
+            .HasOne(a => a.ProductPhase)
+            .WithMany(pp => pp.Alerts)
+            .HasForeignKey(a => a.ProductPhaseId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

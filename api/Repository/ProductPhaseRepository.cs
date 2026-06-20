@@ -55,4 +55,16 @@ public class ProductPhaseRepository : IProductPhaseRepository
         _context.ProductPhases.Update(entity);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<IEnumerable<ProductPhaseModel>> GetOpenPhasesWithPhaseInfoAsync() =>
+    await _context.ProductPhases
+        .Where(pp => pp.DatetimeEnd == null)
+        .Include(pp => pp.ManufacturingPhase)
+        .Include(pp => pp.Product)
+        .ToListAsync();
+
+    public async Task<ProductPhaseModel?> GetByIdAsync(int id) =>
+        await _context.ProductPhases
+            .Include(pp => pp.ManufacturingPhase)
+            .FirstOrDefaultAsync(pp => pp.Id == id);
 }

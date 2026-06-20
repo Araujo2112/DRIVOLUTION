@@ -319,6 +319,40 @@ export const messages = {
         tag: 'Tag',
       },
     },
+    // ── RESTAURADO: secção alerts (Card I.2 — Andon), tinha sido removida nesta versão ──
+    alerts: {
+      title: 'Alerta Andon',
+      timeExceeded: 'Tempo Excedido',
+      wrongSequence: 'Sequência Inválida',
+      notes: {
+        timeExceeded: 'Produto {product} excedeu {pct}% do tempo estimado na fase "{phase}" ({estimated}s)',
+        wrongSequence: 'Produto {product}: transição fora de sequência (fase order={from} → fase order={to})',
+      },
+    },
+    // ── RESTAURADO: secção alertsHistory (Card I.2 — Andon), tinha sido removida nesta versão ──
+    alertsHistory: {
+      nav: 'Alertas Andon',
+      title: 'Histórico de Alertas Andon',
+      subtitle: 'Registo de desvios de tempo e sequência detetados automaticamente.',
+      empty: 'Nenhum alerta registado.',
+      filterAll: 'Todos',
+      filterType: 'Tipo',
+      filterStatus: 'Estado',
+      acknowledgeBtn: 'Confirmar',
+      acknowledged: 'Confirmado',
+      fields: {
+        type: 'Tipo',
+        product: 'Produto',
+        phase: 'Fase',
+        triggeredAt: 'Detetado em',
+        status: 'Estado',
+      },
+      status: {
+        open: 'Aberto',
+        acknowledged: 'Confirmado',
+        resolved: 'Resolvido',
+      },
+    },
     auth: {
       login: 'Iniciar sessão',
       register: 'Criar conta',
@@ -648,6 +682,40 @@ export const messages = {
         phasesCount: 'phases',
         phaseN: 'Phase',
         tag: 'Tag',
+      },
+    },
+    // ── RESTORED: alerts section (Card I.2 — Andon), was removed in this version ──
+    alerts: {
+      title: 'Andon Alert',
+      timeExceeded: 'Time Exceeded',
+      wrongSequence: 'Invalid Sequence',
+      notes: {
+        timeExceeded: 'Product {product} exceeded {pct}% of estimated time in phase "{phase}" ({estimated}s)',
+        wrongSequence: 'Product {product}: transition out of sequence (phase order={from} → phase order={to})',
+      },
+    },
+    // ── RESTORED: alertsHistory section (Card I.2 — Andon), was removed in this version ──
+    alertsHistory: {
+      nav: 'Andon Alerts',
+      title: 'Andon Alert History',
+      subtitle: 'Log of automatically detected time and sequence deviations.',
+      empty: 'No alerts registered.',
+      filterAll: 'All',
+      filterType: 'Type',
+      filterStatus: 'Status',
+      acknowledgeBtn: 'Acknowledge',
+      acknowledged: 'Acknowledged',
+      fields: {
+        type: 'Type',
+        product: 'Product',
+        phase: 'Phase',
+        triggeredAt: 'Detected at',
+        status: 'Status',
+      },
+      status: {
+        open: 'Open',
+        acknowledged: 'Acknowledged',
+        resolved: 'Resolved',
       },
     },
     auth: {

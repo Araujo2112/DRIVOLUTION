@@ -65,6 +65,7 @@
           <div class="flex items-center gap-1.5"><div class="w-4 h-1 rounded-full bg-purple-500"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.skippedN') }}</span></div>
           <div class="flex items-center gap-1.5"><div class="w-4 h-1 rounded-full bg-background-400"></div><span class="text-xs text-background-600 dark:text-background-400">{{ t('timeline.legend.unknown') }}</span></div>
         </div>
+
         <div class="flex flex-col">
           <div v-for="(phase, index) in timeline" :key="phase.productPhaseId">
             <div class="flex items-start gap-4 px-4 py-3 rounded-xl border transition-colors"
@@ -96,12 +97,25 @@
                 </div>
               </div>
             </div>
-            <div v-if="index < timeline.length - 1" class="flex items-center gap-3 pl-6 py-1">
-              <div class="w-0.5 h-6 rounded-full" :class="connectorClass(index)"></div>
-              <span class="text-xs font-medium" :class="connectorTextClass(index)">{{ connectorLabel(index) }}</span>
+
+            <div v-if="index < timeline.length - 1" class="flex items-start gap-3 pl-6 py-1">
+              <div class="w-0.5 h-6 rounded-full mt-1" :class="connectorClass(index)"></div>
+              <div class="flex flex-col">
+                <span class="text-xs font-medium" :class="connectorTextClass(index)">
+                  {{ connectorLabel(index) }}
+                </span>
+                <span
+                  v-if="skippedPhaseNames(index).length"
+                  class="text-xs text-background-500 dark:text-background-400 mt-0.5"
+                >
+                  {{ t('timeline.skippedPhases') }}:
+                  {{ skippedPhaseNames(index).join(', ') }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+
         <div>
           <button @click="showTable = !showTable"
             class="flex items-center gap-2 text-xs text-background-500 hover:text-background-700 dark:hover:text-background-300 transition-colors">
@@ -503,25 +517,16 @@ function initHierarchyGraph() {
   }
 
   // ── Classificação de transição entre fases por 'order', considerando histórico completo ──
-  // (mesma lógica do backend: avanço correto / repetição / correção de buraco / salto)
   const sortedOrders = phaseSequence.value.map(s => s.order).sort((a, b) => a - b)
-
-  function occurredOrders(): Set<number> {
-    const set = new Set<number>()
-    for (const s of phaseSequence.value) {
-      if ((phaseOccurrences[s.manufacturingPhaseId] ?? []).length > 0) set.add(s.order)
-    }
-    return set
-  }
 
   function classifyOrderEdge(targetOrder: number, visitedBefore: Set<number>): string {
     if (visitedBefore.size === 0) return targetOrder === sortedOrders[0] ? C.success : C.danger
     const maxVisited = Math.max(...visitedBefore)
-    if (visitedBefore.has(targetOrder)) return C.warning // repetição
-    if (targetOrder === maxVisited + 1) return C.success // avanço correto
-    if (targetOrder < maxVisited) return C.corrected      // preencheu buraco
-    if (targetOrder === maxVisited + 2) return C.danger    // saltou 1
-    return C.purple                                        // saltou várias
+    if (visitedBefore.has(targetOrder)) return C.warning
+    if (targetOrder === maxVisited + 1) return C.success
+    if (targetOrder < maxVisited) return C.corrected
+    if (targetOrder === maxVisited + 2) return C.danger
+    return C.purple
   }
 
   for (const seq of phaseSequence.value) {
@@ -531,6 +536,36 @@ function initHierarchyGraph() {
     const lastOcc = occs[occs.length - 1]
     const isActive = lastOcc && !lastOcc.endedAt
     const isDone = lastOcc && !!lastOcc.endedAt
+
+    const firstOccStart = occs[0]?.startedAt
+    const skippedRowsForNode: { label: string; value: string }[] = []
+
+    if (firstOccStart && occs.length > 0) {
+      const visitedBefore = new Set<number>()
+
+      for (const s2 of phaseSequence.value) {
+        if (s2.manufacturingPhaseId === seq.manufacturingPhaseId) continue
+        const occs2 = phaseOccurrences[s2.manufacturingPhaseId] ?? []
+        if (occs2.some(o => o.startedAt < firstOccStart)) visitedBefore.add(s2.order)
+      }
+
+      if (!visitedBefore.has(seq.order) && visitedBefore.size > 0) {
+        const maxVisited = Math.max(...visitedBefore)
+
+        if (seq.order > maxVisited + 1) {
+          const skipped = phaseSequence.value
+            .filter(s => s.order > maxVisited && s.order < seq.order)
+            .map(s => s.phaseName)
+
+          if (skipped.length > 0) {
+            skippedRowsForNode.push({
+              label: t('timeline.skippedPhases'),
+              value: skipped.join(', '),
+            })
+          }
+        }
+      }
+    }
 
     addNode({
       id: phId, type: 'phase', typeLabel: t('timeline.graphNodes.processPhase'),
@@ -542,6 +577,7 @@ function initHierarchyGraph() {
         { label: 'Fase', value: seq.phaseName },
         { label: 'Ordem', value: String(seq.order) },
         { label: 'Ocorrências', value: String(occs.length) },
+        ...skippedRowsForNode,
         ...(lastOcc ? [
           { label: 'Última entrada', value: formatDate(lastOcc.startedAt) },
           { label: 'Última saída', value: formatDate(lastOcc.endedAt) },
@@ -556,10 +592,6 @@ function initHierarchyGraph() {
 
     let edgeColor = C.edgeNeutral
     if (occs.length > 0) {
-      // 'visitedBefore' = orders com ocorrências, EXCLUINDO esta fase
-      // (aproximação: usamos o conjunto global de orders ocorridos antes de esta ter
-      // a sua primeira ocorrência, comparando timestamps)
-      const firstOccStart = occs[0]?.startedAt
       const visitedBefore = new Set<number>()
       for (const s2 of phaseSequence.value) {
         if (s2.manufacturingPhaseId === seq.manufacturingPhaseId) continue
@@ -967,6 +999,7 @@ function getExpectedIndex(i: number): number {
   if (!phase || !phaseSequence.value.length) return -1
   return phaseSequence.value.findIndex(s => s.manufacturingPhaseId === phase.manufacturingPhaseId)
 }
+
 function expectedOrderLabel(i: number): string | null {
   const ei = getExpectedIndex(i)
   return ei === -1 ? null : `${phaseSequence.value[ei].order}`
@@ -984,6 +1017,7 @@ function visitedOrdersUpTo(i: number): Set<number> {
 
 // Classifica a transição que LEVOU à fase no índice i, com base no histórico 0..i-1
 type SeqClass = 'first' | 'correct' | 'repeated' | 'corrected' | 'skipped1' | 'skippedN' | 'unknown'
+
 function classifyTransition(i: number): SeqClass {
   if (i <= 0) return 'first'
 
@@ -1007,26 +1041,63 @@ function classifyTransition(i: number): SeqClass {
 function sequenceStatus(i: number): SeqClass {
   return classifyTransition(i)
 }
+
 function transitionStatus(i: number): SeqClass {
   return classifyTransition(i + 1)
 }
+
 function connectorClass(i: number) {
   const s = transitionStatus(i)
   return {
-    correct: 'bg-success-500', repeated: 'bg-warning-500', corrected: 'bg-blue-500',
-    skipped1: 'bg-danger-500', skippedN: 'bg-purple-500', unknown: 'bg-background-400', first: 'bg-background-400',
+    correct: 'bg-success-500',
+    repeated: 'bg-warning-500',
+    corrected: 'bg-blue-500',
+    skipped1: 'bg-danger-500',
+    skippedN: 'bg-purple-500',
+    unknown: 'bg-background-400',
+    first: 'bg-background-400',
   }[s] ?? 'bg-background-400'
 }
+
 function connectorTextClass(i: number) {
   const s = transitionStatus(i)
   return {
-    correct: 'text-success-600', repeated: 'text-warning-600', corrected: 'text-blue-600',
-    skipped1: 'text-danger-600', skippedN: 'text-purple-600', unknown: 'text-background-400', first: 'text-background-400',
+    correct: 'text-success-600',
+    repeated: 'text-warning-600',
+    corrected: 'text-blue-600',
+    skipped1: 'text-danger-600',
+    skippedN: 'text-purple-600',
+    unknown: 'text-background-400',
+    first: 'text-background-400',
   }[s] ?? 'text-background-400'
 }
+
 function connectorLabel(i: number) {
   const s = transitionStatus(i)
   return t(`timeline.transition.${s === 'first' ? 'unknown' : s}`)
+}
+
+function skippedPhaseNames(i: number): string[] {
+  const currentIndex = i + 1
+
+  if (currentIndex >= timeline.value.length) return []
+
+  const currentExpectedIdx = getExpectedIndex(currentIndex)
+  if (currentExpectedIdx === -1) return []
+
+  const currentOrder = phaseSequence.value[currentExpectedIdx].order
+  const visitedBefore = visitedOrdersUpTo(i)
+
+  if (visitedBefore.size === 0) return []
+
+  const maxVisited = Math.max(...visitedBefore)
+
+  if (currentOrder <= maxVisited + 1) return []
+  if (visitedBefore.has(currentOrder)) return []
+
+  return phaseSequence.value
+    .filter(p => p.order > maxVisited && p.order < currentOrder)
+    .map(p => p.phaseName)
 }
 
 // ── Formatação ─────────────────────────────────────────────────────────────────
@@ -1035,10 +1106,12 @@ function formatDate(date: string | null) {
   const n = date.endsWith('Z') ? date : date + 'Z'
   return new Date(n).toLocaleString('pt-PT')
 }
+
 function formatDuration(seconds: number | null) {
   if (seconds === null || seconds === undefined) return t('timeline.inProgress')
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
 }
+
 function resultLabel(result: string | null) {
   switch (result) {
     case 'passed': return t('timeline.result.passed')
@@ -1057,11 +1130,13 @@ onMounted(() => {
 })
 
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
+
 function handleResize() {
   if (viewMode.value !== 'graph') return
   if (resizeTimeout) clearTimeout(resizeTimeout)
   resizeTimeout = setTimeout(() => initHierarchyGraph(), 200)
 }
+
 onMounted(() => window.addEventListener('resize', handleResize))
 onUnmounted(() => window.removeEventListener('resize', handleResize))
 </script>

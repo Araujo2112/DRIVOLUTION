@@ -1,0 +1,10 @@
+{
+  "services": [
+    {
+      "apikey": "drivolution-key",
+      "cbroker": "http://orion:1026",
+      "entity_type": "Skid",
+      "resource": "/iot/json"
+    }
+  ]
+}

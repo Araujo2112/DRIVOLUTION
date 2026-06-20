@@ -1,0 +1,18 @@
+{
+  "devices": [
+    {
+      "device_id": "skid-1111",
+      "entity_name": "urn:ngsi-ld:Skid:skid-1111",
+      "entity_type": "Skid",
+      "protocol": "PDI-IoTA-JSON",
+      "transport": "HTTP",
+      "attributes": [
+        {
+          "object_id": "ws",
+          "name": "currentWorkstation",
+          "type": "Integer"
+        }
+      ]
+    }
+  ]
+}

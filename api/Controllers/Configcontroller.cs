@@ -16,7 +16,7 @@ public class ConfigController : ControllerBase
     public async Task<IActionResult> GetByModel(int modelId)
     {
         var items = await _repo.GetByModelId(modelId);
-        return Ok(items.Select(c => new ConfigDTO(c.Id, c.ModelId, c.Item)));
+        return Ok(items.Select(c => new ConfigDTO(c.Id, c.ModelId, c.Item, c.AllowMultiple)));
     }
 
     [HttpGet("{id}")]
@@ -24,7 +24,7 @@ public class ConfigController : ControllerBase
     {
         var item = await _repo.GetById(id);
         if (item == null) return NotFound();
-        return Ok(new ConfigDTO(item.Id, item.ModelId, item.Item));
+        return Ok(new ConfigDTO(item.Id, item.ModelId, item.Item, item.AllowMultiple));
     }
 
     [HttpPost]
@@ -33,11 +33,12 @@ public class ConfigController : ControllerBase
         var entity = new ConfigModel
         {
             ModelId = dto.ModelId,
-            Item = dto.Item
+            Item = dto.Item,
+            AllowMultiple = dto.AllowMultiple
         };
         var created = await _repo.Create(entity);
         return CreatedAtAction(nameof(GetById), new { id = created.Id },
-            new ConfigDTO(created.Id, created.ModelId, created.Item));
+            new ConfigDTO(created.Id, created.ModelId, created.Item, created.AllowMultiple));
     }
 
     [HttpPut("{id}")]
@@ -47,6 +48,7 @@ public class ConfigController : ControllerBase
         if (entity == null) return NotFound();
         
         if (dto.Item != null) entity.Item = dto.Item;
+        if (dto.AllowMultiple != null) entity.AllowMultiple = dto.AllowMultiple.Value;
 
         await _repo.Update(entity);
         return NoContent();

@@ -42,7 +42,7 @@ public class CarModelController : ControllerBase
     {
         if (!await _repo.Exists(id)) return NotFound();
         var configs = await _repo.GetConfigs(id);
-        return Ok(configs.Select(c => new ConfigDTO(c.Id, c.ModelId, c.Item)));
+        return Ok(configs.Select(c => new ConfigDTO(c.Id, c.ModelId, c.Item, c.AllowMultiple)));
     }
 
     [HttpPost]

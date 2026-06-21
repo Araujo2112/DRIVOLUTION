@@ -121,9 +121,11 @@
             <div v-for="config in configs" :key="config.id" class="flex flex-col gap-1.5">
               <label class="text-xs font-medium text-background-600 dark:text-background-400">
                 {{ config.item }}
-                <span class="text-background-400 font-normal">({{ t('orders.optionalDefault') }})</span>
+                <span v-if="!config.allowMultiple" class="text-background-400 font-normal">({{ t('orders.optionalDefault') }})</span>
               </label>
-              <select v-model="selectedOptions[config.id]">
+
+              <!-- Single-select: dropdown, comportamento original -->
+              <select v-if="!config.allowMultiple" v-model="selectedOptions[config.id]">
                 <option :value="undefined">{{ t('orders.useDefault') }}</option>
                 <option
                   v-for="option in optionsByConfig[config.id]"
@@ -133,6 +135,24 @@
                   {{ option.value }}{{ option.isDefault ? ` (${t('carModels.default')})` : '' }}
                 </option>
               </select>
+
+              <!-- Multi-select: toggle por opção (acessórios) -->
+              <div v-else class="flex flex-col gap-1.5">
+                <label
+                  v-for="option in optionsByConfig[config.id]"
+                  :key="option.id"
+                  class="flex items-center gap-2 text-sm text-background-700 dark:text-background-300"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="(selectedAccessoryOptions[config.id] || []).includes(option.id)"
+                    @change="toggleAccessoryOption(config.id, option.id, ($event.target as HTMLInputElement).checked)"
+                    class="w-4 h-4 accent-primary-500"
+                  />
+                  {{ option.value }}
+                  <span v-if="option.isDefault" class="text-xs text-background-400">({{ t('carModels.default') }})</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -206,7 +226,12 @@ const orders = ref<ClientOrder[]>([])
 const models = ref<CarModel[]>([])
 const configs = ref<Config[]>([])
 const optionsByConfig = reactive<Record<number, ConfigOption[]>>({})
+
+// Single-select (ex: Cor) — uma opção escolhida por config, ou undefined = usar default
 const selectedOptions = reactive<Record<number, number | undefined>>({})
+
+// Multi-select (ex: Acessórios) — lista de opções escolhidas por config
+const selectedAccessoryOptions = reactive<Record<number, number[]>>({})
 
 const showModal = ref(false)
 const showResultModal = ref(false)
@@ -260,6 +285,7 @@ async function onModelChange() {
   configs.value = []
   Object.keys(optionsByConfig).forEach(k => delete optionsByConfig[Number(k)])
   Object.keys(selectedOptions).forEach(k => delete selectedOptions[Number(k)])
+  Object.keys(selectedAccessoryOptions).forEach(k => delete selectedAccessoryOptions[Number(k)])
 
   try {
     const res = await configService.getByModel(form.modelId)
@@ -277,6 +303,17 @@ async function onModelChange() {
   }
 }
 
+function toggleAccessoryOption(configId: number, optionId: number, checked: boolean) {
+  if (!selectedAccessoryOptions[configId]) selectedAccessoryOptions[configId] = []
+  const arr = selectedAccessoryOptions[configId]
+  if (checked) {
+    if (!arr.includes(optionId)) arr.push(optionId)
+  } else {
+    const idx = arr.indexOf(optionId)
+    if (idx !== -1) arr.splice(idx, 1)
+  }
+}
+
 function openCreateModal() {
   form.orderNumber = ''
   form.customerName = ''
@@ -284,6 +321,8 @@ function openCreateModal() {
   form.quantity = 1
   form.modelId = 0
   configs.value = []
+  Object.keys(selectedOptions).forEach(k => delete selectedOptions[Number(k)])
+  Object.keys(selectedAccessoryOptions).forEach(k => delete selectedAccessoryOptions[Number(k)])
   showModal.value = true
 }
 
@@ -294,9 +333,15 @@ function closeModal() {
 async function submitCreate() {
   submitting.value = true
   try {
-    const selectedConfigOptions = Object.entries(selectedOptions)
+    const fromSingles = Object.entries(selectedOptions)
       .filter(([, val]) => val !== undefined)
       .map(([, val]) => ({ configOptionId: val as number }))
+
+    const fromAccessories = Object.values(selectedAccessoryOptions)
+      .flat()
+      .map(optionId => ({ configOptionId: optionId }))
+
+    const selectedConfigOptions = [...fromSingles, ...fromAccessories]
 
     const res = await clientOrderService.create({
       orderNumber: form.orderNumber,

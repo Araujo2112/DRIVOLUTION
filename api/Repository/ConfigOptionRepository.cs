@@ -47,4 +47,7 @@ public class ConfigOptionRepository : IConfigOptionRepository
 
     public async Task<bool> Exists(int id) => 
         await _context.Set<ConfigOptionModel>().AnyAsync(e => e.Id == id);
+
+    public async Task<IEnumerable<ConfigOptionModel>> GetDefaultsByConfigId(int configId) =>
+        await _context.Set<ConfigOptionModel>().Where(o => o.ConfigId == configId && o.IsDefault).ToListAsync();
 }

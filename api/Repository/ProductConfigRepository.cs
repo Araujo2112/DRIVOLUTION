@@ -25,4 +25,13 @@ public class ProductConfigRepository : IProductConfigRepository
         var entity = await _context.ProductConfigs.FindAsync(id);
         if (entity != null) { _context.ProductConfigs.Remove(entity); await _context.SaveChangesAsync(); }
     }
+
+    public async Task<ProductConfigModel?> GetByProductAndOption(int productId, int configOptionId) =>
+        await _context.ProductConfigs.FirstOrDefaultAsync(pc => pc.ProductId == productId && pc.ConfigOptionId == configOptionId);
+
+    public async Task<IEnumerable<ProductConfigModel>> GetByProductAndConfig(int productId, int configId) =>
+        await _context.ProductConfigs
+            .Include(pc => pc.ConfigOption)
+            .Where(pc => pc.ProductId == productId && pc.ConfigOption.ConfigId == configId)
+            .ToListAsync();
 }

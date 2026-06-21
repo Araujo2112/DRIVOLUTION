@@ -6,4 +6,6 @@ public interface IProductConfigRepository
     Task<ProductConfigModel> Create(ProductConfigModel entity);
     Task Update(ProductConfigModel entity);
     Task Delete(int id);
+    Task<ProductConfigModel?> GetByProductAndOption(int productId, int configOptionId);
+    Task<IEnumerable<ProductConfigModel>> GetByProductAndConfig(int productId, int configId);
 }

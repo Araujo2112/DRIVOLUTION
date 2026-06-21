@@ -248,6 +248,7 @@ CREATE TABLE IF NOT EXISTS config (
     id SERIAL PRIMARY KEY,
     model_id INTEGER NOT NULL,
     item VARCHAR(100) NOT NULL,
+    allow_multiple BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT fk_config_model 
         FOREIGN KEY (model_id) 
         REFERENCES model(id)
@@ -272,7 +273,9 @@ CREATE TABLE IF NOT EXISTS product_config (
         REFERENCES product(id),
     CONSTRAINT fk_product_config_option 
         FOREIGN KEY (config_option_id) 
-        REFERENCES config_option(id)
+        REFERENCES config_option(id),
+    CONSTRAINT uq_product_config 
+        UNIQUE (product_id, config_option_id)
 );
 
 CREATE TABLE IF NOT EXISTS alert (

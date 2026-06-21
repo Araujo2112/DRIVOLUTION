@@ -12,4 +12,5 @@ public interface IConfigOptionRepository
     Task Update(ConfigOptionModel entity);
     Task Delete(int id);
     Task<bool> Exists(int id);
+    Task<IEnumerable<ConfigOptionModel>> GetDefaultsByConfigId(int configId);
 }

@@ -108,10 +108,18 @@
                   <div class="flex items-center gap-2 text-sm font-medium text-background-800 dark:text-background-100">
                     <span class="material-symbols-rounded text-background-500 text-base">settings</span>
                     {{ config.item }}
+                    <span
+                      class="text-xs px-2 py-0.5 rounded-full"
+                      :class="config.allowMultiple
+                        ? 'bg-primary-50 dark:bg-primary-950 text-primary-500 border border-primary-200 dark:border-primary-800'
+                        : 'bg-background-200 dark:bg-background-700 text-background-500 border border-background-300 dark:border-background-600'"
+                    >
+                      {{ config.allowMultiple ? t('carModels.multiple') : t('carModels.single') }}
+                    </span>
                   </div>
                   <div class="flex items-center gap-2">
                     <button
-                      @click="openCreateOption(config.id)"
+                      @click="openCreateOption(config)"
                       class="flex items-center gap-1 text-xs text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950 px-2 py-1 rounded-md transition-colors"
                     >
                       <span class="material-symbols-rounded text-sm">add</span>
@@ -269,10 +277,16 @@
             <span class="material-symbols-rounded">close</span>
           </button>
         </div>
-        <div class="px-5 py-4">
+        <div class="px-5 py-4 flex flex-col gap-4">
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('carModels.fields.configName') }} *</label>
             <input v-model="configForm.item" type="text" :placeholder="t('carModels.fields.configNamePlaceholder')" />
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="allowMultiple" v-model="configForm.allowMultiple" class="w-4 h-4 accent-primary-500" />
+            <label for="allowMultiple" class="text-sm text-background-700 dark:text-background-300">
+              {{ t('carModels.fields.allowMultiple') }}
+            </label>
           </div>
         </div>
         <div class="flex justify-end gap-2 px-5 py-4 border-t border-background-300 dark:border-background-700">
@@ -300,13 +314,24 @@
             <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('carModels.fields.optionValue') }} *</label>
             <input v-model="optionForm.value" type="text" :placeholder="t('carModels.fields.optionValuePlaceholder')" />
           </div>
-          <div class="flex items-center gap-2">
-            <input type="checkbox" id="isDefault" v-model="optionForm.isDefault" :disabled="currentConfigHasDefault" class="w-4 h-4 accent-primary-500" />
+          <div v-if="!optionForm.configAllowsMultiple" class="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isDefault"
+              v-model="optionForm.isDefault"
+              :disabled="currentConfigHasDefault"
+              class="w-4 h-4 accent-primary-500"
+            />
             <label for="isDefault" class="text-sm text-background-700 dark:text-background-300">
               {{ t('carModels.fields.isDefault') }}
-              <span v-if="currentConfigHasDefault" class="text-xs text-background-400 ml-1">({{ t('carModels.defaultExists') }})</span>
+              <span v-if="currentConfigHasDefault" class="text-xs text-background-400 ml-1">
+                ({{ t('carModels.defaultExists') }})
+              </span>
             </label>
           </div>
+          <p v-if="optionForm.configAllowsMultiple" class="text-xs text-background-400">
+            {{ t('carModels.multipleDefaultsHint') }}
+          </p>
         </div>
         <div class="flex justify-end gap-2 px-5 py-4 border-t border-background-300 dark:border-background-700">
           <button @click="showOptionModal = false" class="px-4 py-2 text-sm rounded-lg border border-background-300 dark:border-background-600 text-background-700 dark:text-background-300 hover:bg-background-100 dark:hover:bg-background-700 transition-colors">
@@ -392,12 +417,15 @@ const showPhaseModal = ref(false)
 
 // ── Forms ──────────────────────────────────────────────────────────────────────
 const modelForm = reactive({ name: '', version: '', type: '' })
-const configForm = reactive({ item: '', modelId: 0 })
-const optionForm = reactive({ value: '', isDefault: false, configId: 0 })
+const configForm = reactive({ item: '', modelId: 0, allowMultiple: false })
+const optionForm = reactive({ value: '', isDefault: false, configId: 0, configAllowsMultiple: false })
 const phaseForm = reactive({ manufacturingPhaseId: 0, modelId: 0 })
 
 // ── Computed ───────────────────────────────────────────────────────────────────
+// Só bloqueia um segundo "default" quando a config é single-select.
+// Em configs allowMultiple (ex: Acessórios) pode haver vários defaults ao mesmo tempo.
 const currentConfigHasDefault = computed(() => {
+  if (optionForm.configAllowsMultiple) return false
   const options = optionsByConfig[optionForm.configId] || []
   return options.some(o => o.isDefault)
 })
@@ -526,12 +554,17 @@ async function deleteModel(model: CarModel) {
 function openCreateConfig(modelId: number) {
   configForm.item = ''
   configForm.modelId = modelId
+  configForm.allowMultiple = false
   showConfigModal.value = true
 }
 
 async function submitCreateConfig() {
   try {
-    const res = await configService.create({ modelId: configForm.modelId, item: configForm.item })
+    const res = await configService.create({
+      modelId: configForm.modelId,
+      item: configForm.item,
+      allowMultiple: configForm.allowMultiple,
+    })
     showConfigModal.value = false
     toast.success(t('carModels.configCreated'))
     optionsByConfig[res.data.id] = []
@@ -552,10 +585,11 @@ async function deleteConfig(config: Config) {
 }
 
 // ── Opção ──────────────────────────────────────────────────────────────────────
-function openCreateOption(configId: number) {
+function openCreateOption(config: Config) {
   optionForm.value = ''
   optionForm.isDefault = false
-  optionForm.configId = configId
+  optionForm.configId = config.id
+  optionForm.configAllowsMultiple = config.allowMultiple
   showOptionModal.value = true
 }
 

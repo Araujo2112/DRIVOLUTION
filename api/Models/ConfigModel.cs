@@ -17,6 +17,9 @@ public class ConfigModel
     [Column("item")]
     [Required]
     public string Item { get; set; } = string.Empty;
+    
+    [Column("allow_multiple")]
+    public bool AllowMultiple { get; set; }
 
     // Navigation
     [ForeignKey("ModelId")]

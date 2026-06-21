@@ -11,6 +11,7 @@ export interface Config {
   id: number
   modelId: number
   item: string
+  allowMultiple: boolean
 }
 
 export interface ConfigOption {
@@ -29,6 +30,7 @@ export interface CreateCarModelDTO {
 export interface CreateConfigDTO {
   modelId: number
   item: string
+  allowMultiple: boolean
 }
 
 export interface CreateConfigOptionDTO {

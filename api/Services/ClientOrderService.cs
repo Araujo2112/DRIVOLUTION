@@ -47,6 +47,40 @@ public class ClientOrderService : IClientOrderService
         return new ClientOrderDTO(item.Id, item.OrderNumber, item.OrderDate, item.CustomerName, item.Quantity);
     }
 
+    private async Task<List<int>> ResolveOptionIds(ConfigModel configCategory, List<ConfigSelectionDTO>? selections)
+    {
+        var matchedIds = new List<int>();
+
+        if (selections != null && selections.Any())
+        {
+            foreach (var selection in selections)
+            {
+                var option = await _configOptionRepo.GetById(selection.ConfigOptionId);
+                if (option != null && option.ConfigId == configCategory.Id)
+                {
+                    matchedIds.Add(option.Id);
+                    if (!configCategory.AllowMultiple)
+                        break; // single-select: ignora seleções extra da mesma categoria
+                }
+            }
+        }
+
+        if (matchedIds.Any())
+            return matchedIds;
+
+        // Fallback: nenhuma seleção do cliente para esta categoria
+        if (configCategory.AllowMultiple)
+        {
+            var defaults = await _configOptionRepo.GetDefaultsByConfigId(configCategory.Id);
+            return defaults.Select(d => d.Id).ToList();
+        }
+        else
+        {
+            var defaultOption = await _configOptionRepo.GetDefaultByConfigId(configCategory.Id);
+            return defaultOption != null ? new List<int> { defaultOption.Id } : new List<int>();
+        }
+    }
+
     public async Task<CreateClientOrderResultDTO> Create(CreateClientOrderDTO dto)
     {
         // 1. Validar existência do modelo de carro
@@ -90,14 +124,14 @@ public class ClientOrderService : IClientOrderService
             // 5. Processar as Configurações para cada Produto
             foreach (var configCategory in allConfigsForModel)
             {
-                int finalOptionId = await ResolveOptionId(configCategory.Id, dto.Configs);
+                var finalOptionIds = await ResolveOptionIds(configCategory, dto.Configs);
 
-                if (finalOptionId != 0)
+                foreach (var optionId in finalOptionIds)
                 {
                     await _productConfigRepo.Create(new ProductConfigModel
                     {
                         ProductId = product.Id,
-                        ConfigOptionId = finalOptionId
+                        ConfigOptionId = optionId
                     });
                 }
             }

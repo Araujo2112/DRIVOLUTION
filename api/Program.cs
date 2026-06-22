@@ -91,6 +91,7 @@ builder.Services.AddScoped<IQualityCheckService, QualityCheckService>();
 builder.Services.AddScoped<IManufacturingOrderService, ManufacturingOrderService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddHostedService<AlertBackgroundService>();
+builder.Services.AddScoped<IWipDashboardService, WipDashboardService>();
 
 // --- Repositories ---
 builder.Services.AddScoped<IProductionLineRepository, ProductionLineRepository>();
@@ -115,6 +116,7 @@ builder.Services.AddScoped<IProductConfigRepository, ProductConfigRepository>();
 builder.Services.AddScoped<IConfigOptionRepository, ConfigOptionRepository>();
 builder.Services.AddScoped<IProductTimelineRepository, ProductTimelineRepository>();
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
+builder.Services.AddScoped<IWipDashboardRepository, WipDashboardRepository>();
 
 // --- JWT Authentication ---
 builder.Services.AddAuthentication(options =>

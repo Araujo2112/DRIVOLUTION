@@ -64,6 +64,16 @@
           {{ t('wip.viewTables') }}
         </button>
         <button
+          @click="viewMode = 'kanban'"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+          :class="viewMode === 'kanban'
+            ? 'bg-primary-500 text-white'
+            : 'bg-background-100 dark:bg-background-800 text-background-600 dark:text-background-400 hover:text-background-900 dark:hover:text-background-100'"
+        >
+          <span class="material-symbols-rounded text-base">view_kanban</span>
+          {{ t('wip.viewKanban') }}
+        </button>
+        <button
           @click="viewMode = 'graph'; nextTick(() => initGraph())"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
           :class="viewMode === 'graph'
@@ -75,6 +85,7 @@
         </button>
       </div>
 
+      <!-- Tables View -->
       <div v-if="viewMode === 'tables'" class="flex flex-col gap-8">
         <!-- Fila de Espera -->
         <section>
@@ -188,6 +199,90 @@
         </section>
       </div>
 
+      <!-- Kanban View -->
+      <div v-else-if="viewMode === 'kanban'" class="flex gap-4 overflow-x-auto pb-4">
+        <div
+          v-for="col in kanbanColumns"
+          :key="col.id"
+          class="flex-shrink-0 w-72"
+        >
+          <!-- Column Header -->
+          <div class="flex items-center justify-between mb-3 px-1">
+            <div class="flex items-center gap-2">
+              <span
+                class="w-2.5 h-2.5 rounded-full"
+                :class="col.type === 'waiting' ? 'bg-warning-500' : 'bg-primary-500'"
+              ></span>
+              <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ col.label }}</span>
+            </div>
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-background-200 dark:bg-background-700 text-background-600 dark:text-background-300">
+              {{ col.items.length }}
+            </span>
+          </div>
+
+          <!-- Cards -->
+          <div class="flex flex-col gap-2">
+
+            <!-- Waiting Cards -->
+            <template v-if="col.type === 'waiting'">
+              <div
+                v-for="item in (col.items as WaitingItem[])"
+                :key="'kanban-w-' + item.productId"
+                @click="goToProduct(item.productId)"
+                class="bg-background-50 dark:bg-background-800 border border-warning-300 dark:border-warning-700 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
+              >
+                <div class="text-xs font-medium text-warning-600 dark:text-warning-400 truncate">
+                  {{ item.serialNumber }}
+                </div>
+                <div class="text-xs text-background-500 dark:text-background-400 mt-1">
+                  {{ item.nextPhase ?? '—' }}
+                </div>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-xs px-1.5 py-0.5 rounded-full" :class="queueReasonClass(item.queueReason)">
+                    {{ queueReasonLabel(item.queueReason) }}
+                  </span>
+                  <span class="text-xs text-background-400">ID #{{ item.productId }}</span>
+                </div>
+              </div>
+            </template>
+
+            <!-- In Progress Cards -->
+            <template v-else>
+              <div
+                v-for="item in (col.items as WipItem[])"
+                :key="'kanban-p-' + item.productId"
+                @click="goToProduct(item.productId)"
+                class="rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow border"
+                :class="cardStatusClass(item)"
+              >
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-xs font-medium truncate" :class="cardStatusTextClass(item)">
+                    {{ item.serialNumber }}
+                  </span>
+                  <span
+                    v-if="openAlertProductIds.includes(item.productId)"
+                    class="material-symbols-rounded text-sm text-red-500 flex-shrink-0"
+                    :title="t('wip.kanban.hasAlert')"
+                  >
+                    notifications_active
+                  </span>
+                </div>
+                <div class="text-xs text-background-500 dark:text-background-400 mt-1">
+                  {{ item.currentPhase }}
+                </div>
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-xs font-medium" :class="cardStatusDurationClass(item)">
+                    {{ formatDuration(item.elapsedSeconds) }}
+                  </span>
+                  <span class="text-xs text-background-400">ID #{{ item.productId }}</span>
+                </div>
+              </div>
+            </template>
+
+          </div>
+        </div>
+      </div>
+
       <!-- Graph View -->
       <div v-else class="flex flex-col gap-3">
         <div class="flex items-center justify-between gap-4 flex-wrap">
@@ -235,7 +330,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import * as d3 from 'd3'
 import axios from '@/axios'
@@ -245,7 +340,7 @@ import { toast } from '@/plugins/toast'
 const { t } = useI18n()
 const router = useRouter()
 
-type ViewMode = 'tables' | 'graph'
+type ViewMode = 'tables' | 'kanban' | 'graph'
 
 type WipSummary = {
   totalProducts: number
@@ -263,6 +358,8 @@ type WipItem = {
   workstationId: number
   workstation: string | null
   currentPhase: string | null
+  estimatedDuration: number | null
+  timeThresholdPct: number | null
   startedAt: string | null
   elapsedSeconds: number | null
 }
@@ -296,6 +393,13 @@ type GraphEdge = {
   type: string
 }
 
+type KanbanColumn = {
+  id: string
+  label: string
+  type: 'waiting' | 'workstation'
+  items: WaitingItem[] | WipItem[]
+}
+
 const loading = ref(false)
 const viewMode = ref<ViewMode>('tables')
 const summary = ref<WipSummary>({
@@ -307,6 +411,7 @@ const summary = ref<WipSummary>({
 })
 const items = ref<WipItem[]>([])
 const waitingItems = ref<WaitingItem[]>([])
+const openAlertProductIds = ref<number[]>([])
 const graph = ref<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] })
 
 const graphContainer = ref<HTMLDivElement>()
@@ -319,23 +424,84 @@ const tooltip = ref({
   subtitle: '',
 })
 
+const kanbanColumns = computed<KanbanColumn[]>(() => {
+  const waitingCol: KanbanColumn = {
+    id: 'waiting',
+    label: t('wip.queue.title'),
+    type: 'waiting',
+    items: waitingItems.value,
+  }
+
+  const wsMap = new Map<number, KanbanColumn>()
+  for (const item of items.value) {
+    if (!wsMap.has(item.workstationId)) {
+      wsMap.set(item.workstationId, {
+        id: `ws-${item.workstationId}`,
+        label: item.workstation ?? `WS ${item.workstationId}`,
+        type: 'workstation',
+        items: [],
+      })
+    }
+    ;(wsMap.get(item.workstationId)!.items as WipItem[]).push(item)
+  }
+
+  return [waitingCol, ...wsMap.values()]
+})
+
+function cardStatus(item: WipItem): 'critical' | 'warning' | 'normal' {
+  if (openAlertProductIds.value.includes(item.productId)) return 'critical'
+  if (item.estimatedDuration && item.elapsedSeconds !== null) {
+    if (item.elapsedSeconds > item.estimatedDuration) return 'warning'
+  }
+  return 'normal'
+}
+
+function cardStatusClass(item: WipItem): string {
+  const status = cardStatus(item)
+  if (status === 'critical') return 'bg-red-50 dark:bg-red-950 border-red-300 dark:border-red-700'
+  if (status === 'warning') return 'bg-warning-50 dark:bg-warning-950 border-warning-300 dark:border-warning-700'
+  return 'bg-background-50 dark:bg-background-800 border-background-300 dark:border-background-700'
+}
+
+function cardStatusTextClass(item: WipItem): string {
+  const status = cardStatus(item)
+  if (status === 'critical') return 'text-red-600 dark:text-red-400'
+  if (status === 'warning') return 'text-warning-600 dark:text-warning-400'
+  return 'text-primary-600 dark:text-primary-400'
+}
+
+function cardStatusDurationClass(item: WipItem): string {
+  const status = cardStatus(item)
+  if (status === 'critical') return 'text-red-500'
+  if (status === 'warning') return 'text-warning-500'
+  return 'text-background-400'
+}
+
 async function loadWip() {
   loading.value = true
   try {
-    const response = await axios.get('/production-lines/wip')
+    const [wipResponse, alertsResponse] = await Promise.all([
+      axios.get('/production-lines/wip'),
+      axios.get('/Alert/open'),
+    ])
 
     summary.value = {
-      totalProducts: response.data.totalProducts ?? 0,
-      waiting: response.data.waiting ?? 0,
-      inProgress: response.data.inProgress ?? 0,
-      completed: response.data.completed ?? 0,
-      activeLines: response.data.activeLines ?? 0,
+      totalProducts: wipResponse.data.totalProducts ?? 0,
+      waiting: wipResponse.data.waiting ?? 0,
+      inProgress: wipResponse.data.inProgress ?? 0,
+      completed: wipResponse.data.completed ?? 0,
+      activeLines: wipResponse.data.activeLines ?? 0,
     }
 
-    waitingItems.value = response.data.waitingItems?.$values ?? response.data.waitingItems ?? []
-    items.value = response.data.items?.$values ?? response.data.items ?? []
+    waitingItems.value = wipResponse.data.waitingItems?.$values ?? wipResponse.data.waitingItems ?? []
+    items.value = wipResponse.data.items?.$values ?? wipResponse.data.items ?? []
 
-    const graphData = response.data.graph ?? {}
+    const alerts = alertsResponse.data?.$values ?? alertsResponse.data ?? []
+    openAlertProductIds.value = alerts
+      .filter((a: any) => a.productId != null)
+      .map((a: any) => a.productId as number)
+
+    const graphData = wipResponse.data.graph ?? {}
     graph.value = {
       nodes: graphData.nodes?.$values ?? graphData.nodes ?? [],
       edges: graphData.edges?.$values ?? graphData.edges ?? [],

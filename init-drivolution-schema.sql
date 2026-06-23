@@ -297,3 +297,19 @@ CREATE TABLE IF NOT EXISTS alert (
         FOREIGN KEY (product_phase_id)
         REFERENCES product_phase(id)
 );
+
+CREATE TABLE IF NOT EXISTS phase_time_coefficient (
+    id SERIAL PRIMARY KEY,
+    manufacturing_phase_id INTEGER NOT NULL,
+    config_option_id INTEGER,
+    weight_seconds NUMERIC(10,2) NOT NULL,
+    trained_at TIMESTAMP NOT NULL,
+
+    CONSTRAINT fk_phase_time_coefficient_phase
+        FOREIGN KEY (manufacturing_phase_id)
+        REFERENCES manufacturing_phase(id),
+
+    CONSTRAINT fk_phase_time_coefficient_option
+        FOREIGN KEY (config_option_id)
+        REFERENCES config_option(id)
+);

@@ -361,6 +361,10 @@ export const messages = {
     activeLines: 'Linhas Ativas',
     viewTables: 'Tabelas',
     viewGraph: 'Grafo de Rede',
+    viewKanban: 'Kanban',
+    kanban: {
+      hasAlert: 'Este produto tem um alerta Andon ativo.',
+    },
     queue: {
       title: 'Fila de Espera',
       subtitle: 'Produtos ainda não iniciados, sem suporte associado ou à espera da próxima fase.',
@@ -892,6 +896,10 @@ export const messages = {
     activeLines: 'Active Lines',
     viewTables: 'Tables',
     viewGraph: 'Network Graph',
+    viewKanban: 'Kanban',
+    kanban: {
+      hasAlert: 'This product has an active Andon alert.',
+    },
     queue: {
       title: 'Waiting Queue',
       subtitle: 'Products not started yet, without assigned support, or waiting for the next phase.',

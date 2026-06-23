@@ -1,0 +1,150 @@
+{
+  "_comentario": "Este ficheiro NÃO é lido pelo modelo de ML em produção. Serve apenas para o script de geração de dados sintéticos (seed) saber quanto tempo extra atribuir a cada produto fictício, em cada fase, de acordo com as opções escolhidas. As opções marcadas como 'isDefault' em cada categoria single-select são a BASELINE (delta = 0) e não aparecem aqui. Estampagem, Soldadura e Inspeção não variam com a configuração do produto — só Pintura (cor) e Montagem (motor, tração, jantes, estofos, acessórios) têm deltas, à semelhança do processo real da Toyota (5 fases: Estampagem, Soldadura, Pintura, Montagem, Inspeção). Os nomes em 'phase' têm de corresponder EXATAMENTE ao campo 'name' da tabela manufacturing_phase.",
+
+  "Bravon Halo": {
+    "Cor": {
+      "Amarelo Solar": [
+        { "phase": "Pintura", "deltaMinutes": 0 }
+      ]
+    },
+    "Motorização": {
+      "Gasolina 1.2": [
+        { "phase": "Montagem", "deltaMinutes": 5 }
+      ]
+    },
+    "Acessórios": {
+      "Carregador wireless": [
+        { "phase": "Montagem", "deltaMinutes": 6 }
+      ],
+      "Frisos laterais": [
+        { "phase": "Montagem", "deltaMinutes": 4 }
+      ]
+    }
+  },
+
+  "Velora Astra": {
+    "Motorização": {
+      "2.0 Híbrido": [
+        { "phase": "Montagem", "deltaMinutes": 15 }
+      ],
+      "1.6 Diesel": [
+        { "phase": "Montagem", "deltaMinutes": 5 }
+      ]
+    },
+    "Cor": {
+      "Azul Cobalto": [
+        { "phase": "Pintura", "deltaMinutes": 0 }
+      ],
+      "Cinza Grafite": [
+        { "phase": "Pintura", "deltaMinutes": 0 }
+      ]
+    },
+    "Jantes": {
+      "18 polegadas Desportivas": [
+        { "phase": "Montagem", "deltaMinutes": 8 }
+      ]
+    },
+    "Estofos": {
+      "Couro Preto": [
+        { "phase": "Montagem", "deltaMinutes": 10 }
+      ]
+    },
+    "Acessórios": {
+      "Tow bar": [
+        { "phase": "Montagem", "deltaMinutes": 12 }
+      ],
+      "Teto de abrir": [
+        { "phase": "Montagem", "deltaMinutes": 23 }
+      ],
+      "Sensores de estacionamento": [
+        { "phase": "Montagem", "deltaMinutes": 7 }
+      ]
+    }
+  },
+
+  "Quintex Fuso": {
+    "Motorização": {
+      "3.0 V6 Gasolina": [
+        { "phase": "Montagem", "deltaMinutes": 10 }
+      ],
+      "Híbrido Plug-in 2.0": [
+        { "phase": "Montagem", "deltaMinutes": 25 }
+      ]
+    },
+    "Cor": {
+      "Verde Floresta": [
+        { "phase": "Pintura", "deltaMinutes": 0 }
+      ],
+      "Vermelho Vulcão": [
+        { "phase": "Pintura", "deltaMinutes": 0 }
+      ],
+      "Cinza Tempestade": [
+        { "phase": "Pintura", "deltaMinutes": 6 }
+      ]
+    },
+    "Jantes": {
+      "19 polegadas Off-Road": [
+        { "phase": "Montagem", "deltaMinutes": 10 }
+      ],
+      "20 polegadas Desportivas": [
+        { "phase": "Montagem", "deltaMinutes": 9 }
+      ]
+    },
+    "Tração": {
+      "Integral 4x4": [
+        { "phase": "Montagem", "deltaMinutes": 20 }
+      ]
+    },
+    "Estofos": {
+      "Couro Castanho": [
+        { "phase": "Montagem", "deltaMinutes": 12 }
+      ],
+      "Couro Preto Premium": [
+        { "phase": "Montagem", "deltaMinutes": 15 }
+      ]
+    },
+    "Acessórios": {
+      "Barras de tejadilho": [
+        { "phase": "Montagem", "deltaMinutes": 8 }
+      ],
+      "Câmara 360º": [
+        { "phase": "Montagem", "deltaMinutes": 14 }
+      ],
+      "Engate de reboque": [
+        { "phase": "Montagem", "deltaMinutes": 16 }
+      ],
+      "Proteção de cárter": [
+        { "phase": "Montagem", "deltaMinutes": 5 }
+      ]
+    }
+  },
+
+  "Nordia Volt": {
+    "Cor": {
+      "Cinza Tecnológico": [
+        { "phase": "Pintura", "deltaMinutes": 0 }
+      ]
+    },
+    "Bateria": {
+      "Longo Alcance 65 kWh": [
+        { "phase": "Montagem", "deltaMinutes": 8 }
+      ]
+    },
+    "Jantes": {
+      "18 polegadas Desportivas": [
+        { "phase": "Montagem", "deltaMinutes": 7 }
+      ]
+    },
+    "Acessórios": {
+      "Carregador rápido DC": [
+        { "phase": "Montagem", "deltaMinutes": 10 }
+      ],
+      "Bomba de calor": [
+        { "phase": "Montagem", "deltaMinutes": 9 }
+      ],
+      "Câmara de marcha-atrás": [
+        { "phase": "Montagem", "deltaMinutes": 6 }
+      ]
+    }
+  }
+}

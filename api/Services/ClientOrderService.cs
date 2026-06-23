@@ -162,24 +162,4 @@ public class ClientOrderService : IClientOrderService
         await _repo.Delete(id);
         return true;
     }
-
-    // --- Métodos privados auxiliares ---
-
-    private async Task<int> ResolveOptionId(int configCategoryId, List<ConfigSelectionDTO>? selections)
-    {
-        // Verificar se o cliente enviou uma escolha que pertença a esta categoria
-        if (selections != null && selections.Any())
-        {
-            foreach (var selection in selections)
-            {
-                var option = await _configOptionRepo.GetById(selection.ConfigOptionId);
-                if (option != null && option.ConfigId == configCategoryId)
-                    return option.Id;
-            }
-        }
-
-        // Fallback: opção default da categoria
-        var defaultOption = await _configOptionRepo.GetDefaultByConfigId(configCategoryId);
-        return defaultOption?.Id ?? 0;
-    }
 }

@@ -80,8 +80,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // --- FIWARE / Orion ---
-builder.Services.AddHttpClient<OrionService>();
-builder.Services.AddScoped<OrionService>();
 
 // --- Services ---
 builder.Services.AddScoped<IClientOrderService, ClientOrderService>();

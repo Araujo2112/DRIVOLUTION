@@ -4,18 +4,12 @@ seed_synthetic_history.py
 Gera histórico SINTÉTICO de produtos já "concluídos", para arrancar o
 modelo de regressão de previsão de tempo (cold start).
 
-NÃO usa a API — insere diretamente na base de dados via psycopg2, porque
-precisamos de controlar datetime_ini/datetime_end no passado, e a API
-normal não tem esse propósito (cria produtos "agora", não retroativos).
+Agora inclui um delta de BASE por modelo/fase (independente das opções
+escolhidas), para refletir que carros maiores (ex: SUV) demoram sempre
+mais tempo nalgumas fases do que carros pequenos, mesmo com a mesma
+configuração.
 
-Pressupostos (confirmar antes de correr):
-- As 5 ManufacturingPhase já existem (ids 1-5: Estampagem, Soldadura,
-  Pintura, Montagem, Inspeção).
-- As workstations já existem para as 2 production_line, cobrindo as 5 fases.
-- Os 4 CarModel fictícios (Bravon Halo, Velora Astra, Quintex Fuso, Nordia
-  Volt) já foram recriados via seed-fake-models.ps1, DEPOIS de teres feito
-  o TRUNCATE às tabelas antigas.
-- O ficheiro time-deltas-by-option-phase.json está na mesma pasta deste script.
+NÃO usa a API — insere diretamente na base de dados via psycopg2.
 
 Instalar dependência: pip install psycopg2-binary --break-system-packages
 Correr: python seed_synthetic_history.py
@@ -26,7 +20,6 @@ import random
 import psycopg2
 from datetime import datetime, timedelta
 
-# ── Configuração ──────────────────────────────────────────────────────────
 DB_CONFIG = {
     "host": "localhost",
     "port": 5433,
@@ -35,22 +28,23 @@ DB_CONFIG = {
     "password": "drivolution",
 }
 
-PRODUCTS_PER_MODEL = 15
-ACCESSORY_PROB = 0.35          # probabilidade de cada acessório ser escolhido
-NOISE_STD_PCT = 0.15           # ruído gaussiano: ±15% do tempo esperado
-HANDOVER_MIN_MINUTES = 5       # tempo de espera entre fases (mínimo)
-HANDOVER_MAX_MINUTES = 25      # tempo de espera entre fases (máximo)
-ORDER_SPREAD_DAYS = 60         # encomendas distribuídas nos últimos N dias
+PRODUCTS_PER_MODEL = 50
+ACCESSORY_PROB = 0.35
+NOISE_STD_PCT = 0.15
+HANDOVER_MIN_MINUTES = 5
+HANDOVER_MAX_MINUTES = 25
+ORDER_SPREAD_DAYS = 60
 
 DELTAS_FILE = "time-deltas-by-option-phase.json"
 
-random.seed(42)  # reprodutibilidade — tira esta linha se quiseres aleatório puro
+random.seed(42)
 
 
 def main():
     with open(DELTAS_FILE, "r", encoding="utf-8") as f:
         deltas = json.load(f)
     deltas.pop("_comentario", None)
+    model_base_deltas = deltas.pop("_model_base_deltas", {})
 
     conn = psycopg2.connect(**DB_CONFIG)
     conn.autocommit = False
@@ -69,9 +63,10 @@ def main():
                 print(f"  [aviso] sem deltas definidos para '{model_name}', a saltar.")
                 continue
             configs = load_configs_with_options(cur, model_id)
+            base_deltas = model_base_deltas.get(model_name, {})
             print(f"\n=== Gerando histórico para {model_name} (id={model_id}) ===")
             create_history_for_model(
-                cur, model_name, model_id, configs, deltas[model_name],
+                cur, model_name, model_id, configs, deltas[model_name], base_deltas,
                 phases, workstations, lines
             )
 
@@ -91,7 +86,7 @@ def load_models(cur):
 
 
 def load_phases(cur):
-    cur.execute("SELECT id, name, estimated_duration FROM manufacturing_phase ORDER BY id;")
+    cur.execute("SELECT id, trim(name), estimated_duration FROM manufacturing_phase ORDER BY id;")
     return {name: {"id": pid, "duration": dur} for pid, name, dur in cur.fetchall()}
 
 
@@ -120,12 +115,11 @@ def load_configs_with_options(cur, model_id):
 
 
 def ensure_phase_sequences(cur, models, phases):
-    """Garante que cada modelo tem as 5 fases sequenciadas, na ordem certa."""
     phase_order = ["Estampagem", "Soldadura", "Pintura", "Montagem", "Inspeção"]
     for model_id in models.values():
         cur.execute("SELECT COUNT(*) FROM phase_sequence WHERE model_id = %s;", (model_id,))
         if cur.fetchone()[0] > 0:
-            continue  # já tem sequência, não duplicar
+            continue
         for order, phase_name in enumerate(phase_order, start=1):
             cur.execute(
                 'INSERT INTO phase_sequence ("order", manufacturing_phase_id, model_id) VALUES (%s, %s, %s);',
@@ -134,8 +128,7 @@ def ensure_phase_sequences(cur, models, phases):
 
 
 def pick_config_selections(configs):
-    """Escolhe opções aleatórias para um produto: 1 por single-select, várias por multi-select."""
-    selections = {}  # config_item -> list of option dicts escolhidos
+    selections = {}
     for item, cfg in configs.items():
         if cfg["allow_multiple"]:
             chosen = [opt for opt in cfg["options"] if random.random() < ACCESSORY_PROB]
@@ -153,7 +146,7 @@ def lookup_delta_minutes(model_deltas, config_item, option_value, phase_name):
     return 0
 
 
-def create_history_for_model(cur, model_name, model_id, configs, model_deltas,
+def create_history_for_model(cur, model_name, model_id, configs, model_deltas, base_deltas,
                               phases, workstations, lines):
     order_number = f"SEED-{model_id}-{random.randint(1000, 9999)}"
     order_date = datetime.now() - timedelta(days=random.randint(1, ORDER_SPREAD_DAYS))
@@ -199,9 +192,9 @@ def create_history_for_model(cur, model_name, model_id, configs, model_deltas,
 
         for phase_name in phase_order:
             phase = phases[phase_name]
-            base_seconds = phase["duration"] or 1800  # fallback 30 min se vier nulo
+            base_seconds = phase["duration"] or 1800
 
-            delta_minutes_total = 0
+            delta_minutes_total = base_deltas.get(phase_name, 0)
             for item, chosen_options in selections.items():
                 for opt in chosen_options:
                     delta_minutes_total += lookup_delta_minutes(
@@ -210,7 +203,7 @@ def create_history_for_model(cur, model_name, model_id, configs, model_deltas,
 
             expected_seconds = base_seconds + delta_minutes_total * 60
             actual_seconds = int(random.gauss(expected_seconds, expected_seconds * NOISE_STD_PCT))
-            actual_seconds = max(actual_seconds, int(expected_seconds * 0.5))  # nunca anormalmente curto
+            actual_seconds = max(actual_seconds, int(expected_seconds * 0.5))
 
             handover = timedelta(minutes=random.randint(HANDOVER_MIN_MINUTES, HANDOVER_MAX_MINUTES))
             datetime_ini = current_time + handover

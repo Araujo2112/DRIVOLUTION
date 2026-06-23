@@ -288,6 +288,12 @@ CREATE TABLE IF NOT EXISTS alert (
     acknowledged_at TIMESTAMP,
     resolved_at TIMESTAMP,
     notes TEXT,
+    product_serial VARCHAR(100) NOT NULL,
+    phase_name VARCHAR(100) NOT NULL,
+    threshold_pct INTEGER,
+    estimated_duration INTEGER,
+    order_from INTEGER,
+    order_to INTEGER,
 
     CONSTRAINT fk_alert_product
         FOREIGN KEY (product_id)

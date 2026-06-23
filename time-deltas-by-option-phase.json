@@ -1,5 +1,20 @@
 {
-  "_comentario": "Este ficheiro NÃO é lido pelo modelo de ML em produção. Serve apenas para o script de geração de dados sintéticos (seed) saber quanto tempo extra atribuir a cada produto fictício, em cada fase, de acordo com as opções escolhidas. As opções marcadas como 'isDefault' em cada categoria single-select são a BASELINE (delta = 0) e não aparecem aqui. Estampagem, Soldadura e Inspeção não variam com a configuração do produto — só Pintura (cor) e Montagem (motor, tração, jantes, estofos, acessórios) têm deltas, à semelhança do processo real da Toyota (5 fases: Estampagem, Soldadura, Pintura, Montagem, Inspeção). Os nomes em 'phase' têm de corresponder EXATAMENTE ao campo 'name' da tabela manufacturing_phase.",
+  "_comentario": "Ficheiro usado só pelo script de geração de histórico sintético (seed_synthetic_history.py). '_model_base_deltas' representa o efeito do TAMANHO/TIPO do carro no tempo de cada fase, independentemente das opções escolhidas (ex: um SUV demora sempre mais a estampar do que um citadino, mesmo com as mesmas opções). O resto do ficheiro mantém os deltas por opção de configuração, como antes.",
+
+  "_model_base_deltas": {
+    "Bravon Halo": {
+      "Estampagem": 0, "Soldadura": 0, "Pintura": 0, "Montagem": 0, "Inspeção": 0
+    },
+    "Velora Astra": {
+      "Estampagem": 3, "Soldadura": 3, "Pintura": 2, "Montagem": 0, "Inspeção": 0
+    },
+    "Quintex Fuso": {
+      "Estampagem": 8, "Soldadura": 7, "Pintura": 5, "Montagem": 3, "Inspeção": 2
+    },
+    "Nordia Volt": {
+      "Estampagem": -2, "Soldadura": -2, "Pintura": -1, "Montagem": 0, "Inspeção": 0
+    }
+  },
 
   "Bravon Halo": {
     "Cor": {

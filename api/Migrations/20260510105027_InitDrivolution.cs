@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace ApiTexPact.Migrations
+namespace Drivolution.Migrations
 {
     /// <inheritdoc />
     public partial class InitDrivolution : Migration

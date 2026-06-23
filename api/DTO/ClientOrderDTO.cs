@@ -1,4 +1,4 @@
-namespace ApiTexPact.DTO;
+namespace Drivolution.DTO;
 
 public record ClientOrderDTO(int Id, string OrderNumber, DateTime OrderDate, string CustomerName, int Quantity);
 

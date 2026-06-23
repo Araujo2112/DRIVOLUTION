@@ -1,0 +1,6 @@
+@Drivolution_HostAddress = http://localhost:5181
+
+GET {{Drivolution_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

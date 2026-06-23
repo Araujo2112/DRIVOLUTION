@@ -1,4 +1,4 @@
-namespace ApiTexPact.DTO;
+namespace Drivolution.DTO;
 
 public record WorkstationDTO(
     int Id,

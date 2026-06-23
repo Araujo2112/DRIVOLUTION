@@ -1,10 +1,10 @@
 using System.Text;
 using System.Text.Json.Serialization;
-using ApiTexPact.Data;
-using ApiTexPact.Repository;
-using ApiTexPact.Repository.Interface;
-using ApiTexPact.Services;
-using ApiTexPact.Services.Interface;
+using Drivolution.Data;
+using Drivolution.Repository;
+using Drivolution.Repository.Interface;
+using Drivolution.Services;
+using Drivolution.Services.Interface;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;

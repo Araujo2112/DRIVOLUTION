@@ -1,10 +1,10 @@
-using ApiTexPact.DTO;
-using ApiTexPact.Repository.Interface;
-using ApiTexPact.Services.Interface;
+using Drivolution.DTO;
+using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
-namespace ApiTexPact.Controllers;
+namespace Drivolution.Controllers;
 
 // Recebe notificações do Orion Context Broker quando um skid muda de workstation.
 // O Orion chama este endpoint automaticamente via subscrição NGSI-LD.

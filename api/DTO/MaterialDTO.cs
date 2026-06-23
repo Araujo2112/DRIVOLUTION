@@ -1,4 +1,4 @@
-namespace ApiTexPact.DTO;
+namespace Drivolution.DTO;
 
 public record MaterialDTO(int Id, string Item, string? PartNumber);
 public record CreateMaterialDTO(string Item, string? PartNumber);

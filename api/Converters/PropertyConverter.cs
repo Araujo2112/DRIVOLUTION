@@ -2,7 +2,7 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace ApiTexPact.Converters
+namespace Drivolution.Converters
 {
     public class DateTimeConverter : JsonConverter<DateTime>
     {

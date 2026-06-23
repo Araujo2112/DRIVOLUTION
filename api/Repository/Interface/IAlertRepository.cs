@@ -1,6 +1,6 @@
-using ApiTexPact.Models;
+using Drivolution.Models;
 
-namespace ApiTexPact.Repository.Interface;
+namespace Drivolution.Repository.Interface;
 
 public interface IAlertRepository
 {

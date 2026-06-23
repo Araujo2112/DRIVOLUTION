@@ -1,8 +1,8 @@
-using ApiTexPact.DTO;
-using ApiTexPact.Repository.Interface;
-using ApiTexPact.Services.Interface;
+using Drivolution.DTO;
+using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 
-namespace ApiTexPact.Services;
+namespace Drivolution.Services;
 
 public class WipDashboardService : IWipDashboardService
 {

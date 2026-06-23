@@ -1,7 +1,7 @@
-using ApiTexPact.Models;
+using Drivolution.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace ApiTexPact.Data;
+namespace Drivolution.Data;
 
 public class ApplicationDbContext : DbContext
 {

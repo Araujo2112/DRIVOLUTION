@@ -1,9 +1,9 @@
-using ApiTexPact.Data;
-using ApiTexPact.Models;
+using Drivolution.Data;
+using Drivolution.Models;
 using Microsoft.EntityFrameworkCore;
-using ApiTexPact.Repository.Interface;
+using Drivolution.Repository.Interface;
 
-namespace ApiTexPact.Repository;
+namespace Drivolution.Repository;
 
 public class AlertRepository : IAlertRepository
 {

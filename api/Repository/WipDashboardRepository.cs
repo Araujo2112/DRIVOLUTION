@@ -1,9 +1,9 @@
-using ApiTexPact.Data;
-using ApiTexPact.DTO;
-using ApiTexPact.Repository.Interface;
+using Drivolution.Data;
+using Drivolution.DTO;
+using Drivolution.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 
-namespace ApiTexPact.Repository;
+namespace Drivolution.Repository;
 
 public class WipDashboardRepository : IWipDashboardRepository
 {

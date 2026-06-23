@@ -1,4 +1,4 @@
-namespace ApiTexPact.Models.Constants;
+namespace Drivolution.Models.Constants;
 
 // Para a tabela ManufacturingPhase e QualityCheck
 public static class Severity 

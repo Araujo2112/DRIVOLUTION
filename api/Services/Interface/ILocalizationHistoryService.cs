@@ -1,6 +1,6 @@
-using ApiTexPact.DTO;
+using Drivolution.DTO;
 
-namespace ApiTexPact.Services.Interface;
+namespace Drivolution.Services.Interface;
 
 public interface ILocalizationHistoryService
 {

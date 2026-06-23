@@ -1,4 +1,4 @@
-namespace ApiTexPact.DTO;
+namespace Drivolution.DTO;
 
 public class ProductTimelineDTO
 {

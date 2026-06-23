@@ -1,6 +1,6 @@
-using ApiTexPact.DTO;
+using Drivolution.DTO;
 
-namespace ApiTexPact.Repository.Interface;
+namespace Drivolution.Repository.Interface;
 
 public interface IProductTimelineRepository
 {

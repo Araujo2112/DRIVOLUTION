@@ -1,5 +1,5 @@
-using ApiTexPact.Models;
-namespace ApiTexPact.Repository.Interface;
+using Drivolution.Models;
+namespace Drivolution.Repository.Interface;
 public interface IProductRepository
 {
     Task<IEnumerable<ProductModel>> GetAll();

@@ -1,7 +1,7 @@
-using ApiTexPact.Repository.Interface;
+using Drivolution.Repository.Interface;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ApiTexPact.Controllers;
+namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/products")]

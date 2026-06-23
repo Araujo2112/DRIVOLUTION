@@ -1,6 +1,6 @@
-using ApiTexPact.Models;
+using Drivolution.Models;
 
-namespace ApiTexPact.Services.Interface;
+namespace Drivolution.Services.Interface;
 
 public interface IAlertService
 {

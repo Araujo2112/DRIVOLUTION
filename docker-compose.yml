@@ -1,9 +1,9 @@
 services:
   api:
-      build: api/
-      ports:
-        - "8080:8080"
-      environment:
+    build: api/
+    ports:
+      - "8080:8080"
+    environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - JWT_ISSUER=${JWT_ISSUER}
       - JWT_AUDIENCE=${JWT_AUDIENCE}
@@ -13,8 +13,8 @@ services:
       - DB_NAME=drivolution
       - DB_USER=${POSTGRESQL_USER}
       - DB_PASSWORD=${POSTGRESQL_PASSWORD}
-      depends_on:
-        - db
+    depends_on:
+      - db
 
   orion:
     platform: linux/x86_64
@@ -41,11 +41,11 @@ services:
     networks:
       - default
     expose:
-      - '4041'
-      - '7896'
+      - "4041"
+      - "7896"
     ports:
-      - '4041:4041'
-      - '7896:7896'
+      - "4041:4041"
+      - "7896:7896"
     environment:
       - IOTA_CB_HOST=orion
       - IOTA_CB_PORT=1026
@@ -117,12 +117,14 @@ services:
     ports:
       - "5433:5432"
     volumes:
+      - drivolution-db-data:/bitnami/postgresql
       - ./init-db.sh:/docker-entrypoint-initdb.d/01-init-db.sh
       - ./init-drivolution-schema.sql:/docker-entrypoint-initdb.d/02-init-drivolution-schema.sql
     environment:
       POSTGRESQL_USER: ${POSTGRESQL_USER}
       POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
-      POSTGRESQL_POSTGRES_PASSWORD: ${POSTGRESQL_POSTGRES_PASSWORD} 
+      POSTGRESQL_POSTGRES_PASSWORD: ${POSTGRESQL_POSTGRES_PASSWORD}
 
 volumes:
   mongo-db: ~
+  drivolution-db-data: ~

@@ -37,8 +37,12 @@
             {{ t('timeline.viewGraph') }}
           </button>
         </div>
-        <input v-model.number="productId" type="number" min="1" class="w-28" :placeholder="t('timeline.idPlaceholder')" />
-        <button @click="loadTimeline"
+        <input
+          v-model="serialNumber"
+          type="text"
+          class="w-64"
+          placeholder="VIN..." />
+          <button @click="loadTimeline"
           class="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
           <span class="material-symbols-rounded text-base">search</span>
           {{ t('common.search') }}
@@ -253,7 +257,8 @@ const route = useRoute()
 
 // ── State ──────────────────────────────────────────────────────────────────────
 const loading       = ref(false)
-const productId     = ref<number>(1)
+const productId     = ref<number | null>(null)
+const serialNumber  = ref('')
 const timeline      = ref<any[]>([])
 const product       = ref<any>(null)
 const modelId       = ref<number | null>(null)
@@ -326,7 +331,19 @@ async function loadTimeline() {
   viewMode.value = 'timeline'
 
   try {
-    const res = await axios.get(`/products/${productId.value}/timeline`)
+    let res
+
+    if (serialNumber.value.trim()) {
+      res = await axios.get(
+        `/products/vin/${encodeURIComponent(serialNumber.value.trim())}/timeline`
+      )
+    } else if (productId.value) {
+      res = await axios.get(`/products/${productId.value}/timeline`)
+    } else {
+      toast.error(t('errors.loadFailed'))
+      return
+    }
+
     product.value = {
       id: res.data.productId,
       serialNumber: res.data.serialNumber,
@@ -1047,11 +1064,19 @@ function resultLabel(result: string | null) {
 }
 
 onMounted(() => {
+  const queryVin = route.query.vin
   const queryId = route.query.id
+
+  if (typeof queryVin === 'string' && queryVin.trim()) {
+    serialNumber.value = queryVin
+    loadTimeline()
+    return
+  }
+
   if (queryId && !isNaN(Number(queryId))) {
     productId.value = Number(queryId)
+    loadTimeline()
   }
-  loadTimeline()
 })
 
 onMounted(() => window.addEventListener('resize', handleResize))

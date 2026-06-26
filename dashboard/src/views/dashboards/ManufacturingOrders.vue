@@ -106,7 +106,7 @@
                 <div class="flex items-center gap-2 mb-2">
                   <span class="material-symbols-rounded text-primary-500 text-base">directions_car</span>
                   <button
-                    @click.stop="goToProductTimeline(product.id)"
+                    @click.stop="goToProductTimeline(product.serialNumber)"
                     class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
                     :title="t('mo.goToTimeline')"
                   >
@@ -266,8 +266,13 @@ async function submitUpdateStatus() {
 }
 
 // Navega para a Timeline do produto clicado (vindo da lista expandida de uma MO)
-function goToProductTimeline(productId: number) {
-  router.push({ name: 'ProductTimeline', query: { id: String(productId) } })
+function goToProductTimeline(serialNumber: string | null) {
+  if (!serialNumber) return
+
+  router.push({
+    name: 'ProductTimeline',
+    query: { vin: serialNumber }
+  })
 }
 
 function formatDate(dateStr: string) {

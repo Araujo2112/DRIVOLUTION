@@ -93,19 +93,6 @@
 
 
   <ItemGroup>
-    <Protobuf Include="Proto/clients.proto" ProtoRoot="Proto" />
-    <Protobuf Include="Proto/containers.proto" ProtoRoot="Proto" />
-    <Protobuf Include="Proto/rawmaterials.proto" ProtoRoot="Proto" />
-    <Protobuf Include="Proto/products.proto" ProtoRoot="Proto" />
-    <Protobuf Include="Proto/plantfloorsection.proto" ProtoRoot="Proto" />
-    <Protobuf Include="Proto/checkpoint.proto" ProtoRoot="Proto" />
-    <Protobuf Include="Proto/container_localization.proto" ProtoRoot="Proto" />
-    <Protobuf Include="Proto/manufacturing.proto" ProtoRoot="Proto" />
-    <Protobuf Include="Proto/prediction.proto" ProtoRoot="Proto" />
-  </ItemGroup>
-
-
-  <ItemGroup>
     <Folder Include="Migrations\" />
     <Folder Include="Services\FactoryElements\Interfaces\" />
     <Folder Include="Services\FinnishedProducts\Interfaces\" />

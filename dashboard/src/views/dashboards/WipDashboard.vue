@@ -119,7 +119,7 @@
             >
               <div class="col-span-2">
                 <button
-                  @click="goToProduct(item.productId)"
+                  @click="goToProduct(item.serialNumber)"
                   class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline hover:text-primary-700 dark:hover:text-primary-300 transition-colors text-left"
                   :title="t('wip.goToTimeline')"
                 >
@@ -170,7 +170,7 @@
             >
               <div class="col-span-2">
                 <button
-                  @click="goToProduct(item.productId)"
+                  @click="goToProduct(item.serialNumber)"
                   class="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline hover:text-primary-700 dark:hover:text-primary-300 transition-colors text-left"
                   :title="t('wip.goToTimeline')"
                 >
@@ -552,8 +552,13 @@ async function loadWip() {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function goToProduct(productId: number) {
-  router.push({ name: 'ProductTimeline', query: { id: String(productId) } })
+function goToProduct(serialNumber: string | null) {
+  if (!serialNumber) return
+
+  router.push({
+    name: 'ProductTimeline',
+    query: { vin: serialNumber }
+  })
 }
 
 function formatDate(date: string | null) {

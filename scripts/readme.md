@@ -47,8 +47,6 @@ TRUNCATE TABLE phase_time_coefficient, alert, product_phase, localization_histor
 "
 ```
 
-> **Nota:** o nome do container pode variar. Corre `docker ps` para confirmar — procura o container com `timescaledb` no nome.
-
 ---
 
 ## 1. `setup_environment.py` — Criar toda a infraestrutura do zero ⭐
@@ -119,7 +117,7 @@ python scripts/seed_wip_state.py
 
 ```bash
 # Pelo container do PostgreSQL (não precisa de cliente psql instalado)
-docker exec -i drivolution-timescaledb-1 psql -U drivolution -d drivolution < scripts/cleanup_wip_test.sql
+docker exec -i drivolution-db psql -U drivolution -d drivolution < scripts/cleanup_wip_test.sql
 ```
 
 ---

@@ -315,7 +315,7 @@ CREATE TABLE IF NOT EXISTS phase_time_coefficient (
 
     CONSTRAINT fk_phase_time_coefficient_phase
         FOREIGN KEY (manufacturing_phase_id)
-        REFERENCES manufacturing_phase(BackgroundService id),
+        REFERENCES manufacturing_phase(id),
 
     CONSTRAINT fk_phase_time_coefficient_option
         FOREIGN KEY (config_option_id)

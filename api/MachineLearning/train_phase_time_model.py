@@ -24,6 +24,7 @@ Instalar dependências: pip install psycopg2-binary scikit-learn --break-system-
 Correr: python train_phase_time_model.py
 """
 
+import os
 import psycopg2
 from datetime import datetime
 from sklearn.linear_model import RidgeCV
@@ -33,11 +34,11 @@ from sklearn.model_selection import cross_val_score, KFold
 import numpy as np
 
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 5433,
-    "dbname": "drivolution",
-    "user": "drivolution",
-    "password": "drivolution",
+    "host": os.environ.get("DB_HOST", "localhost"),
+    "port": int(os.environ.get("DB_PORT", "5433")),
+    "dbname": os.environ.get("DB_NAME", "drivolution"),
+    "user": os.environ.get("DB_USER", "drivolution"),
+    "password": os.environ.get("DB_PASSWORD", "drivolution"),
 }
 
 RIDGE_ALPHAS = np.logspace(-2, 3, 50)  # gama testada automaticamente pelo RidgeCV, por fase

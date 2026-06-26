@@ -64,7 +64,7 @@
           {{ t('wip.viewTables') }}
         </button>
         <button
-          @click="viewMode = 'kanban'"
+          @click="viewMode = 'kanban'; kanbanOffset = 0"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
           :class="viewMode === 'kanban'
             ? 'bg-primary-500 text-white'
@@ -87,22 +87,18 @@
 
       <!-- Tables View -->
       <div v-if="viewMode === 'tables'" class="flex flex-col gap-8">
-        <!-- Fila de Espera -->
         <section>
           <div class="flex items-center justify-between mb-3">
             <div>
               <h2 class="text-lg font-medium text-background-900 dark:text-background-50">
                 {{ t('wip.queue.title') }}
               </h2>
-              <p class="text-xs text-background-500 mt-0.5">
-                {{ t('wip.queue.subtitle') }}
-              </p>
+              <p class="text-xs text-background-500 mt-0.5">{{ t('wip.queue.subtitle') }}</p>
             </div>
             <span class="text-xs font-medium px-2 py-1 rounded-full bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-200">
               {{ summary.waiting }} {{ t('wip.queue.counter') }}
             </span>
           </div>
-
           <div class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
             <div class="grid grid-cols-7 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider col-span-2">{{ t('wip.fields.product') }}</span>
@@ -112,12 +108,10 @@
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.nextPhase') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.reason') }}</span>
             </div>
-
             <div v-if="waitingItems.length === 0" class="text-center py-10 text-background-500">
               <span class="material-symbols-rounded text-4xl block mb-2">hourglass_empty</span>
               <p class="text-sm">{{ t('wip.queue.empty') }}</p>
             </div>
-
             <div
               v-for="item in waitingItems"
               :key="'waiting-' + item.productId"
@@ -144,22 +138,18 @@
           </div>
         </section>
 
-        <!-- Produtos em Curso -->
         <section>
           <div class="flex items-center justify-between mb-3">
             <div>
               <h2 class="text-lg font-medium text-background-900 dark:text-background-50">
                 {{ t('wip.current.title') }}
               </h2>
-              <p class="text-xs text-background-500 mt-0.5">
-                {{ t('wip.current.subtitle') }}
-              </p>
+              <p class="text-xs text-background-500 mt-0.5">{{ t('wip.current.subtitle') }}</p>
             </div>
             <span class="text-xs font-medium px-2 py-1 rounded-full bg-primary-50 text-primary-600 dark:bg-primary-950 dark:text-primary-300">
               {{ summary.inProgress }} {{ t('wip.current.counter') }}
             </span>
           </div>
-
           <div class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
             <div class="grid grid-cols-7 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider col-span-2">{{ t('wip.fields.product') }}</span>
@@ -169,12 +159,10 @@
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.start') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.elapsed') }}</span>
             </div>
-
             <div v-if="items.length === 0" class="text-center py-10 text-background-500">
               <span class="material-symbols-rounded text-4xl block mb-2">inventory_2</span>
               <p class="text-sm">{{ t('wip.empty') }}</p>
             </div>
-
             <div
               v-for="item in items"
               :key="item.productId + '-' + item.currentPhase"
@@ -200,85 +188,87 @@
       </div>
 
       <!-- Kanban View -->
-      <div v-else-if="viewMode === 'kanban'" class="flex gap-4 overflow-x-auto pb-4">
+      <div
+        v-else-if="viewMode === 'kanban'"
+        ref="kanbanContainer"
+        class="overflow-hidden pb-4 cursor-grab active:cursor-grabbing select-none"
+        @mousedown="onKanbanMouseDown"
+      >
         <div
-          v-for="col in kanbanColumns"
-          :key="col.id"
-          class="flex-shrink-0 w-72"
+          ref="kanbanInner"
+          class="flex gap-4"
+          :style="{ transform: `translateX(${kanbanOffset}px)`, transition: isDraggingKanban ? 'none' : 'transform 0.1s ease' }"
         >
-          <!-- Column Header -->
-          <div class="flex items-center justify-between mb-3 px-1">
-            <div class="flex items-center gap-2">
-              <span
-                class="w-2.5 h-2.5 rounded-full"
-                :class="col.type === 'waiting' ? 'bg-warning-500' : 'bg-primary-500'"
-              ></span>
-              <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ col.label }}</span>
+          <div v-for="col in kanbanColumns" :key="col.id" class="flex-shrink-0 w-72">
+            <!-- Column Header -->
+            <div class="flex items-center justify-between mb-3 px-1">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full" :class="col.type === 'waiting' ? 'bg-warning-500' : 'bg-primary-500'"></span>
+                <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ col.label }}</span>
+              </div>
+              <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-background-200 dark:bg-background-700 text-background-600 dark:text-background-300">
+                {{ col.items.length }}
+              </span>
             </div>
-            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-background-200 dark:bg-background-700 text-background-600 dark:text-background-300">
-              {{ col.items.length }}
-            </span>
-          </div>
 
-          <!-- Cards -->
-          <div class="flex flex-col gap-2">
-
-            <!-- Waiting Cards -->
-            <template v-if="col.type === 'waiting'">
-              <div
-                v-for="item in (col.items as WaitingItem[])"
-                :key="'kanban-w-' + item.productId"
-                @click="goToProduct(item.productId)"
-                class="bg-background-50 dark:bg-background-800 border border-warning-300 dark:border-warning-700 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
-              >
-                <div class="text-xs font-medium text-warning-600 dark:text-warning-400 truncate">
-                  {{ item.serialNumber }}
-                </div>
-                <div class="text-xs text-background-500 dark:text-background-400 mt-1">
-                  {{ item.nextPhase ?? '—' }}
-                </div>
-                <div class="flex items-center justify-between mt-2">
-                  <span class="text-xs px-1.5 py-0.5 rounded-full" :class="queueReasonClass(item.queueReason)">
-                    {{ queueReasonLabel(item.queueReason) }}
-                  </span>
-                  <span class="text-xs text-background-400">ID #{{ item.productId }}</span>
-                </div>
-              </div>
-            </template>
-
-            <!-- In Progress Cards -->
-            <template v-else>
-              <div
-                v-for="item in (col.items as WipItem[])"
-                :key="'kanban-p-' + item.productId"
-                @click="goToProduct(item.productId)"
-                class="rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow border"
-                :class="cardStatusClass(item)"
-              >
-                <div class="flex items-center justify-between gap-1">
-                  <span class="text-xs font-medium truncate" :class="cardStatusTextClass(item)">
+            <!-- Cards -->
+            <div class="flex flex-col gap-2">
+              <!-- Waiting Cards -->
+              <template v-if="col.type === 'waiting'">
+                <div
+                  v-for="item in (col.items as WaitingItem[])"
+                  :key="'kanban-w-' + item.productId"
+                  @click.stop="goToProduct(item.productId)"
+                  class="bg-background-50 dark:bg-background-800 border border-warning-300 dark:border-warning-700 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <div class="text-xs font-medium text-warning-600 dark:text-warning-400 truncate">
                     {{ item.serialNumber }}
-                  </span>
-                  <span
-                    v-if="openAlertProductIds.includes(item.productId)"
-                    class="material-symbols-rounded text-sm text-red-500 flex-shrink-0"
-                    :title="t('wip.kanban.hasAlert')"
-                  >
-                    notifications_active
-                  </span>
+                  </div>
+                  <div class="text-xs text-background-500 dark:text-background-400 mt-1">
+                    {{ item.nextPhase ?? '—' }}
+                  </div>
+                  <div class="flex items-center justify-between mt-2">
+                    <span class="text-xs px-1.5 py-0.5 rounded-full" :class="queueReasonClass(item.queueReason)">
+                      {{ queueReasonLabel(item.queueReason) }}
+                    </span>
+                    <span class="text-xs text-background-400">ID #{{ item.productId }}</span>
+                  </div>
                 </div>
-                <div class="text-xs text-background-500 dark:text-background-400 mt-1">
-                  {{ item.currentPhase }}
-                </div>
-                <div class="flex items-center justify-between mt-2">
-                  <span class="text-xs font-medium" :class="cardStatusDurationClass(item)">
-                    {{ formatDuration(item.elapsedSeconds) }}
-                  </span>
-                  <span class="text-xs text-background-400">ID #{{ item.productId }}</span>
-                </div>
-              </div>
-            </template>
+              </template>
 
+              <!-- In Progress Cards -->
+              <template v-else>
+                <div
+                  v-for="item in (col.items as WipItem[])"
+                  :key="'kanban-p-' + item.productId"
+                  @click.stop="goToProduct(item.productId)"
+                  class="rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow border"
+                  :class="cardStatusClass(item)"
+                >
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-xs font-medium truncate" :class="cardStatusTextClass(item)">
+                      {{ item.serialNumber }}
+                    </span>
+                    <span
+                      v-if="openAlertProductIds.includes(item.productId)"
+                      class="material-symbols-rounded text-sm text-red-500 flex-shrink-0"
+                      :title="t('wip.kanban.hasAlert')"
+                    >
+                      notifications_active
+                    </span>
+                  </div>
+                  <div class="text-xs text-background-500 dark:text-background-400 mt-1">
+                    {{ item.currentPhase }}
+                  </div>
+                  <div class="flex items-center justify-between mt-2">
+                    <span class="text-xs font-medium" :class="cardStatusDurationClass(item)">
+                      {{ formatDuration(item.elapsedSeconds) }}
+                    </span>
+                    <span class="text-xs text-background-400">ID #{{ item.productId }}</span>
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -301,19 +291,16 @@
             {{ t('wip.graph.recenter') }}
           </button>
         </div>
-
         <p class="text-xs text-background-400 px-1">
           <span class="material-symbols-rounded text-sm align-middle">pan_tool</span>
           {{ t('wip.graph.hint') }}
         </p>
-
         <div
           ref="graphContainer"
           class="relative w-full rounded-xl border border-background-300 dark:border-background-700 overflow-hidden"
           style="height: calc(100vh - 330px); min-height: 430px; background: transparent;"
         >
           <svg ref="graphSvg" class="w-full h-full" style="display:block;"></svg>
-
           <div
             v-if="tooltip.visible"
             class="fixed pointer-events-none z-50 bg-background-900 dark:bg-background-950 text-background-50 text-xs rounded-xl px-3 py-2.5 shadow-2xl border border-background-700 min-w-[160px]"
@@ -336,7 +323,9 @@ import * as d3 from 'd3'
 import axios from '@/axios'
 import { useI18n } from 'vue-i18n'
 import { toast } from '@/plugins/toast'
+import { useAlertStore } from '@/stores/alertStore'
 
+const alertStore = useAlertStore()
 const { t } = useI18n()
 const router = useRouter()
 
@@ -400,6 +389,7 @@ type KanbanColumn = {
   items: WaitingItem[] | WipItem[]
 }
 
+// ── State ────────────────────────────────────────────────────────────────────
 const loading = ref(false)
 const viewMode = ref<ViewMode>('tables')
 const summary = ref<WipSummary>({
@@ -411,19 +401,54 @@ const summary = ref<WipSummary>({
 })
 const items = ref<WipItem[]>([])
 const waitingItems = ref<WaitingItem[]>([])
-const openAlertProductIds = ref<number[]>([])
 const graph = ref<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] })
 
+// ── Graph refs ───────────────────────────────────────────────────────────────
 const graphContainer = ref<HTMLDivElement>()
 const graphSvg = ref<SVGSVGElement>()
-const tooltip = ref({
-  visible: false,
-  screenX: 0,
-  screenY: 0,
-  title: '',
-  subtitle: '',
-})
+const tooltip = ref({ visible: false, screenX: 0, screenY: 0, title: '', subtitle: '' })
 
+// ── Kanban drag-to-pan ───────────────────────────────────────────────────────
+const kanbanContainer = ref<HTMLDivElement>()
+const kanbanInner = ref<HTMLDivElement>()
+const kanbanOffset = ref(0)
+let isDraggingKanban = false
+let dragStartX = 0
+let offsetAtDragStart = 0
+
+function onKanbanMouseDown(e: MouseEvent) {
+  isDraggingKanban = true
+  dragStartX = e.clientX
+  offsetAtDragStart = kanbanOffset.value
+
+  const onMove = (e: MouseEvent) => {
+    if (!isDraggingKanban || !kanbanContainer.value || !kanbanInner.value) return
+    const delta = e.clientX - dragStartX
+    const maxOffset = 0
+    const minOffset = -(kanbanInner.value.scrollWidth - kanbanContainer.value.clientWidth)
+    kanbanOffset.value = Math.min(maxOffset, Math.max(minOffset, offsetAtDragStart + delta))
+  }
+
+  const onUp = () => {
+    isDraggingKanban = false
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+  }
+
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
+}
+
+// ── Alert computeds ──────────────────────────────────────────────────────────
+const openAlertProductIds = computed<number[]>(() =>
+  alertStore.activeAlerts?.filter(a => a.productId != null).map(a => a.productId) ?? []
+)
+
+const acknowledgedAlertProductIds = computed<number[]>(() =>
+  [...(alertStore.acknowledgedProductIds ?? [])]
+)
+
+// ── Kanban columns ───────────────────────────────────────────────────────────
 const kanbanColumns = computed<KanbanColumn[]>(() => {
   const waitingCol: KanbanColumn = {
     id: 'waiting',
@@ -431,7 +456,6 @@ const kanbanColumns = computed<KanbanColumn[]>(() => {
     type: 'waiting',
     items: waitingItems.value,
   }
-
   const wsMap = new Map<number, KanbanColumn>()
   for (const item of items.value) {
     if (!wsMap.has(item.workstationId)) {
@@ -444,64 +468,73 @@ const kanbanColumns = computed<KanbanColumn[]>(() => {
     }
     ;(wsMap.get(item.workstationId)!.items as WipItem[]).push(item)
   }
-
   return [waitingCol, ...wsMap.values()]
 })
 
-function cardStatus(item: WipItem): 'critical' | 'warning' | 'normal' {
-  if (openAlertProductIds.value.includes(item.productId)) return 'critical'
-  if (item.estimatedDuration && item.elapsedSeconds !== null) {
-    if (item.elapsedSeconds > item.estimatedDuration) return 'warning'
+// ── Card status ──────────────────────────────────────────────────────────────
+function cardStatus(item: WipItem): 'critical-open' | 'critical-ack' | 'warning' | 'normal' {
+  const elapsed = item.elapsedSeconds ?? 0
+  const estimated = item.estimatedDuration
+  const thresholdPct = item.timeThresholdPct ?? 150
+
+  const isOpen = openAlertProductIds.value?.includes(item.productId) ?? false
+  const isAck = acknowledgedAlertProductIds.value?.includes(item.productId) ?? false
+
+  if (isOpen) return 'critical-open'
+  if (isAck) return 'critical-ack'
+
+  if (estimated) {
+    const limitSeconds = estimated * (thresholdPct / 100)
+    if (elapsed >= limitSeconds) return 'critical-ack'
+    if (elapsed > estimated) return 'warning'
   }
+
   return 'normal'
 }
 
 function cardStatusClass(item: WipItem): string {
   const status = cardStatus(item)
-  if (status === 'critical') return 'bg-red-50 dark:bg-red-950 border-red-300 dark:border-red-700'
-  if (status === 'warning') return 'bg-warning-50 dark:bg-warning-950 border-warning-300 dark:border-warning-700'
+  if (status === 'critical-open' || status === 'critical-ack')
+    return 'bg-red-50 dark:bg-red-950 border-red-300 dark:border-red-700'
+  if (status === 'warning')
+    return 'bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-700'
   return 'bg-background-50 dark:bg-background-800 border-background-300 dark:border-background-700'
 }
 
 function cardStatusTextClass(item: WipItem): string {
   const status = cardStatus(item)
-  if (status === 'critical') return 'text-red-600 dark:text-red-400'
-  if (status === 'warning') return 'text-warning-600 dark:text-warning-400'
+  if (status === 'critical-open' || status === 'critical-ack') return 'text-red-600 dark:text-red-400'
+  if (status === 'warning') return 'text-orange-600 dark:text-orange-400'
   return 'text-primary-600 dark:text-primary-400'
 }
 
 function cardStatusDurationClass(item: WipItem): string {
   const status = cardStatus(item)
-  if (status === 'critical') return 'text-red-500'
-  if (status === 'warning') return 'text-warning-500'
+  if (status === 'critical-open' || status === 'critical-ack') return 'text-red-500'
+  if (status === 'warning') return 'text-orange-500'
   return 'text-background-400'
 }
 
+// ── Data loading ─────────────────────────────────────────────────────────────
 async function loadWip() {
   loading.value = true
   try {
-    const [wipResponse, alertsResponse] = await Promise.all([
-      axios.get('/production-lines/wip'),
-      axios.get('/Alert/open'),
-    ])
+    const response = await axios.get('/production-lines/wip')
 
     summary.value = {
-      totalProducts: wipResponse.data.totalProducts ?? 0,
-      waiting: wipResponse.data.waiting ?? 0,
-      inProgress: wipResponse.data.inProgress ?? 0,
-      completed: wipResponse.data.completed ?? 0,
-      activeLines: wipResponse.data.activeLines ?? 0,
+      totalProducts: response.data.totalProducts ?? 0,
+      waiting: response.data.waiting ?? 0,
+      inProgress: response.data.inProgress ?? 0,
+      completed: response.data.completed ?? 0,
+      activeLines: response.data.activeLines ?? 0,
     }
 
-    waitingItems.value = wipResponse.data.waitingItems?.$values ?? wipResponse.data.waitingItems ?? []
-    items.value = wipResponse.data.items?.$values ?? wipResponse.data.items ?? []
+    waitingItems.value = response.data.waitingItems?.$values ?? response.data.waitingItems ?? []
+    items.value = response.data.items?.$values ?? response.data.items ?? []
 
-    const alerts = alertsResponse.data?.$values ?? alertsResponse.data ?? []
-    openAlertProductIds.value = alerts
-      .filter((a: any) => a.productId != null)
-      .map((a: any) => a.productId as number)
+    kanbanOffset.value = 0
 
-    const graphData = wipResponse.data.graph ?? {}
+    const graphData = response.data.graph ?? {}
     graph.value = {
       nodes: graphData.nodes?.$values ?? graphData.nodes ?? [],
       edges: graphData.edges?.$values ?? graphData.edges ?? [],
@@ -518,6 +551,7 @@ async function loadWip() {
   }
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function goToProduct(productId: number) {
   router.push({ name: 'ProductTimeline', query: { id: String(productId) } })
 }
@@ -552,6 +586,7 @@ function queueReasonClass(reason: string | null) {
   return 'bg-background-200 text-background-600 dark:bg-background-700 dark:text-background-300'
 }
 
+// ── Graph ────────────────────────────────────────────────────────────────────
 function nodeColor(type: string, isDark: boolean) {
   switch (type) {
     case 'factory': return '#3E55F2'
@@ -585,20 +620,12 @@ function initGraph() {
   const svg = d3.select(svgEl)
   svg.selectAll('*').remove()
   svg.attr('width', width).attr('height', height)
-
-  svg.append('rect')
-    .attr('width', width)
-    .attr('height', height)
-    .attr('fill', bg)
+  svg.append('rect').attr('width', width).attr('height', height).attr('fill', bg)
 
   const zoomLayer = svg.append('g')
-
   const zoom = d3.zoom<SVGSVGElement, unknown>()
     .scaleExtent([0.3, 2.5])
-    .on('zoom', event => {
-      zoomLayer.attr('transform', event.transform)
-    })
-
+    .on('zoom', event => { zoomLayer.attr('transform', event.transform) })
   svg.call(zoom)
 
   const simulation = d3.forceSimulation<any>(nodes)
@@ -608,36 +635,17 @@ function initGraph() {
     .force('collide', d3.forceCollide(58))
 
   const link = zoomLayer.append('g')
-    .selectAll('line')
-    .data(links)
-    .enter()
-    .append('line')
-    .attr('stroke', edge)
-    .attr('stroke-width', 1.5)
-    .attr('stroke-opacity', 0.8)
+    .selectAll('line').data(links).enter().append('line')
+    .attr('stroke', edge).attr('stroke-width', 1.5).attr('stroke-opacity', 0.8)
 
   const node = zoomLayer.append('g')
-    .selectAll<SVGGElement, any>('g')
-    .data(nodes)
-    .enter()
-    .append('g')
+    .selectAll<SVGGElement, any>('g').data(nodes).enter().append('g')
     .attr('cursor', 'grab')
     .call(
       d3.drag<SVGGElement, any>()
-        .on('start', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0.3).restart()
-          d.fx = d.x
-          d.fy = d.y
-        })
-        .on('drag', (event, d) => {
-          d.fx = event.x
-          d.fy = event.y
-        })
-        .on('end', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0)
-          d.fx = null
-          d.fy = null
-        })
+        .on('start', (event, d) => { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y })
+        .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y })
+        .on('end', (event, d) => { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null })
     )
 
   node.append('circle')
@@ -647,11 +655,8 @@ function initGraph() {
     .attr('stroke-width', 3)
 
   node.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('dy', 4)
-    .attr('font-size', 18)
-    .attr('fill', '#ffffff')
-    .attr('font-family', 'Material Symbols Rounded')
+    .attr('text-anchor', 'middle').attr('dy', 4).attr('font-size', 18)
+    .attr('fill', '#ffffff').attr('font-family', 'Material Symbols Rounded')
     .text(d => {
       if (d.type === 'factory') return 'factory'
       if (d.type === 'waitingProduct' || d.type === 'activeProduct') return 'directions_car'
@@ -663,49 +668,32 @@ function initGraph() {
     })
 
   node.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('y', 47)
-    .attr('font-size', 11)
-    .attr('font-weight', 600)
-    .attr('fill', text)
+    .attr('text-anchor', 'middle').attr('y', 47).attr('font-size', 11).attr('font-weight', 600).attr('fill', text)
     .text(d => d.label.length > 18 ? d.label.slice(0, 17) + '…' : d.label)
 
   node.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('y', 61)
-    .attr('font-size', 9)
-    .attr('fill', muted)
+    .attr('text-anchor', 'middle').attr('y', 61).attr('font-size', 9).attr('fill', muted)
     .text(d => d.subtitle ? (d.subtitle.length > 20 ? d.subtitle.slice(0, 19) + '…' : d.subtitle) : '')
 
   node
     .on('mouseenter', (event: MouseEvent, d: GraphNode) => {
-      tooltip.value = {
-        visible: true,
-        screenX: event.clientX,
-        screenY: event.clientY,
-        title: d.label,
-        subtitle: d.subtitle || d.type,
-      }
+      tooltip.value = { visible: true, screenX: event.clientX, screenY: event.clientY, title: d.label, subtitle: d.subtitle || d.type }
     })
     .on('mousemove', (event: MouseEvent) => {
       tooltip.value.screenX = event.clientX
       tooltip.value.screenY = event.clientY
     })
-    .on('mouseleave', () => {
-      tooltip.value.visible = false
-    })
+    .on('mouseleave', () => { tooltip.value.visible = false })
 
   simulation.on('tick', () => {
     link
-      .attr('x1', d => (d.source as any).x)
-      .attr('y1', d => (d.source as any).y)
-      .attr('x2', d => (d.target as any).x)
-      .attr('y2', d => (d.target as any).y)
-
+      .attr('x1', d => (d.source as any).x).attr('y1', d => (d.source as any).y)
+      .attr('x2', d => (d.target as any).x).attr('y2', d => (d.target as any).y)
     node.attr('transform', d => `translate(${d.x},${d.y})`)
   })
 }
 
+// ── Lifecycle ─────────────────────────────────────────────────────────────────
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
 
 function handleResize() {

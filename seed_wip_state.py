@@ -1,7 +1,10 @@
 """
 seed_wip_state.py
 
-Popula a BD com dados WIP para testar o WIP Dashboard (Tabelas, Kanban, Grafo).
+Popula a BD com dados WIP para testar o WIP Dashboard (Tabelas, Kanban, Grafo)
+e os endpoints de previsão de ETA (precisam de produtos AINDA EM CURSO,
+não concluídos — diferente do seed_synthetic_history.py, que só gera
+histórico já fechado).
 
 Cria produtos em diferentes estados:
   - Fila de espera sem skid (waiting_support)
@@ -42,7 +45,6 @@ PHASE_WS = {
 }
 
 # Suportes existentes na BD (confirmado pelo fiware_setup.py)
-# Vamos usar os IDs dos suportes existentes
 SUPPORT_RFID_TAGS = [
     "3542100258",
     "3220140258",
@@ -62,7 +64,6 @@ def main():
     try:
         print("=== seed_wip_state.py ===\n")
 
-        # Carregar dados existentes
         models = load_models(cur)
         phases = load_phases(cur)
         supports = load_supports(cur)
@@ -73,10 +74,8 @@ def main():
 
         print(f"✓ {len(models)} modelos | {len(phases)} fases | {len(supports)} suportes")
 
-        # Garantir phase_sequences para todos os modelos
         ensure_phase_sequences(cur, models, phases)
 
-        # Criar encomenda de teste
         now = datetime.now()
         cur.execute(
             "INSERT INTO client_order (order_number, order_date, customer_name, quantity) "
@@ -85,6 +84,8 @@ def main():
         )
         client_order_id = cur.fetchone()[0]
         print(f"✓ ClientOrder criada (id={client_order_id})")
+
+        run_suffix = random.randint(1000, 9999)
 
         model_ids = list(models.values())
         support_ids = [s["id"] for s in supports]
@@ -110,7 +111,6 @@ def main():
                 cur, client_order_id, f"ORD-WIP-TEST-MO-WLINE-{i:02d}",
                 random.choice(model_ids), now, 5 + i
             )
-            # Associar skid ao produto mas sem localization_history ativa
             cur.execute(
                 "INSERT INTO supported_product (support_id, product_id, datetime_ini) "
                 "VALUES (%s, %s, %s);",
@@ -123,8 +123,8 @@ def main():
         print("\n[3/5] A criar produtos em curso em diferentes fases...")
 
         # Produto na fase 1 (Estampagem) - linha 1, ws 1 — normal
-        p_id = create_in_progress(
-            cur, client_order_id, "MO-INP-01", random.choice(model_ids), now,
+        p_id, _ = create_in_progress(
+            cur, client_order_id, f"MO-INP-01-{run_suffix}", random.choice(model_ids), now,
             phase_id=phase_ids_ordered[0], ws_id=1, line_id=1,
             support_id=support_ids[2],
             started_ago_hours=0.5  # 30 min — dentro do tempo (estimated=1800s)
@@ -132,8 +132,8 @@ def main():
         print(f"   id={p_id} — Estampagem ws1 (normal, 30min)")
 
         # Produto na fase 2 (Soldadura) - linha 1, ws 2 — normal
-        p_id = create_in_progress(
-            cur, client_order_id, "MO-INP-02", random.choice(model_ids), now,
+        p_id, _ = create_in_progress(
+            cur, client_order_id, f"MO-INP-02-{run_suffix}", random.choice(model_ids), now,
             phase_id=phase_ids_ordered[1], ws_id=2, line_id=1,
             support_id=support_ids[3],
             started_ago_hours=0.7  # 42 min — dentro do tempo (estimated=2700s=45min)
@@ -141,8 +141,8 @@ def main():
         print(f"   id={p_id} — Soldadura ws2 (normal, 42min)")
 
         # Produto na fase 3 (Pintura) - linha 1, ws 3 — WARNING (>100% estimated)
-        p_id = create_in_progress(
-            cur, client_order_id, "MO-INP-03", random.choice(model_ids), now,
+        p_id, _ = create_in_progress(
+            cur, client_order_id, f"MO-INP-03-{run_suffix}", random.choice(model_ids), now,
             phase_id=phase_ids_ordered[2], ws_id=3, line_id=1,
             support_id=support_ids[4],
             started_ago_hours=1.2  # 72 min — excede estimated 30min → warning
@@ -150,8 +150,8 @@ def main():
         print(f"   id={p_id} — Pintura ws3 (WARNING, 72min > 30min estimado)")
 
         # Produto na fase 4 (Montagem) - linha 2, ws 12 — normal
-        p_id = create_in_progress(
-            cur, client_order_id, "MO-INP-04", random.choice(model_ids), now,
+        p_id, _ = create_in_progress(
+            cur, client_order_id, f"MO-INP-04-{run_suffix}", random.choice(model_ids), now,
             phase_id=phase_ids_ordered[3], ws_id=12, line_id=2,
             support_id=support_ids[5],
             started_ago_hours=0.3
@@ -159,8 +159,8 @@ def main():
         print(f"   id={p_id} — Montagem ws12 linha2 (normal, 18min)")
 
         # Produto na fase 5 (Inspeção) - linha 2, ws 13 — CRITICAL (cria alerta)
-        p_id_critical = create_in_progress(
-            cur, client_order_id, "MO-INP-05", random.choice(model_ids), now,
+        p_id_critical, pp_id_critical = create_in_progress(
+            cur, client_order_id, f"MO-INP-05-{run_suffix}", random.choice(model_ids), now,
             phase_id=phase_ids_ordered[4], ws_id=13, line_id=2,
             support_id=support_ids[6],
             started_ago_hours=2.0  # 120 min — excede 150% de 30min (45min) → critical
@@ -168,8 +168,8 @@ def main():
         print(f"   id={p_id_critical} — Inspeção ws13 linha2 (CRITICAL, 120min > 45min threshold)")
 
         # Produto na fase 1 (Estampagem) - linha 2, ws 9
-        p_id = create_in_progress(
-            cur, client_order_id, "MO-INP-06", random.choice(model_ids), now,
+        p_id, _ = create_in_progress(
+            cur, client_order_id, f"MO-INP-06-{run_suffix}", random.choice(model_ids), now,
             phase_id=phase_ids_ordered[0], ws_id=9, line_id=2,
             support_id=None,  # sem skid — aparece como waiting_support no WIP
             started_ago_hours=0.2
@@ -185,7 +185,7 @@ def main():
             "INSERT INTO alert (type, status, product_id, product_phase_id, triggered_at, "
             "notes, product_serial, phase_name, threshold_pct, estimated_duration) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);",
-            ("time_exceeded", "open", p_id_critical, pp_id,
+            ("time_exceeded", "open", p_id_critical, pp_id_critical,
             now - timedelta(minutes=30),
             f"Produto excedeu 150% do tempo estimado na fase Inspeção",
             serial, "Inspeção", 150, 1800)
@@ -199,7 +199,6 @@ def main():
                 cur, client_order_id, f"ORD-WIP-TEST-MO-DONE-{i:02d}",
                 random.choice(model_ids), now, 15 + i
             )
-            # Criar todas as fases fechadas
             t = now - timedelta(hours=8)
             for phase_id in phase_ids_ordered:
                 ws_id = PHASE_WS[phase_id][1]
@@ -215,6 +214,10 @@ def main():
                 "UPDATE manufacturing_order SET status = %s, end_date = %s WHERE id = %s;",
                 ("completed", t, mo_id)
             )
+            cur.execute(
+                "UPDATE product SET production_date = %s WHERE id = %s;",
+                (t, product_id)
+            )
             print(f"   id={product_id} — completado")
 
         conn.commit()
@@ -229,6 +232,9 @@ def main():
         print("    - 2 normais em linha 2")
         print("  • 2 produtos completados        → KPI Concluídos = 2")
         print("\nAbre o WIP Dashboard e verifica as 3 vistas.")
+        print("\nProdutos 'in_progress' bons para testar GET /api/Product/{id}/eta:")
+        print(f"  - id={p_id_critical} (Inspeção, linha 2, atrasado)")
+        print("  - usa os outros ids 'id=...' impressos acima no Grupo 3")
 
     except Exception as e:
         conn.rollback()
@@ -288,11 +294,14 @@ def create_mo_and_product(cur, client_order_id, mo_number, model_id, now, seq):
 
 def create_in_progress(cur, client_order_id, mo_number, model_id, now,
                         phase_id, ws_id, line_id, support_id, started_ago_hours):
+    """
+    Devolve (product_id, product_phase_id) — o chamador precisa do
+    product_phase_id sempre que for criar um Alert associado a esta fase.
+    """
     mo_id, product_id = create_mo_and_product(
         cur, client_order_id, mo_number, model_id, now, int(started_ago_hours * 10)
     )
 
-    # Atualizar MO para in_progress
     cur.execute(
         "UPDATE manufacturing_order SET status = %s WHERE id = %s;",
         ("in_progress", mo_id)
@@ -300,7 +309,6 @@ def create_in_progress(cur, client_order_id, mo_number, model_id, now,
 
     datetime_ini = now - timedelta(hours=started_ago_hours)
 
-    # Criar fase aberta
     cur.execute(
         "INSERT INTO product_phase (notes, result, datetime_ini, datetime_end, "
         "manufacturing_phase_id, product_id, workstation_id) "
@@ -309,21 +317,19 @@ def create_in_progress(cur, client_order_id, mo_number, model_id, now,
     )
     pp_id = cur.fetchone()[0]
 
-    # Associar skid se fornecido
     if support_id:
         cur.execute(
             "INSERT INTO supported_product (support_id, product_id, datetime_ini) "
             "VALUES (%s, %s, %s);",
             (support_id, product_id, datetime_ini)
         )
-        # Criar localização ativa
         cur.execute(
             "INSERT INTO localization_history (support_id, workstation_id, datetime_ini, status) "
             "VALUES (%s, %s, %s, %s);",
             (support_id, ws_id, datetime_ini, "active")
         )
 
-    return product_id
+    return product_id, pp_id
 
 
 if __name__ == "__main__":

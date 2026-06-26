@@ -90,6 +90,9 @@ builder.Services.AddScoped<IManufacturingOrderService, ManufacturingOrderService
 builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddHostedService<AlertBackgroundService>();
 builder.Services.AddScoped<IWipDashboardService, WipDashboardService>();
+builder.Services.AddScoped<IEtaPredictionService, EtaPredictionService>();
+builder.Services.AddSingleton<IModelTrainingService, ModelTrainingService>();
+builder.Services.AddHostedService<MlRetrainBackgroundService>();
 
 // --- Repositories ---
 builder.Services.AddScoped<IProductionLineRepository, ProductionLineRepository>();
@@ -115,6 +118,7 @@ builder.Services.AddScoped<IConfigOptionRepository, ConfigOptionRepository>();
 builder.Services.AddScoped<IProductTimelineRepository, ProductTimelineRepository>();
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IWipDashboardRepository, WipDashboardRepository>();
+builder.Services.AddScoped<IPhaseTimeCoefficientRepository, PhaseTimeCoefficientRepository>();
 
 // --- JWT Authentication ---
 builder.Services.AddAuthentication(options =>

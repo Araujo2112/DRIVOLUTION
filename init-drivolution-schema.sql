@@ -308,14 +308,24 @@ CREATE TABLE IF NOT EXISTS phase_time_coefficient (
     id SERIAL PRIMARY KEY,
     manufacturing_phase_id INTEGER NOT NULL,
     config_option_id INTEGER,
+    production_line_id INTEGER,
+    model_id INTEGER,
     weight_seconds NUMERIC(10,2) NOT NULL,
     trained_at TIMESTAMP NOT NULL,
 
     CONSTRAINT fk_phase_time_coefficient_phase
         FOREIGN KEY (manufacturing_phase_id)
-        REFERENCES manufacturing_phase(id),
+        REFERENCES manufacturing_phase(BackgroundService id),
 
     CONSTRAINT fk_phase_time_coefficient_option
         FOREIGN KEY (config_option_id)
-        REFERENCES config_option(id)
+        REFERENCES config_option(id),
+
+    CONSTRAINT fk_phase_time_coefficient_line
+        FOREIGN KEY (production_line_id)
+        REFERENCES production_line(id),
+
+    CONSTRAINT fk_phase_time_coefficient_model
+        FOREIGN KEY (model_id)
+        REFERENCES model(id)
 );

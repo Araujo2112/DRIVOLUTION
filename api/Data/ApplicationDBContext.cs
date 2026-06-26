@@ -26,6 +26,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ConfigOptionModel> ConfigOptions { get; set; }
     public DbSet<ManufacturingPhaseModel> ManufacturingPhases { get; set; }
     public DbSet<PhaseSequenceModel> PhaseSequences { get; set; }
+    public DbSet<PhaseTimeCoefficientModel> PhaseTimeCoefficients { get; set; }
 
     // --- Ordens e Produção ---
     public DbSet<ClientOrderModel> ClientOrders { get; set; }
@@ -247,5 +248,36 @@ public class ApplicationDbContext : DbContext
             .WithMany(pp => pp.Alerts)
             .HasForeignKey(a => a.ProductPhaseId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ManufacturingPhase → PhaseTimeCoefficient (1:N)
+        modelBuilder.Entity<PhaseTimeCoefficientModel>()
+            .HasOne(ptc => ptc.ManufacturingPhase)
+            .WithMany()
+            .HasForeignKey(ptc => ptc.ManufacturingPhaseId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ConfigOption → PhaseTimeCoefficient (1:N, opcional)
+        modelBuilder.Entity<PhaseTimeCoefficientModel>()
+            .HasOne(ptc => ptc.ConfigOption)
+            .WithMany()
+            .HasForeignKey(ptc => ptc.ConfigOptionId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // ProductionLine → PhaseTimeCoefficient (1:N, opcional)
+        modelBuilder.Entity<PhaseTimeCoefficientModel>()
+            .HasOne(ptc => ptc.ProductionLine)
+            .WithMany()
+            .HasForeignKey(ptc => ptc.ProductionLineId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // CarModel → PhaseTimeCoefficient (1:N, opcional)
+        modelBuilder.Entity<PhaseTimeCoefficientModel>()
+            .HasOne(ptc => ptc.CarModel)
+            .WithMany()
+            .HasForeignKey(ptc => ptc.ModelId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -1,4 +1,5 @@
 using Drivolution.Data;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,10 +10,12 @@ namespace Drivolution.Controllers;
 public class ProductionLineStatusController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IEtaPredictionService _etaService;
 
-    public ProductionLineStatusController(ApplicationDbContext context)
+    public ProductionLineStatusController(ApplicationDbContext context, IEtaPredictionService etaService)
     {
         _context = context;
+        _etaService = etaService;
     }
 
     [HttpGet("status")]
@@ -32,7 +35,7 @@ public class ProductionLineStatusController : ControllerBase
                     p.serial_number AS "SerialNumber",
                     mp.name AS "CurrentPhase",
                     pp.datetime_ini AS "StartedAt",
-                    pp.datetime_ini + (mp.estimated_duration || ' seconds')::interval AS "EstimatedFinish",
+                    NULL::timestamp AS "EstimatedFinish",
                     pp.result AS "ProductStatus"
                 FROM workstation w
                 JOIN production_line pl ON pl.id = w.production_line_id
@@ -45,6 +48,19 @@ public class ProductionLineStatusController : ControllerBase
                 """
             )
             .ToListAsync();
+
+        // EstimatedFinish passa a ser o ETA completo do carro (todas as fases
+        // que faltam até saír da linha), não só o tempo desta fase — uma linha
+        // representa o percurso todo (todas as workstations em sequência),
+        // não uma estação isolada.
+        foreach (var row in status)
+        {
+            if (row.ProductId == null) continue;
+
+            var eta = await _etaService.PredictForProduct(row.ProductId.Value);
+            if (eta != null)
+                row.EstimatedFinish = eta.EstimatedCompletion;
+        }
 
         return Ok(status);
     }

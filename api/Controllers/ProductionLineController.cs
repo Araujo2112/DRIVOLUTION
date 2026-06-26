@@ -1,6 +1,7 @@
 using Drivolution.DTO;
 using Drivolution.Models;
 using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
@@ -10,7 +11,12 @@ namespace Drivolution.Controllers;
 public class ProductionLineController : ControllerBase
 {
     private readonly IProductionLineRepository _repo;
-    public ProductionLineController(IProductionLineRepository repo) => _repo = repo;
+    private readonly IEtaPredictionService _etaService;
+    public ProductionLineController(IProductionLineRepository repo, IEtaPredictionService etaService)
+    {
+        _repo = repo;
+        _etaService = etaService;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -26,6 +32,15 @@ public class ProductionLineController : ControllerBase
         var item = await _repo.GetById(id);
         if (item == null) return NotFound();
         return Ok(new ProductionLineDTO(item.Id, item.Name, item.Location, item.Status, item.Capacity));
+    }
+
+    [HttpGet("{id}/eta")]
+    public async Task<IActionResult> GetEta(int id)
+    {
+        if (!await _repo.Exists(id)) return NotFound();
+
+        var results = await _etaService.PredictForProductionLine(id);
+        return Ok(results);
     }
 
     [HttpPost]

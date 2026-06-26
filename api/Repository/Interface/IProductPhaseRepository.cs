@@ -10,4 +10,6 @@ public interface IProductPhaseRepository
     Task Update(ProductPhaseModel entity);
     Task<IEnumerable<ProductPhaseModel>> GetOpenPhasesWithPhaseInfoAsync();
     Task<ProductPhaseModel?> GetByIdAsync(int id);
+    Task<ProductPhaseModel?> GetCurrentOpenByProductionLine(int productionLineId);
+    Task<IEnumerable<ProductPhaseModel>> GetAllOpenByProductionLine(int productionLineId);
 }

@@ -20,20 +20,19 @@ interface Alert {
 export const useAlertStore = defineStore('alert', () => {
   const activeAlerts = ref<Alert[]>([])
   const allAlerts = ref<Alert[]>([])
+  const acknowledgedProductIds = ref<Set<number>>(new Set())
   const knownIds = ref<Set<number>>(new Set())
   let pollingInterval: ReturnType<typeof setInterval> | null = null
 
   const fetchOpenAlerts = async () => {
     try {
       const res = await axios.get('/Alert/open')
-      const openAlerts: Alert[] = res.data
+      const openAlerts: Alert[] = res.data?.$values ?? res.data ?? []
 
-      // Detetar alertas novos que ainda não foram mostrados
       const newAlerts = openAlerts.filter(a => !knownIds.value.has(a.id))
-
       newAlerts.forEach(a => {
         knownIds.value.add(a.id)
-        activeAlerts.value.unshift(a) // entra no topo
+        activeAlerts.value.unshift(a)
       })
     } catch (err) {
       console.error('Erro ao buscar alertas:', err)
@@ -43,7 +42,7 @@ export const useAlertStore = defineStore('alert', () => {
   const fetchAllAlerts = async () => {
     try {
       const res = await axios.get('/Alert')
-      allAlerts.value = res.data
+      allAlerts.value = res.data?.$values ?? res.data ?? []
     } catch (err) {
       console.error('Erro ao buscar histórico de alertas:', err)
     }
@@ -52,6 +51,8 @@ export const useAlertStore = defineStore('alert', () => {
   const acknowledge = async (id: number) => {
     try {
       await axios.put(`/Alert/${id}/acknowledge`)
+      const alert = activeAlerts.value.find(a => a.id === id)
+      if (alert) acknowledgedProductIds.value.add(alert.productId)
       activeAlerts.value = activeAlerts.value.filter(a => a.id !== id)
     } catch (err) {
       console.error('Erro ao confirmar alerta:', err)
@@ -61,7 +62,7 @@ export const useAlertStore = defineStore('alert', () => {
   const startPolling = () => {
     if (pollingInterval) return
     fetchOpenAlerts()
-    pollingInterval = setInterval(fetchOpenAlerts, 15000) // 15s
+    pollingInterval = setInterval(fetchOpenAlerts, 15000)
   }
 
   const stopPolling = () => {
@@ -74,6 +75,7 @@ export const useAlertStore = defineStore('alert', () => {
   return {
     activeAlerts,
     allAlerts,
+    acknowledgedProductIds,
     fetchOpenAlerts,
     fetchAllAlerts,
     acknowledge,

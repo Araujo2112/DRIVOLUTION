@@ -73,7 +73,7 @@
               <div class="flex flex-col items-center mt-1 shrink-0">
                 <div class="w-3 h-3 rounded-full" :class="phase.endedAt ? 'bg-success-500' : 'bg-primary-500 animate-pulse'"></div>
               </div>
-              <div class="flex-1 grid grid-cols-7 items-center gap-2">
+              <div class="flex-1 grid grid-cols-8 items-center gap-2">
                 <div class="col-span-2">
                   <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ phase.phaseName }}</span>
@@ -88,6 +88,9 @@
                 <span class="text-sm text-background-500">{{ formatDate(phase.startedAt) }}</span>
                 <span class="text-sm text-background-500">{{ formatDate(phase.endedAt) }}</span>
                 <span class="text-sm text-background-600 dark:text-background-400">{{ formatDuration(phase.durationSeconds) }}</span>
+                <span class="text-sm font-medium" :class="!phase.endedAt ? (liveDurationDisplay(phase).startsWith('-') ? 'text-danger-600 dark:text-danger-400' : 'text-primary-600 dark:text-primary-400') : 'text-background-400'">
+                  {{ phase.endedAt ? '—' : liveDurationDisplay(phase) }}
+                </span>
                 <div>
                   <span v-if="phase.result" class="text-xs font-medium px-2 py-1 rounded-full"
                     :class="phase.result === 'passed' ? 'bg-success-100 text-success-700' : phase.result === 'failed_scrapped' ? 'bg-danger-100 text-danger-700' : 'bg-warning-100 text-warning-700'">
@@ -122,25 +125,33 @@
             <span class="material-symbols-rounded text-sm">{{ showTable ? 'expand_less' : 'expand_more' }}</span>
             {{ showTable ? t('timeline.hideTable') : t('timeline.showTable') }}
           </button>
+          
           <div v-if="showTable" class="mt-3 border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
-            <div class="grid grid-cols-7 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
+            <!-- CABEÇALHO CORRIGIDO (8 colunas exatas) -->
+            <div class="grid grid-cols-8 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider col-span-2">{{ t('timeline.fields.phase') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('timeline.fields.workstation') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('timeline.fields.start') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('timeline.fields.end') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('timeline.fields.duration') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('timeline.fields.result') }}</span>
+              <span class="text-xs font-medium text-background-500 uppercase tracking-wider">Live</span> <!-- Nova label para alinhar com o contador em baixo -->
             </div>
+            
+            <!-- LINHAS DE DADOS -->
             <div v-for="phase in timeline" :key="'table-' + phase.productPhaseId"
-              class="grid grid-cols-7 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 items-center">
+              class="grid grid-cols-8 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 items-center">
+              
               <div class="col-span-2 flex items-center gap-2">
                 <div class="w-2 h-2 rounded-full shrink-0" :class="phase.endedAt ? 'bg-success-500' : 'bg-primary-500 animate-pulse'"></div>
                 <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ phase.phaseName }}</span>
               </div>
+              
               <span class="text-sm text-background-600 dark:text-background-400">{{ phase.workstation }}</span>
               <span class="text-sm text-background-500">{{ formatDate(phase.startedAt) }}</span>
               <span class="text-sm text-background-500">{{ formatDate(phase.endedAt) }}</span>
               <span class="text-sm text-background-600 dark:text-background-400">{{ formatDuration(phase.durationSeconds) }}</span>
+              
               <div>
                 <span v-if="phase.result" class="text-xs font-medium px-2 py-1 rounded-full"
                   :class="phase.result === 'passed' ? 'bg-success-100 text-success-700' : phase.result === 'failed_scrapped' ? 'bg-danger-100 text-danger-700' : 'bg-warning-100 text-warning-700'">
@@ -148,9 +159,15 @@
                 </span>
                 <span v-else class="text-xs text-background-400">{{ t('timeline.inProgress') }}</span>
               </div>
+              
+              <!-- O liveDurationDisplay agora está na coluna certa e só é chamado onde "phase" existe -->
+              <span class="text-sm font-medium" :class="!phase.endedAt ? (liveDurationDisplay(phase).startsWith('-') ? 'text-danger-600 dark:text-danger-400' : 'text-primary-600 dark:text-primary-400') : 'text-background-400'">
+                {{ phase.endedAt ? '—' : liveDurationDisplay(phase) }}
+              </span>
             </div>
           </div>
         </div>
+
       </div>
 
       <!-- ── GRAPH VIEW ── -->
@@ -255,6 +272,40 @@ const tooltip = ref({
   title: '', rows: [] as { label: string; value: string }[],
 })
 
+// ── Live countdown ─────────────────────────────────────────────────────────────
+const nowTick = ref(Date.now())
+let tickInterval: ReturnType<typeof setInterval> | null = null
+
+function startTicking() {
+  if (tickInterval) return
+  tickInterval = setInterval(() => { nowTick.value = Date.now() }, 1000)
+}
+
+function stopTicking() {
+  if (tickInterval) { clearInterval(tickInterval); tickInterval = null }
+}
+
+function liveDurationDisplay(phase: any): string {
+  if (phase.endedAt) {
+    return formatDuration(phase.durationSeconds)
+  }
+  if (!phase.estimatedFinish) {
+    return t('timeline.inProgress')
+  }
+
+  const normalized = phase.estimatedFinish.endsWith('Z') ? phase.estimatedFinish : phase.estimatedFinish + 'Z'
+  const estimatedEndMs = new Date(normalized).getTime()
+  const diffSeconds = Math.floor((estimatedEndMs - nowTick.value) / 1000)
+
+  const isOver = diffSeconds < 0
+  const abs = Math.abs(diffSeconds)
+  const minutes = Math.floor(abs / 60)
+  const seconds = abs % 60
+  const value = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+
+  return isOver ? `-${value}` : value
+}
+
 // Guardados para o botão "Reset view"
 let savedZoomBehavior: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null
 let savedInitialTransform: d3.ZoomTransform | null = null
@@ -284,6 +335,12 @@ async function loadTimeline() {
     }
     timeline.value = res.data.phases?.$values ?? res.data.phases ?? []
     modelId.value  = res.data.modelId ?? null
+
+    if (timeline.value.some((p: any) => !p.endedAt)) {
+      startTicking()
+    } else {
+      stopTicking()
+    }
 
     if (modelId.value) {
       try {
@@ -344,7 +401,6 @@ function initHierarchyGraph() {
   const W = contEl.clientWidth
   const H = contEl.clientHeight
 
-  // ── Paleta ─────────────────────────────────────────────────────────────────
   const C = {
     canvasBg:    isDark ? '#0f172a' : '#f1f5f9',
     nodeBg:      isDark ? '#1e293b' : '#ffffff',
@@ -361,7 +417,6 @@ function initHierarchyGraph() {
     purple:      '#a855f7',
     corrected:   '#3b82f6',
     statusActive:'#3b82f6',
-    // Cores por tipo
     client:      '#7c3aed',
     order:       '#0ea5e9',
     mo:          '#3E55F2',
@@ -372,7 +427,6 @@ function initHierarchyGraph() {
     modelprocess:'#ec4899',
   }
 
-  // ── Ícones SVG por tipo (Material Symbols path data) ────────────────────────
   const ICONS: Record<string, string> = {
     client:  'M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z',
     modelprocess: 'M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z',
@@ -384,7 +438,6 @@ function initHierarchyGraph() {
     ws:      'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   }
 
-  // ── Estrutura de nós/arestas ────────────────────────────────────────────────
   interface HNode {
     id: string; type: string
     typeLabel: string; nameLabel: string; subLabel?: string
@@ -404,7 +457,6 @@ function initHierarchyGraph() {
   const addNode = (n: Omit<HNode, 'x' | 'y'>) => nodes.push({ ...n, x: 0, y: 0 })
   const addEdge = (e: HEdge) => edges.push(e)
 
-  // Client
   const clientName = clientOrder.value?.customerName ?? manufacturingOrder.value?.customerName ?? 'Cliente'
   addNode({
     id: 'client', type: 'client', typeLabel: t('timeline.graphNodes.client'),
@@ -416,7 +468,6 @@ function initHierarchyGraph() {
     ] : [],
   })
 
-  // Order
   const orderNum = clientOrder.value?.orderNumber ?? '—'
   addNode({
     id: 'order', type: 'order', typeLabel: t('timeline.graphNodes.order'),
@@ -429,7 +480,6 @@ function initHierarchyGraph() {
   })
   addEdge({ source: 'client', target: 'order', label: t('timeline.graphEdges.order') })
 
-  // MO
   const moNum = manufacturingOrder.value?.manufacturingOrderNumber ?? '—'
   const moStatus = manufacturingOrder.value?.status ?? ''
   addNode({
@@ -444,7 +494,6 @@ function initHierarchyGraph() {
   })
   addEdge({ source: 'order', target: 'mo', label: t('timeline.graphEdges.lot') })
 
-  // Product
   const serialNum = product.value?.serialNumber ?? '—'
   const shortSerial = serialNum.length > 18 ? serialNum.slice(0, 16) + '…' : serialNum
   const moProducts: any[] = manufacturingOrder.value?.products?.$values ?? manufacturingOrder.value?.products ?? []
@@ -464,7 +513,6 @@ function initHierarchyGraph() {
   })
   addEdge({ source: 'mo', target: 'product', label: t('timeline.graphEdges.process') })
 
-  // Fases + Workstations — calcular ocorrências reais primeiro
   const phaseOccurrences: Record<number, any[]> = {}
   const phaseToWs: Record<number, string> = {}
   for (const ph of timeline.value) {
@@ -476,14 +524,12 @@ function initHierarchyGraph() {
     phaseToWs[key] = ph.workstation
   }
 
-  // Fase ativa atual (endedAt === null na última ocorrência)
   const activePhaseEntry = timeline.value.find(ph => !ph.endedAt)
   const activeSeq = activePhaseEntry
     ? phaseSequence.value.find(s => s.manufacturingPhaseId === activePhaseEntry.manufacturingPhaseId)
     : null
   const activePhaseNodeId = activeSeq ? `phase-${activeSeq.manufacturingPhaseId}` : null
 
-  // Nó Model Process (Phase Sequence) — entre Product e as fases
   const modelName2 = (() => {
     const moProducts2: any[] = manufacturingOrder.value?.products?.$values ?? manufacturingOrder.value?.products ?? []
     const moProd = moProducts2.find((p: any) => p.serialNumber === product.value?.serialNumber) ?? moProducts2[0]
@@ -502,7 +548,6 @@ function initHierarchyGraph() {
   })
   addEdge({ source: 'product', target: 'modelprocess', label: t('timeline.graphEdges.process') })
 
-  // Skid
   if (skidData.value) {
     addNode({
       id: 'skid', type: 'skid', typeLabel: t('timeline.graphNodes.skid'),
@@ -516,7 +561,6 @@ function initHierarchyGraph() {
     })
   }
 
-  // ── Classificação de transição entre fases por 'order', considerando histórico completo ──
   const sortedOrders = phaseSequence.value.map(s => s.order).sort((a, b) => a - b)
 
   function classifyOrderEdge(targetOrder: number, visitedBefore: Set<number>): string {
@@ -542,26 +586,19 @@ function initHierarchyGraph() {
 
     if (firstOccStart && occs.length > 0) {
       const visitedBefore = new Set<number>()
-
       for (const s2 of phaseSequence.value) {
         if (s2.manufacturingPhaseId === seq.manufacturingPhaseId) continue
         const occs2 = phaseOccurrences[s2.manufacturingPhaseId] ?? []
         if (occs2.some(o => o.startedAt < firstOccStart)) visitedBefore.add(s2.order)
       }
-
       if (!visitedBefore.has(seq.order) && visitedBefore.size > 0) {
         const maxVisited = Math.max(...visitedBefore)
-
         if (seq.order > maxVisited + 1) {
           const skipped = phaseSequence.value
             .filter(s => s.order > maxVisited && s.order < seq.order)
             .map(s => s.phaseName)
-
           if (skipped.length > 0) {
-            skippedRowsForNode.push({
-              label: t('timeline.skippedPhases'),
-              value: skipped.join(', '),
-            })
+            skippedRowsForNode.push({ label: t('timeline.skippedPhases'), value: skipped.join(', ') })
           }
         }
       }
@@ -586,9 +623,7 @@ function initHierarchyGraph() {
     })
 
     const prevSeq = phaseSequence.value.find(s => s.order === seq.order - 1)
-    const srcId = seq.order === 1
-      ? 'modelprocess'
-      : `phase-${prevSeq?.manufacturingPhaseId}`
+    const srcId = seq.order === 1 ? 'modelprocess' : `phase-${prevSeq?.manufacturingPhaseId}`
 
     let edgeColor = C.edgeNeutral
     if (occs.length > 0) {
@@ -617,7 +652,6 @@ function initHierarchyGraph() {
     addEdge({ source: phId, target: wsId, label: t('timeline.graphEdges.section'), color: C.ws })
   }
 
-  // Aresta Skid → fase ativa (ou última fase visitada se não há ativa)
   if (skidData.value) {
     let skidAtSeq: PhaseSequence | null = null
     if (activeSeq) {
@@ -648,47 +682,34 @@ function initHierarchyGraph() {
     }
   }
 
-  // ── Layout LEFT-TO-RIGHT ────────────────────────────────────────────────────
   const BOX  = 90
   const ICON = 36
   const GAP_X = 160
   const GAP_Y = 140
   const GAP_WS = 130
-
   const nPhases = phaseSequence.value.length
-
   const mainNodeIds = ['client', 'order', 'mo', 'product', 'modelprocess']
   const MAIN_ROW_Y = 80 + BOX / 2
   const MAIN_START_X = 60 + BOX / 2
 
   mainNodeIds.forEach((id, i) => {
     const n = nodes.find(n => n.id === id)
-    if (n) {
-      n.x = MAIN_START_X + i * GAP_X
-      n.y = MAIN_ROW_Y
-    }
+    if (n) { n.x = MAIN_START_X + i * GAP_X; n.y = MAIN_ROW_Y }
   })
 
   const lastMainX = MAIN_START_X + (mainNodeIds.length - 1) * GAP_X
   const phaseStartX = lastMainX + GAP_X
   const phaseColCenterY = MAIN_ROW_Y
-
   const phaseColH = nPhases * BOX + (nPhases - 1) * (GAP_Y - BOX)
   const phaseStartY = phaseColCenterY - phaseColH / 2 + BOX / 2
 
   const phaseNodes = nodes.filter(n => n.type === 'phase')
-  phaseNodes.forEach((ph, i) => {
-    ph.x = phaseStartX
-    ph.y = phaseStartY + i * GAP_Y
-  })
+  phaseNodes.forEach((ph, i) => { ph.x = phaseStartX; ph.y = phaseStartY + i * GAP_Y })
 
   for (const ph of phaseNodes) {
     const wsId = ph.id.replace('phase-', 'ws-')
     const ws = nodes.find(n => n.id === wsId)
-    if (ws) {
-      ws.x = phaseStartX + GAP_WS
-      ws.y = ph.y
-    }
+    if (ws) { ws.x = phaseStartX + GAP_WS; ws.y = ph.y }
   }
 
   const skidNode = nodes.find(n => n.id === 'skid')
@@ -719,19 +740,12 @@ function initHierarchyGraph() {
     (skidNode?.y ?? 0) + BOX + 60
   )
 
-  // ── SVG setup ───────────────────────────────────────────────────────────────
   d3.select(svgEl).selectAll('*').remove()
-
   const viewW = contEl.clientWidth
   const viewH = contEl.clientHeight
 
-  const svg = d3.select(svgEl)
-    .attr('width', viewW)
-    .attr('height', viewH)
-
-  svg.append('rect')
-    .attr('width', viewW).attr('height', viewH)
-    .attr('fill', C.canvasBg)
+  const svg = d3.select(svgEl).attr('width', viewW).attr('height', viewH)
+  svg.append('rect').attr('width', viewW).attr('height', viewH).attr('fill', C.canvasBg)
 
   const zoomG = svg.append('g').attr('class', 'zoom-layer')
   const zoom = d3.zoom<SVGSVGElement, unknown>()
@@ -774,50 +788,34 @@ function initHierarchyGraph() {
     const src = nodes.find(n => n.id === edge.source)
     const tgt = nodes.find(n => n.id === edge.target)
     if (!src || !tgt) continue
-
     const color = edge.color ?? C.edge
     const arrowId = colorToArrowId(color)
-
-    const dx = tgt.x - src.x
-    const dy = tgt.y - src.y
+    const dx = tgt.x - src.x; const dy = tgt.y - src.y
     const isMainlyHoriz = Math.abs(dx) > Math.abs(dy)
-
     let x1: number, y1: number, x2: number, y2: number, path: string
-
     if (isMainlyHoriz) {
-      x1 = src.x + BOX / 2; y1 = src.y
-      x2 = tgt.x - BOX / 2; y2 = tgt.y
+      x1 = src.x + BOX / 2; y1 = src.y; x2 = tgt.x - BOX / 2; y2 = tgt.y
       const mx = (x1 + x2) / 2
       path = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`
     } else {
-      x1 = src.x; y1 = src.y + BOX / 2
-      x2 = tgt.x; y2 = tgt.y - BOX / 2
+      x1 = src.x; y1 = src.y + BOX / 2; x2 = tgt.x; y2 = tgt.y - BOX / 2
       const my = (y1 + y2) / 2
       path = `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2 - 2}`
     }
-
-    edgesG.append('path')
-      .attr('d', path).attr('fill', 'none')
+    edgesG.append('path').attr('d', path).attr('fill', 'none')
       .attr('stroke', color).attr('stroke-width', 1.5)
       .attr('stroke-dasharray', color === C.edge ? '5 4' : 'none')
-      .attr('marker-end', `url(#ha-${arrowId})`)
-      .attr('opacity', 0.75)
-
+      .attr('marker-end', `url(#ha-${arrowId})`).attr('opacity', 0.75)
     if (edge.label) {
-      const mx = (x1 + x2) / 2
-      const my = (y1 + y2) / 2
+      const mx = (x1 + x2) / 2; const my = (y1 + y2) / 2
       edgesG.append('text')
-        .attr('x', mx + (isMainlyHoriz ? 0 : 6))
-        .attr('y', isMainlyHoriz ? my - 8 : my - 4)
-        .attr('text-anchor', 'middle')
-        .attr('font-size', '9').attr('font-style', 'italic')
-        .attr('fill', C.edgeLabel)
-        .text(edge.label)
+        .attr('x', mx + (isMainlyHoriz ? 0 : 6)).attr('y', isMainlyHoriz ? my - 8 : my - 4)
+        .attr('text-anchor', 'middle').attr('font-size', '9').attr('font-style', 'italic')
+        .attr('fill', C.edgeLabel).text(edge.label)
     }
   }
 
   const nodesG = zoomG.append('g').attr('class', 'nodes')
-
   const drag = d3.drag<SVGGElement, HNode>()
     .on('start', function() { d3.select(this).raise() })
     .on('drag', function(event, d) {
@@ -831,37 +829,29 @@ function initHierarchyGraph() {
 
   function redrawEdges() {
     edgesG.selectAll('*').remove()
-
     for (const [name, color] of Object.entries(arrowDefs)) {
       zoomG.select('defs').append('marker')
         .attr('id', `ha-${name}`).attr('markerWidth', 8).attr('markerHeight', 8)
         .attr('refX', 5).attr('refY', 3).attr('orient', 'auto')
         .append('path').attr('d', 'M0,0 L0,6 L8,3 z').attr('fill', color)
     }
-
     for (const edge of edges) {
-      const src = nodeMap.get(edge.source)
-      const tgt = nodeMap.get(edge.target)
+      const src = nodeMap.get(edge.source); const tgt = nodeMap.get(edge.target)
       if (!src || !tgt) continue
-
-      const color = edge.color ?? C.edge
-      const arrowId = colorToArrowId(color)
+      const color = edge.color ?? C.edge; const arrowId = colorToArrowId(color)
       const dx = tgt.x - src.x; const dy = tgt.y - src.y
       const isMainlyHoriz = Math.abs(dx) > Math.abs(dy)
       let rx1: number, ry1: number, rx2: number, ry2: number, path: string
       if (isMainlyHoriz) {
-        rx1 = src.x + BOX / 2; ry1 = src.y
-        rx2 = tgt.x - BOX / 2; ry2 = tgt.y
+        rx1 = src.x + BOX / 2; ry1 = src.y; rx2 = tgt.x - BOX / 2; ry2 = tgt.y
         const mx = (rx1 + rx2) / 2
         path = `M ${rx1} ${ry1} C ${mx} ${ry1}, ${mx} ${ry2}, ${rx2} ${ry2}`
       } else {
-        rx1 = src.x; ry1 = src.y + BOX / 2
-        rx2 = tgt.x; ry2 = tgt.y - BOX / 2
+        rx1 = src.x; ry1 = src.y + BOX / 2; rx2 = tgt.x; ry2 = tgt.y - BOX / 2
         const my = (ry1 + ry2) / 2
         path = `M ${rx1} ${ry1} C ${rx1} ${my}, ${rx2} ${my}, ${rx2} ${ry2 - 2}`
       }
-      edgesG.append('path')
-        .attr('d', path).attr('fill', 'none')
+      edgesG.append('path').attr('d', path).attr('fill', 'none')
         .attr('stroke', color).attr('stroke-width', 1.5)
         .attr('stroke-dasharray', color === C.edge ? '5 4' : 'none')
         .attr('marker-end', `url(#ha-${arrowId})`).attr('opacity', 0.75)
@@ -869,51 +859,32 @@ function initHierarchyGraph() {
         const mx = (rx1 + rx2) / 2; const my = (ry1 + ry2) / 2
         edgesG.append('text')
           .attr('x', mx + (isMainlyHoriz ? 0 : 6)).attr('y', isMainlyHoriz ? my - 8 : my - 4)
-          .attr('text-anchor', 'middle')
-          .attr('font-size', '9').attr('font-style', 'italic')
+          .attr('text-anchor', 'middle').attr('font-size', '9').attr('font-style', 'italic')
           .attr('fill', C.edgeLabel).text(edge.label)
       }
     }
   }
 
   const nodeGroups = nodesG.selectAll<SVGGElement, HNode>('g.node')
-    .data(nodes).enter()
-    .append('g').attr('class', 'node')
+    .data(nodes).enter().append('g').attr('class', 'node')
     .attr('transform', d => `translate(${d.x - BOX / 2}, ${d.y - BOX / 2})`)
-    .attr('cursor', 'grab')
-    .call(drag)
+    .attr('cursor', 'grab').call(drag)
 
   nodeGroups.append('text')
-    .attr('x', BOX / 2).attr('y', -10)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', '10').attr('fill', C.typeLabel)
-    .text(d => d.typeLabel)
+    .attr('x', BOX / 2).attr('y', -10).attr('text-anchor', 'middle')
+    .attr('font-size', '10').attr('fill', C.typeLabel).text(d => d.typeLabel)
 
   nodeGroups.filter(d => !!d.isActivePulse)
-    .append('rect')
-    .attr('x', -4).attr('y', -4)
-    .attr('width', BOX + 8).attr('height', BOX + 8)
-    .attr('rx', 16)
-    .attr('fill', 'none')
-    .attr('stroke', C.phase)
-    .attr('stroke-width', 2)
-    .attr('opacity', 0.6)
+    .append('rect').attr('x', -4).attr('y', -4)
+    .attr('width', BOX + 8).attr('height', BOX + 8).attr('rx', 16)
+    .attr('fill', 'none').attr('stroke', C.phase).attr('stroke-width', 2).attr('opacity', 0.6)
     .each(function() {
       const el = d3.select(this)
-      el.append('animate')
-        .attr('attributeName', 'opacity')
-        .attr('values', '0.6;0.05;0.6')
-        .attr('dur', '1.8s')
-        .attr('repeatCount', 'indefinite')
-      el.append('animate')
-        .attr('attributeName', 'stroke-width')
-        .attr('values', '2;3.5;2')
-        .attr('dur', '1.8s')
-        .attr('repeatCount', 'indefinite')
+      el.append('animate').attr('attributeName', 'opacity').attr('values', '0.6;0.05;0.6').attr('dur', '1.8s').attr('repeatCount', 'indefinite')
+      el.append('animate').attr('attributeName', 'stroke-width').attr('values', '2;3.5;2').attr('dur', '1.8s').attr('repeatCount', 'indefinite')
     })
 
-  nodeGroups.append('rect')
-    .attr('width', BOX).attr('height', BOX).attr('rx', 12)
+  nodeGroups.append('rect').attr('width', BOX).attr('height', BOX).attr('rx', 12)
     .attr('fill', C.nodeBg)
     .attr('stroke', d => (C as any)[d.type] ?? C.edge)
     .attr('stroke-width', d => d.isActivePulse ? 2.5 : 1.8)
@@ -924,16 +895,12 @@ function initHierarchyGraph() {
     .each(function(d) {
       const iconPath = ICONS[d.type] ?? ICONS.phase
       const color = (C as any)[d.type] ?? C.edge
-      d3.select(this).append('path')
-        .attr('d', iconPath)
-        .attr('fill', color)
-        .attr('transform', `scale(${ICON / 24})`)
-        .attr('opacity', 0.85)
+      d3.select(this).append('path').attr('d', iconPath).attr('fill', color)
+        .attr('transform', `scale(${ICON / 24})`).attr('opacity', 0.85)
     })
 
   nodeGroups.append('text')
-    .attr('x', BOX / 2).attr('y', BOX - 18)
-    .attr('text-anchor', 'middle')
+    .attr('x', BOX / 2).attr('y', BOX - 18).attr('text-anchor', 'middle')
     .attr('font-size', '9').attr('font-weight', '600')
     .attr('fill', d => (C as any)[d.type] ?? C.nodeText)
     .each(function(d) {
@@ -941,27 +908,20 @@ function initHierarchyGraph() {
       const label = d.nameLabel
       if (label.length > 14) {
         el.append('tspan').attr('x', BOX / 2).attr('dy', '0').text(label.slice(0, 13) + '…')
-      } else {
-        el.text(label)
-      }
+      } else { el.text(label) }
     })
 
   nodeGroups.filter(d => !!d.subLabel)
-    .append('text')
-    .attr('x', BOX / 2).attr('y', BOX - 6)
-    .attr('text-anchor', 'middle')
+    .append('text').attr('x', BOX / 2).attr('y', BOX - 6).attr('text-anchor', 'middle')
     .attr('font-size', '8').attr('fill', C.nodeSubText)
     .text(d => d.subLabel!.length > 16 ? d.subLabel!.slice(0, 15) + '…' : d.subLabel!)
 
   nodeGroups.filter(d => !!d.statusDot)
-    .append('circle')
-    .attr('cx', BOX - 8).attr('cy', 8).attr('r', 5)
-    .attr('fill', d => d.statusDot!)
-    .attr('stroke', C.nodeBg).attr('stroke-width', 1.5)
+    .append('circle').attr('cx', BOX - 8).attr('cy', 8).attr('r', 5)
+    .attr('fill', d => d.statusDot!).attr('stroke', C.nodeBg).attr('stroke-width', 1.5)
 
   nodeGroups.filter(d => d.type === 'phase' && (d.occurrenceCount ?? 0) > 1)
-    .append('g')
-    .each(function(d) {
+    .append('g').each(function(d) {
       const g = d3.select(this)
       g.append('circle').attr('cx', 10).attr('cy', 10).attr('r', 9)
         .attr('fill', C.warning).attr('stroke', C.nodeBg).attr('stroke-width', 1.5)
@@ -988,7 +948,6 @@ function initHierarchyGraph() {
   const ty = (viewH - canvasH * initialScale) / 2
   const initialTransform = d3.zoomIdentity.translate(tx, ty).scale(initialScale)
   d3.select(svgEl).call(zoom.transform, initialTransform)
-
   savedZoomBehavior = zoom
   savedInitialTransform = initialTransform
 }
@@ -1005,7 +964,6 @@ function expectedOrderLabel(i: number): string | null {
   return ei === -1 ? null : `${phaseSequence.value[ei].order}`
 }
 
-// Conjunto de 'order' já visitados (0..i inclusive)
 function visitedOrdersUpTo(i: number): Set<number> {
   const visited = new Set<number>()
   for (let k = 0; k <= i; k++) {
@@ -1015,21 +973,16 @@ function visitedOrdersUpTo(i: number): Set<number> {
   return visited
 }
 
-// Classifica a transição que LEVOU à fase no índice i, com base no histórico 0..i-1
 type SeqClass = 'first' | 'correct' | 'repeated' | 'corrected' | 'skipped1' | 'skippedN' | 'unknown'
 
 function classifyTransition(i: number): SeqClass {
   if (i <= 0) return 'first'
-
   const currIdx = getExpectedIndex(i)
   if (currIdx === -1) return 'unknown'
   const currOrder = phaseSequence.value[currIdx].order
-
   const visitedBefore = visitedOrdersUpTo(i - 1)
   if (visitedBefore.size === 0) return 'unknown'
-
   const maxVisited = Math.max(...visitedBefore)
-
   if (visitedBefore.has(currOrder)) return 'repeated'
   if (currOrder === maxVisited + 1) return 'correct'
   if (currOrder < maxVisited) return 'corrected'
@@ -1038,38 +991,17 @@ function classifyTransition(i: number): SeqClass {
   return 'unknown'
 }
 
-function sequenceStatus(i: number): SeqClass {
-  return classifyTransition(i)
-}
-
-function transitionStatus(i: number): SeqClass {
-  return classifyTransition(i + 1)
-}
+function sequenceStatus(i: number): SeqClass { return classifyTransition(i) }
+function transitionStatus(i: number): SeqClass { return classifyTransition(i + 1) }
 
 function connectorClass(i: number) {
   const s = transitionStatus(i)
-  return {
-    correct: 'bg-success-500',
-    repeated: 'bg-warning-500',
-    corrected: 'bg-blue-500',
-    skipped1: 'bg-danger-500',
-    skippedN: 'bg-purple-500',
-    unknown: 'bg-background-400',
-    first: 'bg-background-400',
-  }[s] ?? 'bg-background-400'
+  return { correct: 'bg-success-500', repeated: 'bg-warning-500', corrected: 'bg-blue-500', skipped1: 'bg-danger-500', skippedN: 'bg-purple-500', unknown: 'bg-background-400', first: 'bg-background-400' }[s] ?? 'bg-background-400'
 }
 
 function connectorTextClass(i: number) {
   const s = transitionStatus(i)
-  return {
-    correct: 'text-success-600',
-    repeated: 'text-warning-600',
-    corrected: 'text-blue-600',
-    skipped1: 'text-danger-600',
-    skippedN: 'text-purple-600',
-    unknown: 'text-background-400',
-    first: 'text-background-400',
-  }[s] ?? 'text-background-400'
+  return { correct: 'text-success-600', repeated: 'text-warning-600', corrected: 'text-blue-600', skipped1: 'text-danger-600', skippedN: 'text-purple-600', unknown: 'text-background-400', first: 'text-background-400' }[s] ?? 'text-background-400'
 }
 
 function connectorLabel(i: number) {
@@ -1079,22 +1011,15 @@ function connectorLabel(i: number) {
 
 function skippedPhaseNames(i: number): string[] {
   const currentIndex = i + 1
-
   if (currentIndex >= timeline.value.length) return []
-
   const currentExpectedIdx = getExpectedIndex(currentIndex)
   if (currentExpectedIdx === -1) return []
-
   const currentOrder = phaseSequence.value[currentExpectedIdx].order
   const visitedBefore = visitedOrdersUpTo(i)
-
   if (visitedBefore.size === 0) return []
-
   const maxVisited = Math.max(...visitedBefore)
-
   if (currentOrder <= maxVisited + 1) return []
   if (visitedBefore.has(currentOrder)) return []
-
   return phaseSequence.value
     .filter(p => p.order > maxVisited && p.order < currentOrder)
     .map(p => p.phaseName)
@@ -1129,6 +1054,13 @@ onMounted(() => {
   loadTimeline()
 })
 
+onMounted(() => window.addEventListener('resize', handleResize))
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  stopTicking()
+})
+
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
 
 function handleResize() {
@@ -1136,7 +1068,4 @@ function handleResize() {
   if (resizeTimeout) clearTimeout(resizeTimeout)
   resizeTimeout = setTimeout(() => initHierarchyGraph(), 200)
 }
-
-onMounted(() => window.addEventListener('resize', handleResize))
-onUnmounted(() => window.removeEventListener('resize', handleResize))
 </script>

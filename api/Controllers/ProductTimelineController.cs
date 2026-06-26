@@ -1,4 +1,5 @@
 using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
@@ -8,10 +9,12 @@ namespace Drivolution.Controllers;
 public class ProductTimelineController : ControllerBase
 {
     private readonly IProductTimelineRepository _repo;
+    private readonly IEtaPredictionService _etaService;
 
-    public ProductTimelineController(IProductTimelineRepository repo)
+    public ProductTimelineController(IProductTimelineRepository repo, IEtaPredictionService etaService)
     {
         _repo = repo;
+        _etaService = etaService;
     }
 
     [HttpGet("{productId}/timeline")]
@@ -24,6 +27,15 @@ public class ProductTimelineController : ControllerBase
 
         if (!timeline.Any())
             return BadRequest("Product has no timeline yet.");
+
+        // Só a fase em curso (EndedAt == null) recebe previsão — é a única
+        // que ainda não tem uma duração real conhecida. As fases já
+        // concluídas mantêm o DurationSeconds real, sem previsão a mais.
+        var openPhase = timeline.FirstOrDefault(t => t.EndedAt == null);
+        if (openPhase != null)
+        {
+            openPhase.EstimatedFinish = await _etaService.PredictCurrentPhaseFinish(productId);
+        }
 
         return Ok(new
         {

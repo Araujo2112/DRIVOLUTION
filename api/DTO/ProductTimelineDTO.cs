@@ -14,4 +14,5 @@ public class ProductTimelineDTO
     public int? DurationSeconds { get; set; }
     public string? Result { get; set; }
     public string? Notes { get; set; }
+    public DateTime? EstimatedFinish { get; set; }
 }

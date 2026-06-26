@@ -38,7 +38,8 @@ public class ProductTimelineRepository : IProductTimelineRepository
                         ELSE EXTRACT(EPOCH FROM (pp.datetime_end - pp.datetime_ini))::INT
                     END                   AS "DurationSeconds",
                     pp.result             AS "Result",
-                    pp.notes              AS "Notes"
+                    pp.notes              AS "Notes",
+                    NULL::timestamp       AS "EstimatedFinish"
                 FROM product_phase pp
                 JOIN product p ON p.id = pp.product_id
                 JOIN manufacturing_phase mp ON mp.id = pp.manufacturing_phase_id

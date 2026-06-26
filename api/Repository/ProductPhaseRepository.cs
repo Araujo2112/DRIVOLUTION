@@ -67,4 +67,22 @@ public class ProductPhaseRepository : IProductPhaseRepository
         await _context.ProductPhases
             .Include(pp => pp.ManufacturingPhase)
             .FirstOrDefaultAsync(pp => pp.Id == id);
+
+    public async Task<ProductPhaseModel?> GetCurrentOpenByProductionLine(int productionLineId) =>
+        await _context.ProductPhases
+            .Where(pp => pp.DatetimeEnd == null && pp.Workstation.ProductionLineId == productionLineId)
+            .Include(pp => pp.ManufacturingPhase)
+            .Include(pp => pp.Workstation)
+            .Include(pp => pp.Product)
+            .OrderByDescending(pp => pp.DatetimeIni)
+            .FirstOrDefaultAsync();
+
+    public async Task<IEnumerable<ProductPhaseModel>> GetAllOpenByProductionLine(int productionLineId) =>
+        await _context.ProductPhases
+            .Where(pp => pp.DatetimeEnd == null && pp.Workstation.ProductionLineId == productionLineId)
+            .Include(pp => pp.ManufacturingPhase)
+            .Include(pp => pp.Workstation)
+            .Include(pp => pp.Product)
+            .OrderBy(pp => pp.DatetimeIni)
+            .ToListAsync();
 }

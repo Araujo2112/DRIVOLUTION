@@ -1,13 +1,20 @@
 services:
   api:
-    build: api/
-    ports:
-      - "8080:8080"
-    environment:
-    - ASPNETCORE_ENVIRONMENT=Development
-    - JWT_ISSUER=${JWT_ISSUER}
-    - JWT_AUDIENCE=${JWT_AUDIENCE}
-    - JWT_SECRET=${JWT_SECRET}
+      build: api/
+      ports:
+        - "8080:8080"
+      environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=drivolution
+      - DB_USER=${POSTGRESQL_USER}
+      - DB_PASSWORD=${POSTGRESQL_PASSWORD}
+      depends_on:
+        - db
 
   orion:
     platform: linux/x86_64

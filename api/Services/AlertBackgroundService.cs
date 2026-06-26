@@ -49,7 +49,7 @@ public class AlertBackgroundService : BackgroundService
 
             if (estimated == null || estimated == 0) continue;
 
-            var elapsedSeconds = (DateTime.Now - phase.DatetimeIni).TotalSeconds;
+            var elapsedSeconds = (DateTime.UtcNow - phase.DatetimeIni).TotalSeconds;
             var limitSeconds = estimated.Value * (threshold / 100.0);
 
             if (elapsedSeconds > limitSeconds)
@@ -81,7 +81,7 @@ public class AlertBackgroundService : BackgroundService
             if (phase?.DatetimeEnd != null)
             {
                 alert.Status = "resolved";
-                alert.ResolvedAt = DateTime.Now;
+                alert.ResolvedAt = DateTime.UtcNow;
                 await alertRepo.UpdateAsync(alert);
             }
         }

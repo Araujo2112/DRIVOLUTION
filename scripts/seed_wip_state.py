@@ -76,7 +76,7 @@ def main():
 
         ensure_phase_sequences(cur, models, phases)
 
-        now = datetime.now()
+        now = datetime.utcnow()
         cur.execute(
             "INSERT INTO client_order (order_number, order_date, customer_name, quantity) "
             "VALUES (%s, %s, %s, %s) RETURNING id;",

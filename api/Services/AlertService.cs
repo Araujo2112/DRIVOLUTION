@@ -25,7 +25,7 @@ public class AlertService : IAlertService
         if (alert == null) return null;
 
         alert.Status = "acknowledged";
-        alert.AcknowledgedAt = DateTime.Now;
+        alert.AcknowledgedAt = DateTime.UtcNow;
         return await _alertRepo.UpdateAsync(alert);
     }
 
@@ -35,7 +35,7 @@ public class AlertService : IAlertService
         if (alert == null) return null;
 
         alert.Status = "resolved";
-        alert.ResolvedAt = DateTime.Now;
+        alert.ResolvedAt = DateTime.UtcNow;
         return await _alertRepo.UpdateAsync(alert);
     }
 
@@ -51,7 +51,7 @@ public class AlertService : IAlertService
             Status = "open",
             ProductId = productId,
             ProductPhaseId = productPhaseId,
-            TriggeredAt = DateTime.Now,
+            TriggeredAt = DateTime.UtcNow,
             ProductSerial = productSerial,
             PhaseName = phaseName,
             ThresholdPct = thresholdPct,

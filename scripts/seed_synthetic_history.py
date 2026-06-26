@@ -150,7 +150,7 @@ def lookup_delta_minutes(model_deltas, config_item, option_value, phase_name):
 def create_history_for_model(cur, model_name, model_id, configs, model_deltas, base_deltas,
                               phases, workstations, lines):
     order_number = f"SEED-{model_id}-{random.randint(1000, 9999)}"
-    order_date = datetime.now() - timedelta(days=random.randint(1, ORDER_SPREAD_DAYS))
+    order_date = datetime.utcnow() - timedelta(days=random.randint(1, ORDER_SPREAD_DAYS))
 
     cur.execute(
         "INSERT INTO client_order (order_number, order_date, customer_name, quantity) "

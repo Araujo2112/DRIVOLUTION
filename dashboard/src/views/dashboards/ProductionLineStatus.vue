@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import axios from '@/axios'
 import { useI18n } from 'vue-i18n'
 import { toast } from '@/plugins/toast'
@@ -128,6 +128,22 @@ type ProductionLineStatus = {
 const status = ref<ProductionLineStatus[]>([])
 const loading = ref(false)
 
+// ── Live ticking ──────────────────────────────────────────────────────────────
+// Sem isto, o Vue não tem motivo para voltar a chamar getRemainingTime() —
+// 'status' só muda quando há novo fetch, por isso o remaining time ficava
+// congelado no valor calculado no momento da carga inicial.
+const nowTick = ref(Date.now())
+let tickInterval: ReturnType<typeof setInterval> | null = null
+
+function startTicking() {
+  if (tickInterval) return
+  tickInterval = setInterval(() => { nowTick.value = Date.now() }, 1000)
+}
+
+function stopTicking() {
+  if (tickInterval) { clearInterval(tickInterval); tickInterval = null }
+}
+
 async function loadStatus() {
   loading.value = true
   try {
@@ -149,14 +165,14 @@ function formatDate(value: string | null) {
 function isLate(item: ProductionLineStatus) {
   if (!item.productId || !item.estimatedFinish) return false
   const normalized = item.estimatedFinish.endsWith('Z') ? item.estimatedFinish : item.estimatedFinish + 'Z'
-  return new Date(normalized).getTime() < new Date().getTime()
+  return new Date(normalized).getTime() < nowTick.value
 }
 
 function getRemainingTime(date: string | null) {
   if (!date) return '—'
 
   const normalized = date.endsWith('Z') ? date : date + 'Z'
-  const diff = new Date(normalized).getTime() - new Date().getTime()
+  const diff = new Date(normalized).getTime() - nowTick.value
   const seconds = Math.abs(Math.floor(diff / 1000))
   const minutes = Math.floor(seconds / 60)
 
@@ -201,5 +217,10 @@ const lateProducts = computed(() =>
 
 onMounted(() => {
   loadStatus()
+  startTicking()
+})
+
+onUnmounted(() => {
+  stopTicking()
 })
 </script>

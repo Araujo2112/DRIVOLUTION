@@ -218,7 +218,7 @@
                 <div
                   v-for="item in (col.items as WaitingItem[])"
                   :key="'kanban-w-' + item.productId"
-                  @click.stop="goToProduct(item.productId)"
+                  @click.stop="goToProduct(item.serialNumber)"
                   class="bg-background-50 dark:bg-background-800 border border-warning-300 dark:border-warning-700 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
                 >
                   <div class="text-xs font-medium text-warning-600 dark:text-warning-400 truncate">
@@ -241,7 +241,7 @@
                 <div
                   v-for="item in (col.items as WipItem[])"
                   :key="'kanban-p-' + item.productId"
-                  @click.stop="goToProduct(item.productId)"
+                  @click.stop="goToProduct(item.serialNumber)"
                   class="rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow border"
                   :class="cardStatusClass(item)"
                 >

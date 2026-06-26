@@ -40,6 +40,9 @@ public class ApplicationDbContext : DbContext
     // --- Alertas ---
     public DbSet<AlertModel> Alerts { get; set; }
 
+    // --- Utilizadores ---
+    public DbSet<UserModel> AppUsers { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -279,5 +282,19 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(ptc => ptc.ModelId)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<UserModel>(entity =>
+        {
+            entity.ToTable("app_user");
+            entity.HasKey(u => u.Id);
+            entity.Property(u => u.Id).HasColumnName("id");
+            entity.Property(u => u.Name).HasColumnName("name").IsRequired();
+            entity.Property(u => u.Email).HasColumnName("email").IsRequired();
+            entity.Property(u => u.PasswordHash).HasColumnName("password_hash").IsRequired();
+            entity.Property(u => u.Role).HasColumnName("role").IsRequired();
+            entity.Property(u => u.Status).HasColumnName("status").IsRequired();
+            entity.Property(u => u.CreatedAt).HasColumnName("created_at");
+            entity.HasIndex(u => u.Email).IsUnique();
+        });
     }
 }

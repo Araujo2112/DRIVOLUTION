@@ -329,3 +329,16 @@ CREATE TABLE IF NOT EXISTS phase_time_coefficient (
         FOREIGN KEY (model_id)
         REFERENCES model(id)
 );
+
+CREATE TABLE IF NOT EXISTS app_user (
+    id              SERIAL PRIMARY KEY,
+    name            VARCHAR(100) NOT NULL,
+    email           VARCHAR(150) NOT NULL UNIQUE,
+    password_hash   VARCHAR(255) NOT NULL,
+    role            VARCHAR(20)  NOT NULL DEFAULT 'operator',
+    status          VARCHAR(20)  NOT NULL DEFAULT 'active',
+    created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_app_user_role CHECK (role IN ('admin', 'operator', 'client', 'manager')),
+    CONSTRAINT chk_app_user_status CHECK (status IN ('active', 'inactive'))
+);

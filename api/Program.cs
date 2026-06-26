@@ -119,6 +119,7 @@ builder.Services.AddScoped<IProductTimelineRepository, ProductTimelineRepository
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IWipDashboardRepository, WipDashboardRepository>();
 builder.Services.AddScoped<IPhaseTimeCoefficientRepository, PhaseTimeCoefficientRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 // --- JWT Authentication ---
 builder.Services.AddAuthentication(options =>

@@ -16,7 +16,15 @@ export const messages = {
     moveUp: 'Mover para cima',
     moveDown: 'Mover para baixo',
   },
+  sidebar: {
+    configuration: 'Configuração',
+    orders: 'Encomendas',
+    monitoring: 'Monitorização',
+    admin: 'Administração',
+    logout: 'Sair',
+  },
   settings: {
+    nav: 'Definições',
     title: 'Definições',
     subtitle: 'Preferências da aplicação',
     appearance: 'Aparência',
@@ -25,6 +33,10 @@ export const messages = {
     themeDark: 'Modo escuro',
     language: 'Idioma',
     languageLabel: 'Língua da interface',
+  },
+  team: {
+    nav: 'Equipa',
+    title: 'Gestão de Equipa',
   },
   errors: {
     loadFailed: 'Erro ao carregar dados.',
@@ -551,7 +563,15 @@ export const messages = {
     moveUp: 'Move up',
     moveDown: 'Move down',
   },
+  sidebar: {
+    configuration: 'Configuration',
+    orders: 'Orders',
+    monitoring: 'Monitoring',
+    admin: 'Administration',
+    logout: 'Logout',
+  },
   settings: {
+    nav: 'Settings',
     title: 'Settings',
     subtitle: 'Application preferences',
     appearance: 'Appearance',
@@ -560,6 +580,10 @@ export const messages = {
     themeDark: 'Dark mode',
     language: 'Language',
     languageLabel: 'Interface language',
+  },
+  team: {
+    nav: 'Team',
+    title: 'Team Management',
   },
   errors: {
     loadFailed: 'Failed to load data.',

@@ -181,7 +181,7 @@
               <span class="text-sm text-background-600 dark:text-background-400">{{ item.workstation }}</span>
               <span class="text-sm text-background-600 dark:text-background-400">{{ item.currentPhase }}</span>
               <span class="text-sm text-background-500">{{ formatDate(item.startedAt) }}</span>
-              <span class="text-sm font-medium text-primary-500">{{ formatDuration(item.elapsedSeconds) }}</span>
+              <span class="text-sm font-medium text-primary-500">{{ formatDuration(liveElapsed(item)) }}</span>
             </div>
           </div>
         </section>
@@ -262,7 +262,7 @@
                   </div>
                   <div class="flex items-center justify-between mt-2">
                     <span class="text-xs font-medium" :class="cardStatusDurationClass(item)">
-                      {{ formatDuration(item.elapsedSeconds) }}
+                      {{ formatDuration(liveElapsed(item)) }}
                     </span>
                     <span class="text-xs text-background-400">ID #{{ item.productId }}</span>
                   </div>
@@ -471,9 +471,34 @@ const kanbanColumns = computed<KanbanColumn[]>(() => {
   return [waitingCol, ...wsMap.values()]
 })
 
+// ── Live ticking ─────────────────────────────────────────────────────────────
+// 'items' só muda quando há novo fetch (loadWip()). Sem isto, o elapsed
+// mostrado nos cards e usado no cálculo de cardStatus (warning/critical)
+// ficava parado no valor lido no momento do fetch — um produto podia passar
+// do tempo limite enquanto a página estava aberta sem o card alguma vez
+// mudar de cor, só após um refresh manual.
+const nowTick = ref(Date.now())
+const loadedAt = ref(Date.now())
+let tickInterval: ReturnType<typeof setInterval> | null = null
+
+function startTicking() {
+  if (tickInterval) return
+  tickInterval = setInterval(() => { nowTick.value = Date.now() }, 1000)
+}
+
+function stopTicking() {
+  if (tickInterval) { clearInterval(tickInterval); tickInterval = null }
+}
+
+function liveElapsed(item: WipItem): number {
+  const base = item.elapsedSeconds ?? 0
+  const sinceLoad = Math.floor((nowTick.value - loadedAt.value) / 1000)
+  return base + Math.max(0, sinceLoad)
+}
+
 // ── Card status ──────────────────────────────────────────────────────────────
 function cardStatus(item: WipItem): 'critical-open' | 'critical-ack' | 'warning' | 'normal' {
-  const elapsed = item.elapsedSeconds ?? 0
+  const elapsed = liveElapsed(item)
   const estimated = item.estimatedDuration
   const thresholdPct = item.timeThresholdPct ?? 150
 
@@ -531,6 +556,8 @@ async function loadWip() {
 
     waitingItems.value = response.data.waitingItems?.$values ?? response.data.waitingItems ?? []
     items.value = response.data.items?.$values ?? response.data.items ?? []
+    loadedAt.value = Date.now()
+    nowTick.value = Date.now()
 
     kanbanOffset.value = 0
 
@@ -710,9 +737,11 @@ function handleResize() {
 onMounted(() => {
   loadWip()
   window.addEventListener('resize', handleResize)
+  startTicking()
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  stopTicking()
 })
 </script>

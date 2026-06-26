@@ -13,8 +13,10 @@ public class EtaPredictionService : IEtaPredictionService
     private readonly IPhaseSequenceRepository _phaseSequenceRepo;
     private readonly IPhaseTimeCoefficientRepository _coefficientRepo;
 
-    // Piso de segurança: nunca prever menos do que isto para uma fase em curso,
-    // mesmo que já tenha passado o tempo previsto (evita ETAs no passado).
+    // Piso de segurança apenas para a previsão estática de duração de uma fase
+    // (regressão de coeficientes) — nunca prevê menos do que isto como duração
+    // total de uma fase. NÃO se aplica ao "remaining" de uma fase já em curso:
+    // esse pode e deve ir a negativo quando a fase está atrasada.
     private const int MinRemainingSecondsPerPhase = 60;
 
     public EtaPredictionService(
@@ -123,9 +125,10 @@ public class EtaPredictionService : IEtaPredictionService
             decimal remainingForThisPhase;
             if (i == 0 && currentPhase != null)
             {
+                // Sem piso aqui: se a fase já passou do previsto, o remaining
+                // tem de ir a negativo, para o frontend mostrar "atrasado X"
+                // em vez de esconder o atraso atrás de um valor fixo.
                 remainingForThisPhase = predictedFullSeconds - elapsedInCurrentSeconds;
-                if (remainingForThisPhase < MinRemainingSecondsPerPhase)
-                    remainingForThisPhase = MinRemainingSecondsPerPhase;
             }
             else
             {

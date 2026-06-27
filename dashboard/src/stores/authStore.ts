@@ -38,7 +38,15 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem(TOKEN_KEY, jwt)
     localStorage.setItem(USER_KEY,  JSON.stringify(userData))
 
-    await router.push('/dashboard')
+    if (userData.role === 'client') {
+  await router.push('/client')
+} else if (userData.role === 'operator') {
+  await router.push('/dashboard/production-line-status')
+} else if (userData.role === 'manager') {
+  await router.push('/dashboard/orders')
+} else {
+  await router.push('/dashboard')
+}
   }
 
   function logout(): void {
@@ -49,5 +57,14 @@ export const useAuthStore = defineStore('auth', () => {
     router.push('/login')
   }
 
-  return { token, user, isAuthenticated, isAdmin, isOperator, login, logout }
+  return {
+  token,
+  user,
+  isAuthenticated,
+  isAdmin,
+  isOperator,
+  isManager,
+  login,
+  logout,
+}
 })

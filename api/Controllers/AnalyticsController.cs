@@ -1,10 +1,12 @@
 using Drivolution.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/analytics")]
+[Authorize(Roles = "admin,manager")]
 public class AnalyticsController : ControllerBase
 {
     private readonly IAnalyticsService _analyticsService;

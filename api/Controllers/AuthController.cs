@@ -22,6 +22,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequestDTO dto)
     {
         var result = await _authService.Login(dto);
+
         if (result.Success)
             return Ok(result.Value);
 
@@ -39,6 +40,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequestDTO dto)
     {
         var result = await _authService.Register(dto);
+
         if (result.Success)
             return CreatedAtAction(nameof(GetMe), null, result.Value);
 
@@ -52,15 +54,18 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("me")]
-    [Authorize]
+    [Authorize(Roles = "admin,manager,operator")]
     public async Task<IActionResult> GetMe()
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         if (userIdClaim is null || !int.TryParse(userIdClaim, out var userId))
             return Unauthorized();
 
         var user = await _authService.GetUserInfo(userId);
-        if (user is null) return NotFound();
+
+        if (user is null)
+            return NotFound();
 
         return Ok(user);
     }

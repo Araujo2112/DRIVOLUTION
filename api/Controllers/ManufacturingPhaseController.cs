@@ -2,12 +2,14 @@ using Drivolution.DTO;
 using Drivolution.Models;
 using Drivolution.Models.Constants;
 using Drivolution.Repository.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "admin")]
 public class ManufacturingPhaseController : ControllerBase
 {
     private readonly IManufacturingPhaseRepository _repo;

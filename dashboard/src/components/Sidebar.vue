@@ -28,27 +28,39 @@ const auth = useAuthStore()
           <SidebarItem icon="conveyor_belt"           path="supports">{{ $t('supports.nav') }}</SidebarItem>
         </template>
 
-        <template v-if="auth.isAdmin || auth.isOperator">
+        <template v-if="auth.isAdmin || auth.isManager || auth.isOperator">
           <div class="w-full px-2 pt-3 pb-1">
             <span class="text-xs font-semibold uppercase tracking-widest text-background-400 dark:text-background-600">
               {{ $t('sidebar.orders') }}
             </span>
           </div>
-          <SidebarItem icon="shopping_cart"  path="orders">{{ $t('orders.nav') }}</SidebarItem>
-          <SidebarItem icon="assignment"     path="manufacturingOrders">{{ $t('mo.nav') }}</SidebarItem>
+          <SidebarItem
+            v-if="auth.isAdmin || auth.isManager"
+            icon="shopping_cart"
+            path="orders"
+          >
+            {{ $t('orders.nav') }}
+          </SidebarItem>
+          <SidebarItem icon="assignment" path="manufacturingOrders">{{ $t('mo.nav') }}</SidebarItem>
           <SidebarItem icon="directions_car" path="products">{{ $t('products.nav') }}</SidebarItem>
         </template>
 
-        <template v-if="auth.isAdmin || auth.isOperator">
+        <template v-if="auth.isAdmin || auth.isManager || auth.isOperator">
           <div class="w-full px-2 pt-3 pb-1">
             <span class="text-xs font-semibold uppercase tracking-widest text-background-400 dark:text-background-600">
               {{ $t('sidebar.monitoring') }}
             </span>
           </div>
-          <SidebarItem icon="monitoring"    path="production-line-status">{{ $t('lineStatus.nav') }}</SidebarItem>
-          <SidebarItem icon="dashboard"     path="wip-dashboard">{{ $t('wip.nav') }}</SidebarItem>
-          <SidebarItem icon="timeline"      path="product-timeline">{{ $t('timeline.nav') }}</SidebarItem>
-          <SidebarItem icon="bar_chart"     path="analytics">{{ $t('analytics.nav') }}</SidebarItem>
+          <SidebarItem icon="monitoring" path="production-line-status">{{ $t('lineStatus.nav') }}</SidebarItem>
+          <SidebarItem icon="dashboard" path="wip-dashboard">{{ $t('wip.nav') }}</SidebarItem>
+          <SidebarItem icon="timeline" path="product-timeline">{{ $t('timeline.nav') }}</SidebarItem>
+          <SidebarItem
+            v-if="auth.isAdmin || auth.isManager"
+            icon="bar_chart"
+            path="analytics"
+          >
+            {{ $t('analytics.nav') }}
+          </SidebarItem>
           <SidebarItem icon="notifications" path="alerts">{{ $t('alertsHistory.nav') }}</SidebarItem>
         </template>
 

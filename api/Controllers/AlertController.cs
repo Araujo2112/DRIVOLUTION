@@ -1,10 +1,12 @@
 using Drivolution.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "admin,manager,operator")]
 public class AlertController : ControllerBase
 {
     private readonly IAlertService _alertService;

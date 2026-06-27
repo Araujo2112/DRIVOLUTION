@@ -47,7 +47,7 @@ public class WorkstationAllocationController : ControllerBase
             ResourceId = dto.ResourceId,
             WorkstationId = dto.WorkstationId,
             StartDate = dto.StartDate == default ? DateTime.UtcNow : dto.StartDate,
-            Status = dto.Status ?? EntityStatus.Active 
+            Status = dto.Status ?? ActiveStatus.Active 
         };
         
         var created = await _repo.Create(entity);
@@ -72,7 +72,7 @@ public class WorkstationAllocationController : ControllerBase
         if (entity == null) return NotFound();
 
         // Quando a alocação termina, mudamos o status e registamos a data de fim
-        entity.Status = EntityStatus.Inactive;
+        entity.Status = ActiveStatus.Inactive;
         entity.EndDate = DateTime.UtcNow;
 
         await _repo.Update(entity);

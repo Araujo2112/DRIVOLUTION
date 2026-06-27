@@ -110,7 +110,7 @@ public class ClientOrderService : IClientOrderService
                 ClientOrderId = createdOrder.Id,
                 ManufacturingOrderNumber = $"{dto.OrderNumber}-MO-{i:D3}",
                 StartDate = DateTime.UtcNow,
-                Status = EntityStatus.Pending
+                Status = OrderStatus.Pending
             });
 
             var product = await _productRepo.Create(new ProductModel

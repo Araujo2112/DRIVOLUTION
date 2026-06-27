@@ -34,7 +34,7 @@ public class WorkstationStatusController : ControllerBase
         var entity = new WorkstationStatusModel 
         { 
             WorkstationId = dto.WorkstationId, 
-            Status = dto.Status ?? EntityStatus.Functional,
+            Status = dto.Status ?? WorkstationStatusConstants.Functional,
             Timestamp = DateTime.UtcNow 
         };
         var created = await _repo.Create(entity);

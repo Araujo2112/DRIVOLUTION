@@ -34,7 +34,7 @@ public class LocalizationHistoryService : ILocalizationHistoryService
         if (current != null)
         {
             current.DatetimeEnd = DateTime.UtcNow;
-            current.Status = EntityStatus.Completed;
+            current.Status = ActiveStatus.Completed;
             await _repo.Update(current);
         }
 
@@ -43,7 +43,7 @@ public class LocalizationHistoryService : ILocalizationHistoryService
             SupportId = dto.SupportId,
             WorkstationId = dto.WorkstationId,
             DatetimeIni = DateTime.UtcNow,
-            Status = EntityStatus.Active
+            Status = ActiveStatus.Active
         };
 
         var created = await _repo.Create(entity);

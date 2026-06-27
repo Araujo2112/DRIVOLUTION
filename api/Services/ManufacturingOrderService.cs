@@ -77,7 +77,7 @@ public class ManufacturingOrderService : IManufacturingOrderService
             ClientOrderId = dto.ClientOrderId,
             ManufacturingOrderNumber = dto.ManufacturingOrderNumber,
             StartDate = dto.StartDate,
-            Status = EntityStatus.Pending
+            Status = OrderStatus.Pending
         };
 
         var created = await _repo.Create(entity);

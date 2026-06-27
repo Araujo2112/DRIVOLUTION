@@ -90,7 +90,7 @@ public class ProductPhaseService : IProductPhaseService
         if (mo == null) return;
 
         // Se já está concluída ou cancelada, não tocar
-        if (mo.Status == EntityStatus.Completed || mo.Status == EntityStatus.Cancelled) return;
+        if (mo.Status == OrderStatus.Completed || mo.Status == OrderStatus.Cancelled) return;
 
         var allProducts = mo.Products.ToList();
 
@@ -105,12 +105,12 @@ public class ProductPhaseService : IProductPhaseService
 
         if (allCompleted)
         {
-            mo.Status = EntityStatus.Completed;
+            mo.Status = OrderStatus.Completed;
             mo.EndDate = DateTime.UtcNow;
         }
         else if (anyInProgress)
         {
-            mo.Status = EntityStatus.InProgress;
+            mo.Status = OrderStatus.InProgress;
         }
 
         await _moRepo.Update(mo);

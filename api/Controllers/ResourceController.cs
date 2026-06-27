@@ -34,7 +34,7 @@ public class ResourceController : ControllerBase
         var entity = new ResourceModel 
         { 
             IsHuman = dto.IsHuman, 
-            Status = dto.Status ?? EntityStatus.Active // Se vier vazio, assume Ativo
+            Status = dto.Status ?? ActiveStatus.Active // Se vier vazio, assume Ativo
         };
         var created = await _repo.Create(entity);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, new ResourceDTO(created.Id, created.IsHuman, created.Status));

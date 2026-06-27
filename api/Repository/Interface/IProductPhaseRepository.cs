@@ -12,4 +12,5 @@ public interface IProductPhaseRepository
     Task<ProductPhaseModel?> GetByIdAsync(int id);
     Task<ProductPhaseModel?> GetCurrentOpenByProductionLine(int productionLineId);
     Task<IEnumerable<ProductPhaseModel>> GetAllOpenByProductionLine(int productionLineId);
+    Task<List<ProductPhaseModel>> GetCurrentByProducts(List<int> productIds);
 }

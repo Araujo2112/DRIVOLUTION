@@ -3,6 +3,7 @@ namespace Drivolution.DTO;
 public class WipItemDTO
 {
     public int ProductId { get; set; }
+    public int ModelId { get; set; }
     public string? SerialNumber { get; set; }
     public int ProductionLineId { get; set; }
     public string? ProductionLineName { get; set; }
@@ -16,9 +17,6 @@ public class WipItemDTO
     public string? Result { get; set; }
     public string? WipStatus { get; set; }
     public int ElapsedSeconds { get; set; }
-
-    // NOTA: este campo não vem da query SQL (SqlQueryRaw) — fica a 'null' por
-    // omissão depois do mapeamento e é preenchido a posteriori pelo
-    // WipDashboardService, com base na previsão por regressão do EtaPredictionService
     public int? PredictedPhaseDurationSeconds { get; set; }
+    public bool PredictedPhaseDurationIsMl { get; set; }
 }

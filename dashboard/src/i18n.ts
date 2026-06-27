@@ -365,6 +365,8 @@ export const messages = {
     subtitle: 'Produtos atualmente em produção e respetivos tempos de permanência.',
     empty: 'Sem produtos em curso.',
     late: 'Atrasado',
+    mlBadge: 'ML',
+    baselineBadge: 'Base',
     kpis: {
       inProduction: 'Em produção',
       activeSkids: 'Skids ativos',
@@ -964,6 +966,8 @@ analytics: {
     subtitle: 'Products currently in production and their residence times.',
     empty: 'No products in progress.',
     late: 'Late',
+    mlBadge: 'ML',
+    baselineBadge: 'Base',
     kpis: {
       inProduction: 'In production',
       activeSkids: 'Active skids',

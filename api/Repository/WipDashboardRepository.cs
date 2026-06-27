@@ -21,6 +21,7 @@ public class WipDashboardRepository : IWipDashboardRepository
                 """
                 SELECT
                     p.id AS "ProductId",
+                    p.model_id AS "ModelId",
                     p.serial_number AS "SerialNumber",
                     pl.id AS "ProductionLineId",
                     pl.name AS "ProductionLineName",
@@ -33,7 +34,9 @@ public class WipDashboardRepository : IWipDashboardRepository
                     pp.datetime_end AS "EndedAt",
                     pp.result AS "Result",
                     'in_progress' AS "WipStatus",
-                    EXTRACT(EPOCH FROM (NOW() - pp.datetime_ini))::INT AS "ElapsedSeconds"
+                    EXTRACT(EPOCH FROM (NOW() - pp.datetime_ini))::INT AS "ElapsedSeconds",
+                    NULL::INT AS "PredictedPhaseDurationSeconds",
+                    FALSE AS "PredictedPhaseDurationIsMl"
                 FROM product_phase pp
                 JOIN product p ON p.id = pp.product_id
                 JOIN manufacturing_phase mp ON mp.id = pp.manufacturing_phase_id

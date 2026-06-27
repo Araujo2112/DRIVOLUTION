@@ -2,18 +2,24 @@ using Drivolution.Models;
 
 namespace Drivolution.Services.Interface;
 
-// Calcula a duração estimada de uma fase de fabrico a partir dos pesos
-// treinados (intercepto + modelo + linha de produção + opções de configuração).
-// Sem estado e sem acesso à base de dados — recebe os coeficientes já
-// carregados. Partilhada entre a previsão de produtos reais em produção e a
-// simulação de carros hipotéticos, para garantir a mesma fórmula nos dois casos.
+
+// Calcula a duração prevista de uma fase de fabrico com base nos coeficientes treinados pelo modelo de ML (Ridge). 
+// Partilhado entre EtaPredictionService (previsão de produtos reais) e CarModelEtaSimulationService (simulação hipotética sem produto real na BD).
+
 public interface IPhaseTimeWeightCalculator
 {
+    // Devolve a duração prevista em segundos para uma fase, dado o modelo, as opções de configuração selecionadas 
+    // e (opcionalmente) a linha de produção. Se não existirem coeficientes treinados para a fase (cold start), devolve
+
     decimal PredictPhaseDurationSeconds(
         int phaseId,
-        int? modelId,
+        int modelId,
         IEnumerable<int> selectedOptionIds,
         int? lineId,
-        IReadOnlyCollection<PhaseTimeCoefficientModel> coefficients,
+        List<PhaseTimeCoefficientModel> coefficients,
         int fallbackSeconds);
+
+    //Indica se o modelo de ML já foi treinado para a fase indicada, ou seja, se existe um coeficiente interceto gravado na BD. 
+    // Quando false, a previsão usa o valor estático (fallback).
+    bool HasTrainedIntercept(int phaseId, List<PhaseTimeCoefficientModel> coefficients);
 }

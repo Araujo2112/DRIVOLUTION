@@ -3,30 +3,24 @@ using Drivolution.Services.Interface;
 
 namespace Drivolution.Services;
 
-// Calcula a duração estimada de uma fase de fabrico somando os pesos treinados
-// guardados em phase_time_coefficient: um intercepto base por fase, mais um
-// peso opcional por modelo de carro, por linha de produção e por cada opção de
-// configuração selecionada. Não acede à base de dados — recebe a lista de
-// coeficientes já carregada e só faz a soma. Usado tanto para prever o tempo
-// restante de um produto real em produção como para simular o tempo de um
-// carro hipotético antes de existir nenhum produto — para que as duas previsões
-// usem sempre exatamente a mesma fórmula.
+/// <inheritdoc />
 public class PhaseTimeWeightCalculator : IPhaseTimeWeightCalculator
 {
-    // Piso de segurança: a duração prevista de uma fase nunca é inferior a isto,
-    // mesmo que a soma dos pesos dê um valor muito baixo ou negativo.
+    // Piso de segurança para a previsão estática de duração de uma fase
+    // (regressão de coeficientes). Nunca prevê menos do que isto como duração
+    // total de uma fase. NÃO se aplica ao "remaining" de uma fase já em curso:
+    // esse pode e deve ir a negativo quando a fase está atrasada.
+    // Constante pública para que CarModelEtaSimulationService a use no fallback
+    // quando EstimatedDuration da fase é null.
     public const int MinDurationSecondsPerPhase = 60;
 
-    // Soma intercepto + peso do modelo (se indicado) + peso da linha de produção
-    // (se indicada) + soma dos pesos de cada opção de configuração selecionada.
-    // modelId == null significa "sem modelo conhecido" — não soma nenhum peso de
-    // modelo (ex: ainda não foi escolhido um modelo na simulação).
+    /// <inheritdoc />
     public decimal PredictPhaseDurationSeconds(
         int phaseId,
-        int? modelId,
+        int modelId,
         IEnumerable<int> selectedOptionIds,
         int? lineId,
-        IReadOnlyCollection<PhaseTimeCoefficientModel> coefficients,
+        List<PhaseTimeCoefficientModel> coefficients,
         int fallbackSeconds)
     {
         var intercept = coefficients.FirstOrDefault(c =>
@@ -34,21 +28,18 @@ public class PhaseTimeWeightCalculator : IPhaseTimeWeightCalculator
             c.ConfigOptionId == null && c.ProductionLineId == null && c.ModelId == null
         );
 
-        // Sem coeficientes treinados para esta fase ainda (ex: fase nova, nunca
-        // treinada) — cai para a estimativa estática ("cold start").
+        // Sem coeficientes treinados para esta fase ainda (ex: fase nova, nunca treinada) —
+        // cai para a estimativa estática, exatamente como o card pede ("cold start").
         if (intercept == null)
             return fallbackSeconds;
 
         decimal total = intercept.WeightSeconds;
 
-        if (modelId.HasValue)
-        {
-            var modelWeight = coefficients.FirstOrDefault(c =>
-                c.ManufacturingPhaseId == phaseId && c.ModelId == modelId &&
-                c.ConfigOptionId == null && c.ProductionLineId == null
-            )?.WeightSeconds ?? 0;
-            total += modelWeight;
-        }
+        var modelWeight = coefficients.FirstOrDefault(c =>
+            c.ManufacturingPhaseId == phaseId && c.ModelId == modelId &&
+            c.ConfigOptionId == null && c.ProductionLineId == null
+        )?.WeightSeconds ?? 0;
+        total += modelWeight;
 
         if (lineId.HasValue)
         {
@@ -68,5 +59,13 @@ public class PhaseTimeWeightCalculator : IPhaseTimeWeightCalculator
         }
 
         return total < MinDurationSecondsPerPhase ? MinDurationSecondsPerPhase : total;
+    }
+
+    public bool HasTrainedIntercept(int phaseId, List<PhaseTimeCoefficientModel> coefficients)
+    {
+        return coefficients.Any(c =>
+            c.ManufacturingPhaseId == phaseId &&
+            c.ConfigOptionId == null && c.ProductionLineId == null && c.ModelId == null
+        );
     }
 }

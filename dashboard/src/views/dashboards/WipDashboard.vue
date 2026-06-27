@@ -183,7 +183,18 @@
               <span class="text-sm text-background-600 dark:text-background-400">{{ item.currentPhase }}</span>
               <span class="text-sm text-background-500">{{ formatDate(item.startedAt) }}</span>
               <span class="text-sm font-medium" :class="cardStatusDurationClass(item)">{{ formatDuration(liveElapsed(item)) }}</span>
-              <span class="text-sm text-background-500">{{ formatDuration(referenceDuration(item)) }}</span>
+              <span class="text-sm text-background-500 flex items-center gap-1.5">
+                {{ formatDuration(referenceDuration(item)) }}
+                <span
+                  v-if="referenceDuration(item) !== null"
+                  class="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                  :class="item.predictedPhaseDurationIsMl
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300'
+                    : 'bg-background-200 text-background-500 dark:bg-background-700 dark:text-background-400'"
+                >
+                  {{ item.predictedPhaseDurationIsMl ? t('wip.mlBadge') : t('wip.baselineBadge') }}
+                </span>
+              </span>
             </div>
           </div>
         </section>
@@ -263,7 +274,13 @@
                     {{ item.currentPhase }}
                   </div>
                   <div class="flex items-center justify-between mt-2">
-                    <span class="text-xs font-medium" :class="cardStatusDurationClass(item)">
+                    <span class="text-xs font-medium flex items-center gap-1" :class="cardStatusDurationClass(item)">
+                      <span
+                        v-if="item.predictedPhaseDurationSeconds !== null"
+                        class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        :class="item.predictedPhaseDurationIsMl ? 'bg-primary-500' : 'bg-background-400'"
+                        :title="item.predictedPhaseDurationIsMl ? t('wip.mlBadge') : t('wip.baselineBadge')"
+                      ></span>
                       {{ cardDurationLabel(item) }}
                     </span>
                     <span class="text-xs text-background-400">ID #{{ item.productId }}</span>
@@ -354,6 +371,7 @@ type WipItem = {
   startedAt: string | null
   elapsedSeconds: number | null
   predictedPhaseDurationSeconds: number | null
+  predictedPhaseDurationIsMl: boolean
 }
 
 type WaitingItem = {

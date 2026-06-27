@@ -32,34 +32,34 @@ public class EtaPredictionService : IEtaPredictionService
 
     public async Task<DateTime?> PredictCurrentPhaseFinish(int productId)
     {
-        var predictedFullSeconds = await PredictCurrentPhaseDurationSecondsInternal(productId);
-        if (predictedFullSeconds == null) return null;
+        var result = await PredictCurrentPhaseDurationSecondsInternal(productId);
+        if (result == null) return null;
 
         var currentPhase = await _productPhaseRepo.GetCurrentByProduct(productId);
-        if (currentPhase == null) return null; // sem fase aberta — nada a prever aqui
+        if (currentPhase == null) return null;
 
-        return currentPhase.DatetimeIni.AddSeconds((double)predictedFullSeconds.Value);
+        return currentPhase.DatetimeIni.AddSeconds((double)result.Value.Seconds);
     }
 
-    public async Task<int?> PredictCurrentPhaseDurationSeconds(int productId)
+    public async Task<PhaseDurationPredictionDTO?> PredictCurrentPhaseDurationSeconds(int productId)
     {
-        var predictedFullSeconds = await PredictCurrentPhaseDurationSecondsInternal(productId);
-        return predictedFullSeconds == null ? null : (int)predictedFullSeconds.Value;
+        var result = await PredictCurrentPhaseDurationSecondsInternal(productId);
+        if (result == null) return null;
+
+        return new PhaseDurationPredictionDTO
+        {
+            Seconds = (int)result.Value.Seconds,
+            IsMlPrediction = result.Value.IsMl
+        };
     }
 
-    // Duração prevista (em segundos) da fase em que o produto está agora,
-    // usando a regressão de coeficientes treinada a partir do histórico real
-    // — não a estimativa estática (a não ser em "cold start", sem coeficientes
-    // treinados ainda, caso em que PredictPhaseDurationSeconds já faz fallback).
-    // Partilhado por PredictCurrentPhaseFinish (devolve um timestamp absoluto)
-    // e PredictCurrentPhaseDurationSeconds (devolve só a duração).
-    private async Task<decimal?> PredictCurrentPhaseDurationSecondsInternal(int productId)
+    private async Task<(decimal Seconds, bool IsMl)?> PredictCurrentPhaseDurationSecondsInternal(int productId)
     {
         var product = await _productRepo.GetById(productId);
         if (product == null) return null;
 
         var currentPhase = await _productPhaseRepo.GetCurrentByProduct(productId);
-        if (currentPhase == null) return null; // sem fase aberta — nada a prever aqui
+        if (currentPhase == null) return null;
 
         var selectedOptionIds = (await _productConfigRepo.GetByProduct(productId))
             .Select(pc => pc.ConfigOptionId)
@@ -69,10 +69,14 @@ public class EtaPredictionService : IEtaPredictionService
         var lineId = currentPhase.Workstation.ProductionLineId;
         var fallbackSeconds = currentPhase.ManufacturingPhase.EstimatedDuration ?? 1800;
 
-        return PredictPhaseDurationSeconds(
+        var isMl = _weightCalculator.HasTrainedIntercept(currentPhase.ManufacturingPhaseId, coefficients);
+
+        var seconds = _weightCalculator.PredictPhaseDurationSeconds(
             currentPhase.ManufacturingPhaseId, product.ModelId, selectedOptionIds, lineId,
             coefficients, fallbackSeconds
         );
+
+        return (seconds, isMl);
     }
 
     public async Task<EtaResultDTO?> PredictForProduct(int productId)
@@ -91,7 +95,6 @@ public class EtaPredictionService : IEtaPredictionService
 
         var now = DateTime.UtcNow;
 
-        // Caso 1: produto já concluiu todas as fases.
         if (currentPhase == null && product.ProductionDate != null)
         {
             return new EtaResultDTO(
@@ -107,18 +110,13 @@ public class EtaPredictionService : IEtaPredictionService
 
         if (currentPhase == null)
         {
-            // Caso 2: ainda não entrou em nenhuma fase — prevê a sequência toda a partir de agora.
             remainingPhases = sequence;
             currentPhaseName = "Não iniciado";
         }
         else
         {
             var currentIndex = sequence.FindIndex(ps => ps.ManufacturingPhaseId == currentPhase.ManufacturingPhaseId);
-            if (currentIndex == -1)
-            {
-                // Inconsistência de dados: a fase atual não pertence à sequência do modelo.
-                return null;
-            }
+            if (currentIndex == -1) return null;
 
             remainingPhases = sequence.Skip(currentIndex).ToList();
             elapsedInCurrentSeconds = (decimal)(now - currentPhase.DatetimeIni).TotalSeconds;
@@ -135,23 +133,14 @@ public class EtaPredictionService : IEtaPredictionService
             var phaseSeq = remainingPhases[i];
             var fallbackSeconds = phaseSeq.ManufacturingPhase.EstimatedDuration ?? 1800;
 
-            var predictedFullSeconds = PredictPhaseDurationSeconds(
+            var predictedFullSeconds = _weightCalculator.PredictPhaseDurationSeconds(
                 phaseSeq.ManufacturingPhaseId, product.ModelId, selectedOptionIds, lineId,
                 coefficients, fallbackSeconds
             );
 
-            decimal remainingForThisPhase;
-            if (i == 0 && currentPhase != null)
-            {
-                // Sem piso aqui: se a fase já passou do previsto, o remaining
-                // tem de ir a negativo, para o frontend mostrar "atrasado X"
-                // em vez de esconder o atraso atrás de um valor fixo.
-                remainingForThisPhase = predictedFullSeconds - elapsedInCurrentSeconds;
-            }
-            else
-            {
-                remainingForThisPhase = predictedFullSeconds;
-            }
+            decimal remainingForThisPhase = (i == 0 && currentPhase != null)
+                ? predictedFullSeconds - elapsedInCurrentSeconds
+                : predictedFullSeconds;
 
             totalRemainingSeconds += remainingForThisPhase;
         }
@@ -178,11 +167,56 @@ public class EtaPredictionService : IEtaPredictionService
         return results;
     }
 
-    // Fórmula de soma de pesos delegada a IPhaseTimeWeightCalculator (a mesma
-    // fórmula usada pelo simulador de configuração) — ver lá a implementação.
-    private decimal PredictPhaseDurationSeconds(
-        int phaseId, int modelId, HashSet<int> selectedOptionIds, int? lineId,
-        List<PhaseTimeCoefficientModel> coefficients, int fallbackSeconds)
-        => _weightCalculator.PredictPhaseDurationSeconds(
-            phaseId, modelId, selectedOptionIds, lineId, coefficients, fallbackSeconds);
+    public async Task<Dictionary<int, PhaseDurationPredictionDTO>> PredictCurrentPhaseDurationsForWip(
+        IReadOnlyList<WipItemDTO> items)
+    {
+        if (items.Count == 0)
+            return new Dictionary<int, PhaseDurationPredictionDTO>();
+
+        var productIds = items.Select(i => i.ProductId).ToList();
+
+        var coefficients = (await _coefficientRepo.GetAll()).ToList();
+
+        var allConfigs = await _productConfigRepo.GetByProducts(productIds);
+        var configsByProduct = allConfigs
+            .GroupBy(pc => pc.ProductId)
+            .ToDictionary(g => g.Key, g => g.Select(pc => pc.ConfigOptionId).ToHashSet());
+
+        var openPhases = await _productPhaseRepo.GetCurrentByProducts(productIds);
+        var phasesByProduct = openPhases.ToDictionary(pp => pp.ProductId);
+
+        var result = new Dictionary<int, PhaseDurationPredictionDTO>();
+
+        foreach (var item in items)
+        {
+            if (!phasesByProduct.TryGetValue(item.ProductId, out var currentPhase))
+                continue;
+
+            var selectedOptionIds = configsByProduct.TryGetValue(item.ProductId, out var opts)
+                ? opts
+                : new HashSet<int>();
+
+            var lineId = currentPhase.Workstation.ProductionLineId;
+            var fallbackSeconds = currentPhase.ManufacturingPhase.EstimatedDuration ?? 1800;
+
+            var isMl = _weightCalculator.HasTrainedIntercept(
+                currentPhase.ManufacturingPhaseId, coefficients);
+
+            var seconds = _weightCalculator.PredictPhaseDurationSeconds(
+                currentPhase.ManufacturingPhaseId,
+                item.ModelId,
+                selectedOptionIds,
+                lineId,
+                coefficients,
+                fallbackSeconds);
+
+            result[item.ProductId] = new PhaseDurationPredictionDTO
+            {
+                Seconds = (int)seconds,
+                IsMlPrediction = isMl
+            };
+        }
+
+        return result;
+    }
 }

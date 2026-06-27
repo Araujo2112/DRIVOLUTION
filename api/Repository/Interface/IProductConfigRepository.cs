@@ -8,4 +8,5 @@ public interface IProductConfigRepository
     Task Delete(int id);
     Task<ProductConfigModel?> GetByProductAndOption(int productId, int configOptionId);
     Task<IEnumerable<ProductConfigModel>> GetByProductAndConfig(int productId, int configId);
+    Task<List<ProductConfigModel>> GetByProducts(List<int> productIds);
 }

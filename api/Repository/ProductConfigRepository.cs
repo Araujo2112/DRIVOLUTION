@@ -34,4 +34,9 @@ public class ProductConfigRepository : IProductConfigRepository
             .Include(pc => pc.ConfigOption)
             .Where(pc => pc.ProductId == productId && pc.ConfigOption.ConfigId == configId)
             .ToListAsync();
+
+    public async Task<List<ProductConfigModel>> GetByProducts(List<int> productIds) =>
+    await _context.ProductConfigs
+        .Where(pc => productIds.Contains(pc.ProductId))
+        .ToListAsync();
 }

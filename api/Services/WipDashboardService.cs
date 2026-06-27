@@ -21,14 +21,14 @@ public class WipDashboardService : IWipDashboardService
         var waitingItems = await _repository.GetWaitingAsync();
         var completed = await _repository.GetCompletedCountAsync();
 
-        // Previsão da duração da fase atual (regressão sobre histórico real),
-        // por produto em curso — usada no WIP Dashboard para comparar com o
-        // elapsedSeconds e mostrar "Atrasado" no Kanban / "Tempo Suposto" na
-        // tabela, em vez do EstimatedDuration estático.
+        var predictions = await _etaService.PredictCurrentPhaseDurationsForWip(inProgressItems);
         foreach (var item in inProgressItems)
         {
-            item.PredictedPhaseDurationSeconds =
-                await _etaService.PredictCurrentPhaseDurationSeconds(item.ProductId);
+            if (predictions.TryGetValue(item.ProductId, out var prediction))
+            {
+                item.PredictedPhaseDurationSeconds = prediction.Seconds;
+                item.PredictedPhaseDurationIsMl = prediction.IsMlPrediction;
+            }
         }
 
         var graph = BuildGraph(waitingItems, inProgressItems);

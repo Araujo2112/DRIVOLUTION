@@ -151,13 +151,14 @@
             </span>
           </div>
           <div class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
-            <div class="grid grid-cols-7 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
+            <div class="grid grid-cols-8 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider col-span-2">{{ t('wip.fields.product') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.line') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.workstation') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.phase') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.start') }}</span>
               <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.elapsed') }}</span>
+              <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('wip.fields.expected') }}</span>
             </div>
             <div v-if="items.length === 0" class="text-center py-10 text-background-500">
               <span class="material-symbols-rounded text-4xl block mb-2">inventory_2</span>
@@ -166,7 +167,7 @@
             <div
               v-for="item in items"
               :key="item.productId + '-' + item.currentPhase"
-              class="grid grid-cols-7 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
+              class="grid grid-cols-8 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
             >
               <div class="col-span-2">
                 <button
@@ -181,7 +182,8 @@
               <span class="text-sm text-background-600 dark:text-background-400">{{ item.workstation }}</span>
               <span class="text-sm text-background-600 dark:text-background-400">{{ item.currentPhase }}</span>
               <span class="text-sm text-background-500">{{ formatDate(item.startedAt) }}</span>
-              <span class="text-sm font-medium text-primary-500">{{ formatDuration(liveElapsed(item)) }}</span>
+              <span class="text-sm font-medium" :class="cardStatusDurationClass(item)">{{ formatDuration(liveElapsed(item)) }}</span>
+              <span class="text-sm text-background-500">{{ formatDuration(referenceDuration(item)) }}</span>
             </div>
           </div>
         </section>
@@ -262,7 +264,7 @@
                   </div>
                   <div class="flex items-center justify-between mt-2">
                     <span class="text-xs font-medium" :class="cardStatusDurationClass(item)">
-                      {{ formatDuration(liveElapsed(item)) }}
+                      {{ cardDurationLabel(item) }}
                     </span>
                     <span class="text-xs text-background-400">ID #{{ item.productId }}</span>
                   </div>
@@ -351,6 +353,7 @@ type WipItem = {
   timeThresholdPct: number | null
   startedAt: string | null
   elapsedSeconds: number | null
+  predictedPhaseDurationSeconds: number | null
 }
 
 type WaitingItem = {
@@ -496,10 +499,31 @@ function liveElapsed(item: WipItem): number {
   return base + Math.max(0, sinceLoad)
 }
 
+// Duração de referência para esta fase: prioriza a previsão por regressão
+// (histórico real, vinda do EtaPredictionService); só cai para a estimativa
+// estática se ainda não houver coeficientes treinados para esta fase.
+function referenceDuration(item: WipItem): number | null {
+  return item.predictedPhaseDurationSeconds ?? item.estimatedDuration
+}
+
+// Kanban: mesmo espaço, texto diferente — em vez de uma linha extra, troca
+// "elapsed normal" por "Atrasado Xm" quando a fase já passou da duração de
+// referência, reaproveitando a cor já calculada em cardStatusDurationClass.
+function cardDurationLabel(item: WipItem): string {
+  const elapsed = liveElapsed(item)
+  const reference = referenceDuration(item)
+
+  if (reference && elapsed > reference) {
+    return `${t('wip.late')} ${formatDuration(elapsed - reference)}`
+  }
+
+  return formatDuration(elapsed)
+}
+
 // ── Card status ──────────────────────────────────────────────────────────────
 function cardStatus(item: WipItem): 'critical-open' | 'critical-ack' | 'warning' | 'normal' {
   const elapsed = liveElapsed(item)
-  const estimated = item.estimatedDuration
+  const estimated = referenceDuration(item)
   const thresholdPct = item.timeThresholdPct ?? 150
 
   const isOpen = openAlertProductIds.value?.includes(item.productId) ?? false

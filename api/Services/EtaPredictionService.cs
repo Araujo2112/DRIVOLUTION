@@ -35,6 +35,29 @@ public class EtaPredictionService : IEtaPredictionService
 
     public async Task<DateTime?> PredictCurrentPhaseFinish(int productId)
     {
+        var predictedFullSeconds = await PredictCurrentPhaseDurationSecondsInternal(productId);
+        if (predictedFullSeconds == null) return null;
+
+        var currentPhase = await _productPhaseRepo.GetCurrentByProduct(productId);
+        if (currentPhase == null) return null; // sem fase aberta — nada a prever aqui
+
+        return currentPhase.DatetimeIni.AddSeconds((double)predictedFullSeconds.Value);
+    }
+
+    public async Task<int?> PredictCurrentPhaseDurationSeconds(int productId)
+    {
+        var predictedFullSeconds = await PredictCurrentPhaseDurationSecondsInternal(productId);
+        return predictedFullSeconds == null ? null : (int)predictedFullSeconds.Value;
+    }
+
+    // Duração prevista (em segundos) da fase em que o produto está agora,
+    // usando a regressão de coeficientes treinada a partir do histórico real
+    // — não a estimativa estática (a não ser em "cold start", sem coeficientes
+    // treinados ainda, caso em que PredictPhaseDurationSeconds já faz fallback).
+    // Partilhado por PredictCurrentPhaseFinish (devolve um timestamp absoluto)
+    // e PredictCurrentPhaseDurationSeconds (devolve só a duração).
+    private async Task<decimal?> PredictCurrentPhaseDurationSecondsInternal(int productId)
+    {
         var product = await _productRepo.GetById(productId);
         if (product == null) return null;
 
@@ -49,12 +72,10 @@ public class EtaPredictionService : IEtaPredictionService
         var lineId = currentPhase.Workstation.ProductionLineId;
         var fallbackSeconds = currentPhase.ManufacturingPhase.EstimatedDuration ?? 1800;
 
-        var predictedFullSeconds = PredictPhaseDurationSeconds(
+        return PredictPhaseDurationSeconds(
             currentPhase.ManufacturingPhaseId, product.ModelId, selectedOptionIds, lineId,
             coefficients, fallbackSeconds
         );
-
-        return currentPhase.DatetimeIni.AddSeconds((double)predictedFullSeconds);
     }
 
     public async Task<EtaResultDTO?> PredictForProduct(int productId)

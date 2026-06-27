@@ -16,4 +16,9 @@ public class WipItemDTO
     public string? Result { get; set; }
     public string? WipStatus { get; set; }
     public int ElapsedSeconds { get; set; }
+
+    // NOTA: este campo não vem da query SQL (SqlQueryRaw) — fica a 'null' por
+    // omissão depois do mapeamento e é preenchido a posteriori pelo
+    // WipDashboardService, com base na previsão por regressão do EtaPredictionService
+    public int? PredictedPhaseDurationSeconds { get; set; }
 }

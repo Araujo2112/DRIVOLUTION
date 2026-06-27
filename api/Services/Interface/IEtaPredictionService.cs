@@ -5,5 +5,6 @@ public interface IEtaPredictionService
 {
     Task<EtaResultDTO?> PredictForProduct(int productId);
     Task<DateTime?> PredictCurrentPhaseFinish(int productId);
+    Task<int?> PredictCurrentPhaseDurationSeconds(int productId);
     Task<List<EtaResultDTO>> PredictForProductionLine(int productionLineId);
 }

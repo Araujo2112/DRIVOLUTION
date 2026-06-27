@@ -343,6 +343,7 @@ export const messages = {
     title: 'WIP Dashboard',
     subtitle: 'Produtos atualmente em produção e respetivos tempos de permanência.',
     empty: 'Sem produtos em curso.',
+    late: 'Atrasado',
     kpis: {
       inProduction: 'Em produção',
       activeSkids: 'Skids ativos',
@@ -357,6 +358,7 @@ export const messages = {
       workstation: 'Workstation',
       phase: 'Fase',
       elapsed: 'Tempo decorrido',
+      expected: 'Tempo Suposto',
       startedAt: 'Entrada',
       start: 'Início',
       order: 'Ordem',
@@ -890,6 +892,7 @@ export const messages = {
     title: 'WIP Dashboard',
     subtitle: 'Products currently in production and their residence times.',
     empty: 'No products in progress.',
+    late: 'Late',
     kpis: {
       inProduction: 'In production',
       activeSkids: 'Active skids',
@@ -904,6 +907,7 @@ export const messages = {
       workstation: 'Workstation',
       phase: 'Phase',
       elapsed: 'Elapsed time',
+      expected: 'Expected time',
       startedAt: 'Entry',
       start: 'Start',
       order: 'Order',

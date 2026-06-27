@@ -7,10 +7,12 @@ namespace Drivolution.Services;
 public class WipDashboardService : IWipDashboardService
 {
     private readonly IWipDashboardRepository _repository;
+    private readonly IEtaPredictionService _etaService;
 
-    public WipDashboardService(IWipDashboardRepository repository)
+    public WipDashboardService(IWipDashboardRepository repository, IEtaPredictionService etaService)
     {
         _repository = repository;
+        _etaService = etaService;
     }
 
     public async Task<WipDashboardResultDTO> GetWipDashboardAsync()
@@ -18,6 +20,17 @@ public class WipDashboardService : IWipDashboardService
         var inProgressItems = await _repository.GetInProgressAsync();
         var waitingItems = await _repository.GetWaitingAsync();
         var completed = await _repository.GetCompletedCountAsync();
+
+        // Previsão da duração da fase atual (regressão sobre histórico real),
+        // por produto em curso — usada no WIP Dashboard para comparar com o
+        // elapsedSeconds e mostrar "Atrasado" no Kanban / "Tempo Suposto" na
+        // tabela, em vez do EstimatedDuration estático.
+        foreach (var item in inProgressItems)
+        {
+            item.PredictedPhaseDurationSeconds =
+                await _etaService.PredictCurrentPhaseDurationSeconds(item.ProductId);
+        }
+
         var graph = BuildGraph(waitingItems, inProgressItems);
 
         return new WipDashboardResultDTO

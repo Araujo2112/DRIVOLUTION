@@ -27,6 +27,7 @@ const routes = [
       { path: 'production-line-status', name: 'ProductionLineStatus', component: () => import('./views/dashboards/ProductionLineStatus.vue') },
       { path: 'wip-dashboard',          name: 'WipDashboard',         component: () => import('./views/dashboards/WipDashboard.vue') },
       { path: 'product-timeline',       name: 'ProductTimeline',      component: () => import('./views/dashboards/ProductTimeline.vue') },
+      { path: 'analytics',              name: 'Analytics',            component: () => import('./views/dashboards/Analytics.vue') },
       { path: 'settings',               name: 'Settings',             component: () => import('./views/dashboards/Settings.vue') },
       { path: 'alerts',                 name: 'AlertsHistory',        component: () => import('./views/dashboards/AlertsHistory.vue') },
       { path: 'team',                   name: 'Team',                 component: () => import('./views/dashboards/Team.vue'), meta: { requiresRole: 'admin' } },

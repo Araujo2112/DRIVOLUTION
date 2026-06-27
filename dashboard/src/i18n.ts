@@ -526,26 +526,55 @@ export const messages = {
     name: 'Nome',
   },
   alert: {
-    nav: 'Histórico de Alertas',
-    title: 'Histórico de Alertas',
-    subtitle: 'Alertas automáticos gerados por desvios no fluxo de produção.',
-    empty: 'Sem alertas registados.',
-    refresh: 'Atualizar',
-    acknowledge: 'Reconhecer',
-    acknowledged: 'Reconhecido',
-    fields: {
-      type: 'Tipo',
-      product: 'Produto',
-      phase: 'Fase',
-      triggeredAt: 'Detetado em',
-      status: 'Estado',
-    },
-    status: {
-      open: 'Aberto',
-      acknowledged: 'Reconhecido',
-      resolved: 'Resolvido',
-    },
+  nav: 'Histórico de Alertas',
+  title: 'Histórico de Alertas',
+  subtitle: 'Alertas automáticos gerados por desvios no fluxo de produção.',
+  empty: 'Sem alertas registados.',
+  refresh: 'Atualizar',
+  acknowledge: 'Reconhecer',
+  acknowledged: 'Reconhecido',
+  fields: {
+    type: 'Tipo',
+    product: 'Produto',
+    phase: 'Fase',
+    triggeredAt: 'Detetado em',
+    status: 'Estado',
   },
+  status: {
+    open: 'Aberto',
+    acknowledged: 'Reconhecido',
+    resolved: 'Resolvido',
+  },
+},
+
+analytics: {
+  nav: 'Analytics',
+  title: 'Analytics',
+  subtitle: 'Estatísticas históricas de produção, incluindo tempos médios, taxa de rework e throughput.',
+  refresh: 'Atualizar',
+  loading: 'A carregar...',
+  loadError: 'Erro ao carregar analytics.',
+  kpis: {
+    averageTime: 'Tempo médio global',
+    averageRework: 'Taxa média de rework',
+    completedProducts: 'Produtos concluídos',
+  },
+  phaseDurations: {
+    title: 'Tempo médio por fase',
+    subtitle: 'Duração média real das fases concluídas.',
+  },
+  reworkRate: {
+    title: 'Taxa de rework por fase',
+    subtitle: 'Percentagem de controlos de qualidade reprovados por fase.',
+    empty: 'Nenhum controlo reprovado encontrado.',
+  },
+  throughput: {
+    title: 'Throughput diário',
+    subtitle: 'Número de produtos concluídos por dia.',
+  },
+  noData: 'Sem dados.',
+},
+
   },
 
   en: {
@@ -1042,7 +1071,7 @@ export const messages = {
       wrongSequence: 'Product {product}: transition out of sequence (phase order={from} → phase order={to})',
     },
   },
-  alertsHistory: {
+    alertsHistory: {
     nav: 'Andon Alerts',
     title: 'Andon Alert History',
     subtitle: 'Log of automatically detected time and sequence deviations.',
@@ -1065,6 +1094,35 @@ export const messages = {
       resolved: 'Resolved',
     },
   },
+
+  analytics: {
+    nav: 'Analytics',
+    title: 'Analytics',
+    subtitle: 'Historical production statistics, average times, rework and throughput.',
+    refresh: 'Refresh',
+    loading: 'Loading...',
+    loadError: 'Error loading analytics.',
+    kpis: {
+      averageTime: 'Global average time',
+      averageRework: 'Average rework',
+      completedProducts: 'Completed products',
+    },
+    phaseDurations: {
+      title: 'Average time by phase',
+      subtitle: 'Real average duration of completed phases.',
+    },
+    reworkRate: {
+      title: 'Rework rate by phase',
+      subtitle: 'Percentage of failed quality checks by phase.',
+      empty: 'No failed quality checks found.',
+    },
+    throughput: {
+      title: 'Daily throughput',
+      subtitle: 'Number of completed products per day.',
+    },
+    noData: 'No data.',
+  },
+
   auth: {
     login: 'Login',
     register: 'Create account',
@@ -1074,6 +1132,7 @@ export const messages = {
     username: 'Username',
     name: 'Name',
   },
+
   alert: {
     nav: 'Alert History',
     title: 'Alert History',

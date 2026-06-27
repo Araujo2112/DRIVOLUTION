@@ -47,6 +47,7 @@ const auth = useAuthStore()
           <SidebarItem icon="monitoring"    path="production-line-status">{{ $t('lineStatus.nav') }}</SidebarItem>
           <SidebarItem icon="dashboard"     path="wip-dashboard">{{ $t('wip.nav') }}</SidebarItem>
           <SidebarItem icon="timeline"      path="product-timeline">{{ $t('timeline.nav') }}</SidebarItem>
+          <SidebarItem icon="bar_chart"     path="analytics">{{ $t('analytics.nav') }}</SidebarItem>
           <SidebarItem icon="notifications" path="alerts">{{ $t('alertsHistory.nav') }}</SidebarItem>
         </template>
 

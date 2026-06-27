@@ -11,7 +11,7 @@ IOT_AGENT_URL = "http://localhost:4041"
 
 HEADERS_JSON = {
     "FIWARE-Service":     "drivolution",
-    "FIWARE-ServicePath": "/production",
+    "FIWARE-ServicePath": "/",
 }
 
 
@@ -25,7 +25,7 @@ def check(label, url, headers=None):
         try:
             data = r.json()
             print(json.dumps(data, indent=2, ensure_ascii=False)[:2000])
-        except:
+        except json.JSONDecodeError:
             print(r.text[:500])
     except Exception as e:
         print(f"\n✗ {label}: {e}")

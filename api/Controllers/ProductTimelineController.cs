@@ -1,4 +1,3 @@
-using Drivolution.Repository.Interface;
 using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,22 +7,24 @@ namespace Drivolution.Controllers;
 [Route("api/products")]
 public class ProductTimelineController : ControllerBase
 {
-    private readonly IProductTimelineRepository _repo;
-    private readonly IEtaPredictionService _etaService;
+    private readonly IProductTimelineService _service;
 
-    public ProductTimelineController(IProductTimelineRepository repo, IEtaPredictionService etaService)
+    public ProductTimelineController(IProductTimelineService service)
     {
-        _repo = repo;
-        _etaService = etaService;
+        _service = service;
     }
 
     [HttpGet("{productId}/timeline")]
     public async Task<IActionResult> GetProductTimeline(int productId)
     {
-        if (!await _repo.ProductExists(productId))
+        if (!await _service.ProductExists(productId))
             return NotFound("Product does not exist.");
 
-        return await BuildTimelineResponse(productId, await _repo.GetTimeline(productId));
+        var result = await _service.GetTimeline(productId);
+        if (result == null)
+            return BadRequest("Product has no timeline yet.");
+
+        return Ok(result);
     }
 
     [HttpGet("vin/{serialNumber}/timeline")]
@@ -32,42 +33,13 @@ public class ProductTimelineController : ControllerBase
         if (string.IsNullOrWhiteSpace(serialNumber))
             return BadRequest("Serial number is required.");
 
-        if (!await _repo.ProductExistsBySerial(serialNumber))
+        if (!await _service.ProductExistsBySerial(serialNumber))
             return NotFound("Product does not exist.");
 
-        var timeline = await _repo.GetTimelineBySerial(serialNumber);
-
-        if (!timeline.Any())
+        var result = await _service.GetTimelineBySerial(serialNumber);
+        if (result == null)
             return BadRequest("Product has no timeline yet.");
 
-        return await BuildTimelineResponse(timeline.First().ProductId, timeline);
-    }
-
-    private async Task<IActionResult> BuildTimelineResponse(int productId, List<Drivolution.DTO.ProductTimelineDTO> timeline)
-    {
-        if (!timeline.Any())
-            return BadRequest("Product has no timeline yet.");
-
-        var openPhase = timeline.FirstOrDefault(t => t.EndedAt == null);
-        if (openPhase != null)
-        {
-            try
-            {
-                openPhase.EstimatedFinish = await _etaService.PredictCurrentPhaseFinish(productId);
-            }
-            catch
-            {
-                openPhase.EstimatedFinish = null;
-            }
-        }
-
-        return Ok(new
-        {
-            productId,
-            modelId = timeline.First().ModelId,
-            serialNumber = timeline.First().SerialNumber,
-            status = timeline.Any(t => t.EndedAt == null) ? "in_progress" : "completed",
-            phases = timeline
-        });
+        return Ok(result);
     }
 }

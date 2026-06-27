@@ -16,7 +16,7 @@ API_KEY       = "drivolution-key"
 HEADERS_IOT = {
     "Content-Type":       "application/json",
     "FIWARE-Service":     "drivolution",
-    "FIWARE-ServicePath": "/production",
+    "FIWARE-ServicePath": "/",
 }
 
 
@@ -57,7 +57,7 @@ def get_current_product(support_id: int) -> int | None:
             timeout=5
         )
         return r.json().get("productId") if r.status_code == 200 else None
-    except:
+    except (requests.RequestException, ValueError):
         return None
 
 
@@ -100,7 +100,7 @@ def verify_orion(rfid_tag: str):
     try:
         r = requests.get(
             f"http://localhost:1026/ngsi-ld/v1/entities/{entity_id}",
-            headers={"FIWARE-Service": "drivolution", "FIWARE-ServicePath": "/production"},
+            headers={"FIWARE-Service": "drivolution", "FIWARE-ServicePath": "/"},
             timeout=5
         )
         if r.status_code == 200:

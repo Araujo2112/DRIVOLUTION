@@ -1,12 +1,8 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 using Drivolution.DTO;
-using Drivolution.Models;
-using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Drivolution.Controllers;
 
@@ -14,57 +10,45 @@ namespace Drivolution.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IUserRepository _userRepository;
+    private readonly IAuthService _authService;
 
-    public AuthController(IUserRepository userRepository)
+    public AuthController(IAuthService authService)
     {
-        _userRepository = userRepository;
+        _authService = authService;
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequestDTO dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
-            return BadRequest("Email e password são obrigatórios.");
+        var result = await _authService.Login(dto);
+        if (result.Success)
+            return Ok(result.Value);
 
-        var user = await _userRepository.GetByEmailAsync(dto.Email);
-        if (user is null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
-            return Unauthorized("Credenciais inválidas.");
-
-        if (user.Status != "active")
-            return Unauthorized("Conta inativa.");
-
-        var token = GenerateToken(user);
-        return Ok(new LoginResponseDTO { Token = token, User = MapToInfo(user) });
+        return result.ErrorCode switch
+        {
+            AuthErrorCode.InvalidInput => BadRequest(result.ErrorMessage),
+            AuthErrorCode.InvalidCredentials => Unauthorized(result.ErrorMessage),
+            AuthErrorCode.InactiveAccount => Unauthorized(result.ErrorMessage),
+            _ => BadRequest(result.ErrorMessage),
+        };
     }
 
     [HttpPost("register")]
     [Authorize(Roles = "admin,manager")]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDTO dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
-            return BadRequest("Email e password são obrigatórios.");
+        var result = await _authService.Register(dto);
+        if (result.Success)
+            return CreatedAtAction(nameof(GetMe), null, result.Value);
 
-        var validRoles = new[] { "admin", "operator", "client", "manager" };
-        if (!validRoles.Contains(dto.Role))
-            return BadRequest($"Role inválido. Valores aceites: {string.Join(", ", validRoles)}.");
-
-        if (await _userRepository.GetByEmailAsync(dto.Email) is not null)
-            return Conflict("Já existe um utilizador com este email.");
-
-        var user = new UserModel
+        return result.ErrorCode switch
         {
-            Name = dto.Name,
-            Email = dto.Email.ToLower().Trim(),
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-            Role = dto.Role,
-            Status = "active",
-            CreatedAt = DateTime.UtcNow
+            AuthErrorCode.InvalidInput => BadRequest(result.ErrorMessage),
+            AuthErrorCode.InvalidRole => BadRequest(result.ErrorMessage),
+            AuthErrorCode.EmailAlreadyExists => Conflict(result.ErrorMessage),
+            _ => BadRequest(result.ErrorMessage),
         };
-
-        var created = await _userRepository.CreateAsync(user);
-        return CreatedAtAction(nameof(GetMe), null, MapToInfo(created));
     }
 
     [HttpGet("me")]
@@ -75,44 +59,9 @@ public class AuthController : ControllerBase
         if (userIdClaim is null || !int.TryParse(userIdClaim, out var userId))
             return Unauthorized();
 
-        var user = await _userRepository.GetByIdAsync(userId);
+        var user = await _authService.GetUserInfo(userId);
         if (user is null) return NotFound();
 
-        return Ok(MapToInfo(user));
+        return Ok(user);
     }
-
-    private string GenerateToken(UserModel user)
-    {
-        var issuer   = Environment.GetEnvironmentVariable("JWT_ISSUER")   ?? throw new InvalidOperationException("JWT_ISSUER not set");
-        var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? throw new InvalidOperationException("JWT_AUDIENCE not set");
-        var secret   = Environment.GetEnvironmentVariable("JWT_SECRET")   ?? throw new InvalidOperationException("JWT_SECRET not set");
-
-        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
-        {
-            new Claim(JwtRegisteredClaimNames.Sub,   user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.NameIdentifier,     user.Id.ToString()),
-            new Claim(ClaimTypes.Role,               user.Role),
-            new Claim("name",                        user.Name),
-        };
-
-        var token = new JwtSecurityToken(
-            issuer:             issuer,
-            audience:           audience,
-            claims:             claims,
-            expires:            DateTime.UtcNow.AddHours(8),
-            signingCredentials: creds
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private static UserInfoDTO MapToInfo(UserModel u) => new()
-    {
-        Id = u.Id, Name = u.Name, Email = u.Email,
-        Role = u.Role, Status = u.Status, CreatedAt = u.CreatedAt
-    };
 }

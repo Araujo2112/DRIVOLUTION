@@ -53,6 +53,29 @@ public class AuthController : ControllerBase
         };
     }
 
+    [HttpPost("change-password")]
+    [Authorize(Roles = "admin,manager,operator,client")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDTO dto)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userIdClaim is null || !int.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var result = await _authService.ChangePassword(userId, dto);
+
+        if (result.Success)
+            return NoContent();
+
+        return result.ErrorCode switch
+        {
+            AuthErrorCode.InvalidInput => BadRequest(result.ErrorMessage),
+            AuthErrorCode.InvalidCurrentPassword => Unauthorized(result.ErrorMessage),
+            AuthErrorCode.UserNotFound => NotFound(result.ErrorMessage),
+            _ => BadRequest(result.ErrorMessage),
+        };
+    }
+
     [HttpGet("me")]
     [Authorize(Roles = "admin,manager,operator")]
     public async Task<IActionResult> GetMe()

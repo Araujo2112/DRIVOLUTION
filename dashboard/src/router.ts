@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard from './views/Dashboard.vue'
 import Login from './views/Login.vue'
+import ChangePassword from './views/ChangePassword.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -9,6 +10,12 @@ const routes = [
     name: 'Login',
     component: Login,
     meta: { requiresGuest: true },
+  },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: ChangePassword,
+    meta: { requiresAuth: true },
   },
   {
     path: '/dashboard',
@@ -78,6 +85,11 @@ router.beforeEach((to) => {
 
   if (to.meta.requiresGuest && token) {
     return { path: getDefaultRouteByRole(user?.role) }
+  }
+
+  // Enquanto a conta tiver password temporária, a única página acessível é a de troca.
+  if (token && user?.mustChangePassword && to.name !== 'ChangePassword') {
+    return { path: '/change-password' }
   }
 
   const allowedRoles = to.meta.roles as string[] | undefined

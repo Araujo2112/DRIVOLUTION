@@ -166,6 +166,7 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<Drivolution.Middleware.MustChangePasswordMiddleware>();
 app.MapControllers();
 
 app.Run();

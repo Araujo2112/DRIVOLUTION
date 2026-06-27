@@ -32,6 +32,10 @@ public class UserModel
     [Required]
     public string Status { get; set; } = "active";
 
+    [Column("must_change_password")]
+    [Required]
+    public bool MustChangePassword { get; set; } = true;
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

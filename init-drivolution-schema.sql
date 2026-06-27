@@ -337,6 +337,7 @@ CREATE TABLE IF NOT EXISTS app_user (
     password_hash   VARCHAR(255) NOT NULL,
     role            VARCHAR(20)  NOT NULL DEFAULT 'operator',
     status          VARCHAR(20)  NOT NULL DEFAULT 'active',
+    must_change_password BOOLEAN NOT NULL DEFAULT true,
     created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
 
     CONSTRAINT chk_app_user_role CHECK (role IN ('admin', 'operator', 'client', 'manager')),

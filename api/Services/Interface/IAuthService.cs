@@ -10,6 +10,8 @@ public enum AuthErrorCode
     InactiveAccount,
     InvalidRole,
     EmailAlreadyExists,
+    InvalidCurrentPassword,
+    UserNotFound,
 }
 
 public class AuthResult<T>
@@ -28,6 +30,7 @@ public class AuthResult<T>
 public interface IAuthService
 {
     Task<AuthResult<LoginResponseDTO>> Login(LoginRequestDTO dto);
-    Task<AuthResult<UserInfoDTO>> Register(RegisterRequestDTO dto);
+    Task<AuthResult<RegisterResponseDTO>> Register(RegisterRequestDTO dto);
+    Task<AuthResult<bool>> ChangePassword(int userId, ChangePasswordRequestDTO dto);
     Task<UserInfoDTO?> GetUserInfo(int userId);
 }

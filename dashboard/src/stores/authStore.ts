@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string
   role: 'admin' | 'operator' | 'client' | 'manager'
   status: string
+  mustChangePassword: boolean
 }
 
 const TOKEN_KEY = 'drivolution_token'
@@ -27,26 +28,43 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin         = computed(() => user.value?.role === 'admin')
   const isOperator      = computed(() => user.value?.role === 'operator')
   const isManager       = computed(() => user.value?.role === 'manager')
+  const mustChangePassword = computed(() => !!user.value?.mustChangePassword)
+
+  function persistUser(userData: AuthUser) {
+    user.value = userData
+    localStorage.setItem(USER_KEY, JSON.stringify(userData))
+  }
 
   async function login(email: string, password: string): Promise<void> {
     const res = await axios.post('/Auth/login', { email, password })
     const { token: jwt, user: userData } = res.data
 
     token.value = jwt
-    user.value  = userData
-
     localStorage.setItem(TOKEN_KEY, jwt)
-    localStorage.setItem(USER_KEY,  JSON.stringify(userData))
+    persistUser(userData)
+
+    if (userData.mustChangePassword) {
+      await router.push('/change-password')
+      return
+    }
 
     if (userData.role === 'client') {
-  await router.push('/client')
-} else if (userData.role === 'operator') {
-  await router.push('/dashboard/production-line-status')
-} else if (userData.role === 'manager') {
-  await router.push('/dashboard/orders')
-} else {
-  await router.push('/dashboard')
-}
+      await router.push('/client')
+    } else if (userData.role === 'operator') {
+      await router.push('/dashboard/production-line-status')
+    } else if (userData.role === 'manager') {
+      await router.push('/dashboard/orders')
+    } else {
+      await router.push('/dashboard')
+    }
+  }
+
+  async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await axios.post('/Auth/change-password', { currentPassword, newPassword })
+
+    if (user.value) {
+      persistUser({ ...user.value, mustChangePassword: false })
+    }
   }
 
   function logout(): void {
@@ -58,13 +76,15 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-  token,
-  user,
-  isAuthenticated,
-  isAdmin,
-  isOperator,
-  isManager,
-  login,
-  logout,
-}
+    token,
+    user,
+    isAuthenticated,
+    isAdmin,
+    isOperator,
+    isManager,
+    mustChangePassword,
+    login,
+    changePassword,
+    logout,
+  }
 })

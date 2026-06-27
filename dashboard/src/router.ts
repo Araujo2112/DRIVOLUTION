@@ -18,6 +18,7 @@ const routes = [
     children: [
       { path: '', redirect: '/dashboard/carModels' },
       { path: 'carModels',              name: 'CarModels',            component: () => import('./views/dashboards/CarModels.vue') },
+      { path: 'eta-simulator',          name: 'EtaSimulator',         component: () => import('./views/dashboards/EtaSimulator.vue') },
       { path: 'orders',                 name: 'Orders',               component: () => import('./views/dashboards/ClientOrders.vue') },
       { path: 'manufacturingOrders',    name: 'ManufacturingOrders',  component: () => import('./views/dashboards/ManufacturingOrders.vue') },
       { path: 'products',               name: 'Products',             component: () => import('./views/dashboards/Products.vue') },

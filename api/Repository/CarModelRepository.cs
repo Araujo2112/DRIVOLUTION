@@ -13,6 +13,8 @@ public class CarModelRepository : ICarModelRepository
         await _context.CarModels.Include(m => m.PhaseSequences).ThenInclude(ps => ps.ManufacturingPhase).FirstOrDefaultAsync(m => m.Id == id);
     public async Task<IEnumerable<ConfigModel>> GetConfigs(int modelId) =>
         await _context.Configs.Where(c => c.ModelId == modelId).ToListAsync();
+    public async Task<IEnumerable<ConfigModel>> GetConfigsWithOptions(int modelId) =>
+        await _context.Configs.Where(c => c.ModelId == modelId).Include(c => c.ConfigOptions).ToListAsync();
     public async Task<CarModelModel> Create(CarModelModel entity)
     {
         _context.CarModels.Add(entity);

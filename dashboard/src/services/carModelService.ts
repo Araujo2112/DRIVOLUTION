@@ -39,6 +39,23 @@ export interface CreateConfigOptionDTO {
   isDefault: boolean
 }
 
+export interface PhaseEtaSimulation {
+  manufacturingPhaseId: number
+  phaseName: string
+  order: number
+  estimatedSeconds: number
+}
+
+export interface EtaSimulationResult {
+  modelId: number
+  modelName: string
+  selectedConfigOptionIds: number[]
+  phases: PhaseEtaSimulation[]
+  totalEstimatedSeconds: number
+  estimateIsTrained: boolean
+  coefficientsTrainedAt: string | null
+}
+
 export const carModelService = {
   getAll: () => axios.get<CarModel[]>('/CarModel'),
 
@@ -56,6 +73,15 @@ export const carModelService = {
 
   delete: (id: number) =>
     axios.delete(`/CarModel/${id}`),
+
+  // Simula o tempo de fabrico de um modelo com uma combinação de opções de
+  // configuração, sem criar nenhum produto real. optionIds vazio ou omitido
+  // devolve a estimativa só com o modelo, sem nenhuma opção.
+  getEtaSimulation: (modelId: number, optionIds: number[]) =>
+    axios.get<EtaSimulationResult>(`/CarModel/${modelId}/eta-simulation`, {
+      params: { optionIds },
+      paramsSerializer: { indexes: null }, // optionIds=1&optionIds=2 em vez de optionIds[]=1&optionIds[]=2
+    }),
 }
 
 export const configService = {

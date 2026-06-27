@@ -6,6 +6,7 @@ public interface ICarModelRepository
     Task<CarModelModel?> GetById(int id);
     Task<CarModelModel?> GetByIdWithPhaseSequence(int id);
     Task<IEnumerable<ConfigModel>> GetConfigs(int modelId);
+    Task<IEnumerable<ConfigModel>> GetConfigsWithOptions(int modelId);
     Task<CarModelModel> Create(CarModelModel entity);
     Task Update(CarModelModel entity);
     Task Delete(int id);

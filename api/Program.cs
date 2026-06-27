@@ -91,6 +91,8 @@ builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddHostedService<AlertBackgroundService>();
 builder.Services.AddScoped<IWipDashboardService, WipDashboardService>();
 builder.Services.AddScoped<IEtaPredictionService, EtaPredictionService>();
+builder.Services.AddSingleton<IPhaseTimeWeightCalculator, PhaseTimeWeightCalculator>();
+builder.Services.AddScoped<ICarModelEtaSimulationService, CarModelEtaSimulationService>();
 builder.Services.AddScoped<IProductionLineStatusService, ProductionLineStatusService>();
 builder.Services.AddScoped<IProductTimelineService, ProductTimelineService>();
 builder.Services.AddScoped<IAuthService, AuthService>();

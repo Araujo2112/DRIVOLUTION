@@ -12,25 +12,22 @@ public class EtaPredictionService : IEtaPredictionService
     private readonly IProductPhaseRepository _productPhaseRepo;
     private readonly IPhaseSequenceRepository _phaseSequenceRepo;
     private readonly IPhaseTimeCoefficientRepository _coefficientRepo;
-
-    // Piso de segurança apenas para a previsão estática de duração de uma fase
-    // (regressão de coeficientes) — nunca prevê menos do que isto como duração
-    // total de uma fase. NÃO se aplica ao "remaining" de uma fase já em curso:
-    // esse pode e deve ir a negativo quando a fase está atrasada.
-    private const int MinRemainingSecondsPerPhase = 60;
+    private readonly IPhaseTimeWeightCalculator _weightCalculator;
 
     public EtaPredictionService(
         IProductRepository productRepo,
         IProductConfigRepository productConfigRepo,
         IProductPhaseRepository productPhaseRepo,
         IPhaseSequenceRepository phaseSequenceRepo,
-        IPhaseTimeCoefficientRepository coefficientRepo)
+        IPhaseTimeCoefficientRepository coefficientRepo,
+        IPhaseTimeWeightCalculator weightCalculator)
     {
         _productRepo = productRepo;
         _productConfigRepo = productConfigRepo;
         _productPhaseRepo = productPhaseRepo;
         _phaseSequenceRepo = phaseSequenceRepo;
         _coefficientRepo = coefficientRepo;
+        _weightCalculator = weightCalculator;
     }
 
     public async Task<DateTime?> PredictCurrentPhaseFinish(int productId)
@@ -181,45 +178,11 @@ public class EtaPredictionService : IEtaPredictionService
         return results;
     }
 
+    // Fórmula de soma de pesos delegada a IPhaseTimeWeightCalculator (a mesma
+    // fórmula usada pelo simulador de configuração) — ver lá a implementação.
     private decimal PredictPhaseDurationSeconds(
         int phaseId, int modelId, HashSet<int> selectedOptionIds, int? lineId,
         List<PhaseTimeCoefficientModel> coefficients, int fallbackSeconds)
-    {
-        var intercept = coefficients.FirstOrDefault(c =>
-            c.ManufacturingPhaseId == phaseId &&
-            c.ConfigOptionId == null && c.ProductionLineId == null && c.ModelId == null
-        );
-
-        // Sem coeficientes treinados para esta fase ainda (ex: fase nova, nunca treinada) —
-        // cai para a estimativa estática, exatamente como o card pede ("cold start").
-        if (intercept == null)
-            return fallbackSeconds;
-
-        decimal total = intercept.WeightSeconds;
-
-        var modelWeight = coefficients.FirstOrDefault(c =>
-            c.ManufacturingPhaseId == phaseId && c.ModelId == modelId &&
-            c.ConfigOptionId == null && c.ProductionLineId == null
-        )?.WeightSeconds ?? 0;
-        total += modelWeight;
-
-        if (lineId.HasValue)
-        {
-            var lineWeight = coefficients.FirstOrDefault(c =>
-                c.ManufacturingPhaseId == phaseId && c.ProductionLineId == lineId &&
-                c.ConfigOptionId == null && c.ModelId == null
-            )?.WeightSeconds ?? 0;
-            total += lineWeight;
-        }
-
-        foreach (var optionId in selectedOptionIds)
-        {
-            var optionWeight = coefficients.FirstOrDefault(c =>
-                c.ManufacturingPhaseId == phaseId && c.ConfigOptionId == optionId
-            )?.WeightSeconds ?? 0;
-            total += optionWeight;
-        }
-
-        return total < MinRemainingSecondsPerPhase ? MinRemainingSecondsPerPhase : total;
-    }
+        => _weightCalculator.PredictPhaseDurationSeconds(
+            phaseId, modelId, selectedOptionIds, lineId, coefficients, fallbackSeconds);
 }

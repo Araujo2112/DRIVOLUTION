@@ -1,6 +1,7 @@
 using Drivolution.DTO;
 using Drivolution.Models;
 using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
@@ -10,7 +11,13 @@ namespace Drivolution.Controllers;
 public class CarModelController : ControllerBase
 {
     private readonly ICarModelRepository _repo;
-    public CarModelController(ICarModelRepository repo) => _repo = repo;
+    private readonly ICarModelEtaSimulationService _etaSimulationService;
+
+    public CarModelController(ICarModelRepository repo, ICarModelEtaSimulationService etaSimulationService)
+    {
+        _repo = repo;
+        _etaSimulationService = etaSimulationService;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -43,6 +50,29 @@ public class CarModelController : ControllerBase
         if (!await _repo.Exists(id)) return NotFound();
         var configs = await _repo.GetConfigs(id);
         return Ok(configs.Select(c => new ConfigDTO(c.Id, c.ModelId, c.Item, c.AllowMultiple)));
+    }
+
+    // Simula o tempo de fabrico de um modelo com uma combinação de opções de
+    // configuração, sem criar nenhum produto ou encomenda real.
+    // optionIds aceita tanto ?optionIds=3&optionIds=7 como ?optionIds=3,7 (o
+    // model binder do ASP.NET Core trata ambos para List<int>). Não cria
+    // nenhum Product/ManufacturingOrder — só lê coeficientes já treinados.
+    [HttpGet("{id}/eta-simulation")]
+    public async Task<IActionResult> GetEtaSimulation(int id, [FromQuery] List<int>? optionIds)
+    {
+        var result = await _etaSimulationService.Simulate(id, optionIds ?? new List<int>());
+
+        if (!result.Success)
+        {
+            return result.ErrorCode switch
+            {
+                EtaSimulationErrorCode.ModelNotFound => NotFound(result.ErrorMessage),
+                EtaSimulationErrorCode.OptionNotFoundForModel => BadRequest(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage),
+            };
+        }
+
+        return Ok(result.Value);
     }
 
     [HttpPost]

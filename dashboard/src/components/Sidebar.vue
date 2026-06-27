@@ -22,6 +22,7 @@ const auth = useAuthStore()
             </span>
           </div>
           <SidebarItem icon="directions_car"          path="carModels">{{ $t('carModels.nav') }}</SidebarItem>
+          <SidebarItem icon="calculate"               path="eta-simulator">{{ $t('etaSimulation.nav') }}</SidebarItem>
           <SidebarItem icon="precision_manufacturing" path="phases">{{ $t('phases.nav') }}</SidebarItem>
           <SidebarItem icon="conveyor_belt"           path="productionLines">{{ $t('productionLines.nav') }}</SidebarItem>
           <SidebarItem icon="conveyor_belt"           path="supports">{{ $t('supports.nav') }}</SidebarItem>

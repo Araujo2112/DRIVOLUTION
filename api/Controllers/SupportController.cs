@@ -1,12 +1,14 @@
 using Drivolution.DTO;
 using Drivolution.Models;
 using Drivolution.Repository.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "admin")]
 public class SupportController : ControllerBase
 {
     private readonly ISupportRepository _repo;

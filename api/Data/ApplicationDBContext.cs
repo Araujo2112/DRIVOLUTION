@@ -46,6 +46,9 @@ public class ApplicationDbContext : DbContext
     // --- Presença em Workstation (Card L) ---
     public DbSet<WorkstationPresenceModel> WorkstationPresences { get; set; }
 
+    // --- Audit ---
+    public DbSet<AuditLogModel> AuditLogs { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -245,7 +248,7 @@ public class ApplicationDbContext : DbContext
         // ConfigOption → ProductConfig (1:N)
         modelBuilder.Entity<ProductConfigModel>()
             .HasOne(pc => pc.ConfigOption)
-            .WithMany() 
+            .WithMany()
             .HasForeignKey(pc => pc.ConfigOptionId)
             .OnDelete(DeleteBehavior.Restrict);
 

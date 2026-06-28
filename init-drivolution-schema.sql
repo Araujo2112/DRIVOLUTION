@@ -371,6 +371,23 @@ CREATE TABLE IF NOT EXISTS workstation_presence (
         ON DELETE RESTRICT
 );
 
+CREATE TABLE IF NOT EXISTS audit_log (
+    id           SERIAL PRIMARY KEY,
+    user_id      INTEGER NOT NULL,
+    user_name    VARCHAR(150) NOT NULL,
+    action       VARCHAR(20) NOT NULL,
+    entity       VARCHAR(50) NOT NULL,
+    entity_id    INTEGER NOT NULL,
+    entity_label VARCHAR(255),
+    created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_audit_log_action CHECK (action IN ('created', 'updated', 'deleted')),
+    CONSTRAINT chk_audit_log_entity CHECK (entity IN ('car_model', 'phase', 'production_line', 'workstation', 'support', 'order', 'user'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_user     ON audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_entity   ON audit_log(entity, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created  ON audit_log(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_wp_workstation ON workstation_presence(workstation_id);
 CREATE INDEX IF NOT EXISTS idx_wp_user        ON workstation_presence(app_user_id);
 CREATE INDEX IF NOT EXISTS idx_wp_active      ON workstation_presence(app_user_id, workstation_id)

@@ -1,6 +1,8 @@
 using Drivolution.DTO;
+using Drivolution.Extensions;
 using Drivolution.Models;
 using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,7 +14,13 @@ namespace Drivolution.Controllers;
 public class SupportController : ControllerBase
 {
     private readonly ISupportRepository _repo;
-    public SupportController(ISupportRepository repo) => _repo = repo;
+    private readonly IAuditService      _audit;
+
+    public SupportController(ISupportRepository repo, IAuditService audit)
+    {
+        _repo  = repo;
+        _audit = audit;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -40,8 +48,12 @@ public class SupportController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateSupportDTO dto)
     {
-        var entity = new SupportModel { ProductionLineId = dto.ProductionLineId, RfidTag = dto.RfidTag, Type = dto.Type };
+        var entity  = new SupportModel { ProductionLineId = dto.ProductionLineId, RfidTag = dto.RfidTag, Type = dto.Type };
         var created = await _repo.Create(entity);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "created", "support", created.Id, $"{created.Type} – {created.RfidTag}");
+
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, new SupportDTO(created.Id, created.ProductionLineId, created.RfidTag, created.Type));
     }
 
@@ -51,16 +63,25 @@ public class SupportController : ControllerBase
         var entity = await _repo.GetById(id);
         if (entity == null) return NotFound();
         if (dto.RfidTag != null) entity.RfidTag = dto.RfidTag;
-        if (dto.Type != null) entity.Type = dto.Type;
+        if (dto.Type    != null) entity.Type    = dto.Type;
         await _repo.Update(entity);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "updated", "support", entity.Id, $"{entity.Type} – {entity.RfidTag}");
+
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        if (!await _repo.Exists(id)) return NotFound();
+        var entity = await _repo.GetById(id);
+        if (entity == null) return NotFound();
         await _repo.Delete(id);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "deleted", "support", id, $"{entity.Type} – {entity.RfidTag}");
+
         return NoContent();
     }
 }

@@ -1,7 +1,9 @@
 using Drivolution.DTO;
+using Drivolution.Extensions;
 using Drivolution.Models;
 using Drivolution.Models.Constants;
 using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +15,13 @@ namespace Drivolution.Controllers;
 public class ManufacturingPhaseController : ControllerBase
 {
     private readonly IManufacturingPhaseRepository _repo;
-    public ManufacturingPhaseController(IManufacturingPhaseRepository repo) => _repo = repo;
+    private readonly IAuditService                 _audit;
+
+    public ManufacturingPhaseController(IManufacturingPhaseRepository repo, IAuditService audit)
+    {
+        _repo  = repo;
+        _audit = audit;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -39,12 +47,16 @@ public class ManufacturingPhaseController : ControllerBase
     {
         var entity = new ManufacturingPhaseModel
         {
-            Name = dto.Name,
-            EstimatedDuration = dto.EstimatedDuration,
+            Name                  = dto.Name,
+            EstimatedDuration     = dto.EstimatedDuration,
             MaxAcceptableSeverity = dto.MaxAcceptableSeverity ?? Severity.None,
-            ReworkSeverity = dto.ReworkSeverity ?? Severity.Minor
+            ReworkSeverity        = dto.ReworkSeverity ?? Severity.Minor,
         };
         var created = await _repo.Create(entity);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "created", "phase", created.Id, created.Name);
+
         return CreatedAtAction(nameof(GetById), new { id = created.Id },
             new ManufacturingPhaseDTO(created.Id, created.Name, created.EstimatedDuration,
                 created.MaxAcceptableSeverity, created.ReworkSeverity));
@@ -55,19 +67,28 @@ public class ManufacturingPhaseController : ControllerBase
     {
         var entity = await _repo.GetById(id);
         if (entity == null) return NotFound();
-        if (dto.Name != null) entity.Name = dto.Name;
-        if (dto.EstimatedDuration != null) entity.EstimatedDuration = dto.EstimatedDuration;
+        if (dto.Name                  != null) entity.Name                  = dto.Name;
+        if (dto.EstimatedDuration     != null) entity.EstimatedDuration     = dto.EstimatedDuration;
         if (dto.MaxAcceptableSeverity != null) entity.MaxAcceptableSeverity = dto.MaxAcceptableSeverity;
-        if (dto.ReworkSeverity != null) entity.ReworkSeverity = dto.ReworkSeverity;
+        if (dto.ReworkSeverity        != null) entity.ReworkSeverity        = dto.ReworkSeverity;
         await _repo.Update(entity);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "updated", "phase", entity.Id, entity.Name);
+
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        if (!await _repo.Exists(id)) return NotFound();
+        var entity = await _repo.GetById(id);
+        if (entity == null) return NotFound();
         await _repo.Delete(id);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "deleted", "phase", id, entity.Name);
+
         return NoContent();
     }
 }

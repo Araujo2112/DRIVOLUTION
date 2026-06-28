@@ -42,9 +42,13 @@ const routes = [
       { path: 'phases', name: 'ManufacturingPhases', component: () => import('./views/dashboards/ManufacturingPhases.vue'), meta: { roles: ['admin'] } },
       { path: 'productionLines', name: 'ProductionLines', component: () => import('./views/dashboards/ProductionLines.vue'), meta: { roles: ['admin'] } },
       { path: 'supports', name: 'Supports', component: () => import('./views/dashboards/Supports.vue'), meta: { roles: ['admin'] } },
+      { path: 'eta-simulator', name: 'EtaSimulator', component: () => import('./views/dashboards/EtaSimulator.vue'), meta: { roles: ['admin'] } },
       { path: 'team', name: 'Team', component: () => import('./views/dashboards/Team.vue'), meta: { roles: ['admin'] } },
+      { path: 'audit', name: 'AuditLog', component: () => import('./views/dashboards/AuditLog.vue'), meta: { roles: ['admin'] } },
 
       { path: 'orders', name: 'Orders', component: () => import('./views/dashboards/ClientOrders.vue'), meta: { roles: ['admin', 'manager'] } },
+      { path: 'analytics', name: 'Analytics', component: () => import('./views/dashboards/Analytics.vue'), meta: { roles: ['admin', 'manager'] } },
+
       { path: 'manufacturingOrders', name: 'ManufacturingOrders', component: () => import('./views/dashboards/ManufacturingOrders.vue'), meta: { roles: ['admin', 'manager', 'operator'] } },
       { path: 'products', name: 'Products', component: () => import('./views/dashboards/Products.vue'), meta: { roles: ['admin', 'manager', 'operator'] } },
       { path: 'production-line-status', name: 'ProductionLineStatus', component: () => import('./views/dashboards/ProductionLineStatus.vue'), meta: { roles: ['admin', 'manager', 'operator'] } },
@@ -52,8 +56,6 @@ const routes = [
       { path: 'product-timeline', name: 'ProductTimeline', component: () => import('./views/dashboards/ProductTimeline.vue'), meta: { roles: ['admin', 'manager', 'operator'] } },
       { path: 'settings', name: 'Settings', component: () => import('./views/dashboards/Settings.vue'), meta: { roles: ['admin', 'manager', 'operator'] } },
       { path: 'alerts', name: 'AlertsHistory', component: () => import('./views/dashboards/AlertsHistory.vue'), meta: { roles: ['admin', 'manager', 'operator'] } },
-      { path: 'analytics', name: 'Analytics', component: () => import('./views/dashboards/Analytics.vue'), meta: { roles: ['admin', 'manager'] } },
-      { path: 'eta-simulator', name: 'EtaSimulator', component: () => import('./views/dashboards/EtaSimulator.vue'), meta: { roles: ['admin'] } },
       { path: 'presence', name: 'WorkstationPresence', component: () => import('./views/dashboards/WorkstationPresence.vue'), meta: { roles: ['admin', 'manager', 'operator'] } },
     ],
   },

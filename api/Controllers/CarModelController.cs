@@ -1,4 +1,5 @@
 using Drivolution.DTO;
+using Drivolution.Extensions;
 using Drivolution.Models;
 using Drivolution.Repository.Interface;
 using Drivolution.Services.Interface;
@@ -12,13 +13,15 @@ namespace Drivolution.Controllers;
 [Authorize(Roles = "admin")]
 public class CarModelController : ControllerBase
 {
-    private readonly ICarModelRepository _repo;
+    private readonly ICarModelRepository           _repo;
     private readonly ICarModelEtaSimulationService _etaSimulationService;
+    private readonly IAuditService                 _audit;
 
-    public CarModelController(ICarModelRepository repo, ICarModelEtaSimulationService etaSimulationService)
+    public CarModelController(ICarModelRepository repo, ICarModelEtaSimulationService etaSimulationService, IAuditService audit)
     {
-        _repo = repo;
+        _repo                 = repo;
         _etaSimulationService = etaSimulationService;
+        _audit                = audit;
     }
 
     [HttpGet]
@@ -54,34 +57,29 @@ public class CarModelController : ControllerBase
         return Ok(configs.Select(c => new ConfigDTO(c.Id, c.ModelId, c.Item, c.AllowMultiple)));
     }
 
-    // Simula o tempo de fabrico de um modelo com uma combinação de opções de
-    // configuração, sem criar nenhum produto ou encomenda real.
-    // optionIds aceita tanto ?optionIds=3&optionIds=7 como ?optionIds=3,7 (o
-    // model binder do ASP.NET Core trata ambos para List<int>). Não cria
-    // nenhum Product/ManufacturingOrder — só lê coeficientes já treinados.
     [HttpGet("{id}/eta-simulation")]
     public async Task<IActionResult> GetEtaSimulation(int id, [FromQuery] List<int>? optionIds)
     {
         var result = await _etaSimulationService.Simulate(id, optionIds ?? new List<int>());
-
         if (!result.Success)
-        {
             return result.ErrorCode switch
             {
-                EtaSimulationErrorCode.ModelNotFound => NotFound(result.ErrorMessage),
+                EtaSimulationErrorCode.ModelNotFound          => NotFound(result.ErrorMessage),
                 EtaSimulationErrorCode.OptionNotFoundForModel => BadRequest(result.ErrorMessage),
-                _ => BadRequest(result.ErrorMessage),
+                _                                             => BadRequest(result.ErrorMessage),
             };
-        }
-
         return Ok(result.Value);
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCarModelDTO dto)
     {
-        var entity = new CarModelModel { Name = dto.Name, Version = dto.Version, Type = dto.Type };
+        var entity  = new CarModelModel { Name = dto.Name, Version = dto.Version, Type = dto.Type };
         var created = await _repo.Create(entity);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "created", "car_model", created.Id, $"{created.Name} {created.Version}");
+
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, new CarModelDTO(created.Id, created.Name, created.Version, created.Type));
     }
 
@@ -90,18 +88,27 @@ public class CarModelController : ControllerBase
     {
         var entity = await _repo.GetById(id);
         if (entity == null) return NotFound();
-        if (dto.Name != null) entity.Name = dto.Name;
+        if (dto.Name    != null) entity.Name    = dto.Name;
         if (dto.Version != null) entity.Version = dto.Version;
-        if (dto.Type != null) entity.Type = dto.Type;
+        if (dto.Type    != null) entity.Type    = dto.Type;
         await _repo.Update(entity);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "updated", "car_model", entity.Id, $"{entity.Name} {entity.Version}");
+
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        if (!await _repo.Exists(id)) return NotFound();
+        var entity = await _repo.GetById(id);
+        if (entity == null) return NotFound();
         await _repo.Delete(id);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "deleted", "car_model", id, $"{entity.Name} {entity.Version}");
+
         return NoContent();
     }
 }

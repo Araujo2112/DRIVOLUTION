@@ -62,6 +62,7 @@ const auth = useAuthStore()
             {{ $t('analytics.nav') }}
           </SidebarItem>
           <SidebarItem icon="notifications" path="alerts">{{ $t('alertsHistory.nav') }}</SidebarItem>
+          <SidebarItem icon="badge" path="presence">{{ $t('presence.nav') }}</SidebarItem>
         </template>
 
         <template v-if="auth.isAdmin">

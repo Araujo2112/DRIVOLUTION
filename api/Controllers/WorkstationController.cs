@@ -1,5 +1,6 @@
 using Drivolution.DTO;
 using Drivolution.Models;
+using Drivolution.Models.Constants;
 using Drivolution.Repository.Interface;
 using Microsoft.AspNetCore.Mvc;
 
@@ -34,6 +35,15 @@ public class WorkstationController : ControllerBase
         return Ok(items.Select(w => ToDTO(w)));
     }
 
+    /// <summary>Workstations elegíveis para presença de operadores (human e hybrid).</summary>
+    [HttpGet("human-eligible")]
+    public async Task<IActionResult> GetHumanEligible()
+    {
+        var items = await _repo.GetAll();
+        var eligible = items.Where(w => WorkstationKind.HumanEligible.Contains(w.Kind));
+        return Ok(eligible.Select(w => ToDTO(w)));
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkstationDTO dto)
     {
@@ -41,10 +51,10 @@ public class WorkstationController : ControllerBase
         {
             ProductionLineId = dto.ProductionLineId,
             Type = dto.Type,
+            Kind = dto.Kind,
             ManufacturingPhaseId = dto.ManufacturingPhaseId,
         };
         var created = await _repo.Create(entity);
-        // Reload para incluir navegação (fase)
         var full = await _repo.GetById(created.Id);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToDTO(full!));
     }
@@ -55,6 +65,7 @@ public class WorkstationController : ControllerBase
         var entity = await _repo.GetById(id);
         if (entity == null) return NotFound();
         if (dto.Type != null) entity.Type = dto.Type;
+        if (dto.Kind != null) entity.Kind = dto.Kind;
         if (dto.ManufacturingPhaseId.HasValue) entity.ManufacturingPhaseId = dto.ManufacturingPhaseId;
         await _repo.Update(entity);
         return NoContent();
@@ -73,6 +84,7 @@ public class WorkstationController : ControllerBase
         w.ProductionLineId,
         w.ProductionLine?.Name,
         w.Type,
+        w.Kind,
         w.ManufacturingPhaseId,
         w.ManufacturingPhase?.Name
     );

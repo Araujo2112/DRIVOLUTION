@@ -69,17 +69,18 @@ LINES = [
 # linha_index e fase_index são 0-based — os IDs reais são resolvidos após criação
 WORKSTATIONS = [
     # Linha A
-    {"line_index": 0, "phase_index": 0, "type": "A"},  # Estampagem
-    {"line_index": 0, "phase_index": 1, "type": "B"},  # Soldadura
-    {"line_index": 0, "phase_index": 2, "type": "C"},  # Pintura
-    {"line_index": 0, "phase_index": 3, "type": "D"},  # Montagem
-    {"line_index": 0, "phase_index": 4, "type": "E"},  # Inspeção
+    # type = identificador de posto | kind = classificação de operação (human/hybrid/machine)
+    {"line_index": 0, "phase_index": 0, "type": "A", "kind": "machine"},  # Estampagem
+    {"line_index": 0, "phase_index": 1, "type": "B", "kind": "hybrid"},   # Soldadura
+    {"line_index": 0, "phase_index": 2, "type": "C", "kind": "machine"},  # Pintura
+    {"line_index": 0, "phase_index": 3, "type": "D", "kind": "human"},    # Montagem
+    {"line_index": 0, "phase_index": 4, "type": "E", "kind": "human"},    # Inspeção
     # Linha B
-    {"line_index": 1, "phase_index": 0, "type": "1"},  # Estampagem
-    {"line_index": 1, "phase_index": 1, "type": "2"},  # Soldadura
-    {"line_index": 1, "phase_index": 2, "type": "3"},  # Pintura
-    {"line_index": 1, "phase_index": 3, "type": "4"},  # Montagem
-    {"line_index": 1, "phase_index": 4, "type": "6"},  # Inspeção
+    {"line_index": 1, "phase_index": 0, "type": "1", "kind": "machine"},  # Estampagem
+    {"line_index": 1, "phase_index": 1, "type": "2", "kind": "hybrid"},   # Soldadura
+    {"line_index": 1, "phase_index": 2, "type": "3", "kind": "machine"},  # Pintura
+    {"line_index": 1, "phase_index": 3, "type": "4", "kind": "human"},    # Montagem
+    {"line_index": 1, "phase_index": 4, "type": "6", "kind": "human"},    # Inspeção
 ]
 
 SKIDS = [
@@ -183,6 +184,7 @@ def create_workstations(phase_ids, line_ids):
             "productionLineId":    line_ids[ws["line_index"]],
             "manufacturingPhaseId": phase_ids[ws["phase_index"]],
             "type": ws["type"],
+            "kind": ws.get("kind", "machine"),
         }
         result = post("Workstation", body)
         ws_ids.append(result["id"])

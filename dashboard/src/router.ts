@@ -45,6 +45,8 @@ const routes = [
       { path: 'analytics',              name: 'Analytics',            component: () => import('./views/dashboards/Analytics.vue'),              meta: { roles: ['admin', 'manager'] } },
 
       { path: 'eta-simulator',          name: 'EtaSimulator',         component: () => import('./views/dashboards/EtaSimulator.vue'),           meta: { roles: ['admin'] } },
+
+      { path: 'presence',               name: 'WorkstationPresence',  component: () => import('./views/dashboards/WorkstationPresence.vue'),    meta: { roles: ['admin', 'manager', 'operator'] } },
     ],
   },
 ]

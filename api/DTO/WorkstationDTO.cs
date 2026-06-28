@@ -5,6 +5,7 @@ public record WorkstationDTO(
     int ProductionLineId,
     string? ProductionLineName,
     string? Type,
+    string? Kind,
     int? ManufacturingPhaseId,
     string? PhaseName
 );
@@ -12,10 +13,12 @@ public record WorkstationDTO(
 public record CreateWorkstationDTO(
     int ProductionLineId,
     string? Type,
+    string? Kind,
     int? ManufacturingPhaseId
 );
 
 public record UpdateWorkstationDTO(
     string? Type,
+    string? Kind,
     int? ManufacturingPhaseId
 );

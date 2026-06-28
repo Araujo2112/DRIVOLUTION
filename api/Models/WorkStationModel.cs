@@ -14,8 +14,19 @@ public class WorkstationModel
     [Required]
     public int ProductionLineId { get; set; }
 
+    /// <summary>
+    /// Identificador de posto — ex: "A", "B", "C" (Linha A) ou "1", "2", "3" (Linha B).
+    /// Não confundir com Kind (classificação de operação).
+    /// </summary>
     [Column("type")]
     public string? Type { get; set; }
+
+    /// <summary>
+    /// Classificação de operação: "human" | "hybrid" | "machine".
+    /// Determina se a workstation é elegível para presença de operadores (Card L).
+    /// </summary>
+    [Column("kind")]
+    public string? Kind { get; set; }
 
     [Column("manufacturing_phase_id")]
     public int? ManufacturingPhaseId { get; set; }
@@ -31,4 +42,5 @@ public class WorkstationModel
     public ICollection<WorkstationAllocationModel> WorkstationAllocations { get; set; } = new List<WorkstationAllocationModel>();
     public ICollection<LocalizationHistoryModel> LocalizationHistories { get; set; } = new List<LocalizationHistoryModel>();
     public ICollection<ProductPhaseModel> ProductPhases { get; set; } = new List<ProductPhaseModel>();
+    public ICollection<WorkstationPresenceModel> WorkstationPresences { get; set; } = new List<WorkstationPresenceModel>();
 }

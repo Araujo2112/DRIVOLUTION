@@ -48,12 +48,15 @@ CREATE TABLE IF NOT EXISTS workstation (
     id SERIAL PRIMARY KEY,
     production_line_id INTEGER NOT NULL,
     type VARCHAR(100),
+    kind VARCHAR(20),
     manufacturing_phase_id INTEGER,
- 
+
+    CONSTRAINT chk_workstation_kind CHECK (kind IN ('human', 'hybrid', 'machine')),
+
     CONSTRAINT fk_workstation_production_line
         FOREIGN KEY (production_line_id)
         REFERENCES production_line(id),
- 
+
     CONSTRAINT fk_workstation_manufacturing_phase
         FOREIGN KEY (manufacturing_phase_id)
         REFERENCES manufacturing_phase(id)
@@ -209,12 +212,13 @@ CREATE TABLE IF NOT EXISTS quality_check (
     severity VARCHAR(20) NOT NULL,
     notes TEXT,
     status VARCHAR(50),
-    CONSTRAINT fk_quality_check_product 
+
+    CONSTRAINT fk_quality_check_product
         FOREIGN KEY (product_id)
         REFERENCES product(id),
 
-    CONSTRAINT fk_quality_check_manufacturing_phase 
-        FOREIGN KEY (manufacturing_phase_id) 
+    CONSTRAINT fk_quality_check_manufacturing_phase
+        FOREIGN KEY (manufacturing_phase_id)
         REFERENCES manufacturing_phase(id)
 );
 
@@ -249,8 +253,9 @@ CREATE TABLE IF NOT EXISTS config (
     model_id INTEGER NOT NULL,
     item VARCHAR(100) NOT NULL,
     allow_multiple BOOLEAN NOT NULL DEFAULT FALSE,
-    CONSTRAINT fk_config_model 
-        FOREIGN KEY (model_id) 
+
+    CONSTRAINT fk_config_model
+        FOREIGN KEY (model_id)
         REFERENCES model(id)
 );
 
@@ -259,6 +264,7 @@ CREATE TABLE IF NOT EXISTS config_option (
     config_id INTEGER NOT NULL,
     value VARCHAR(255) NOT NULL,
     is_default BOOLEAN DEFAULT FALSE,
+
     CONSTRAINT fk_config_option_config
         FOREIGN KEY (config_id)
         REFERENCES config(id)
@@ -268,13 +274,16 @@ CREATE TABLE IF NOT EXISTS product_config (
     id SERIAL PRIMARY KEY,
     product_id INTEGER NOT NULL,
     config_option_id INTEGER NOT NULL,
-    CONSTRAINT fk_product_config_product 
-        FOREIGN KEY (product_id) 
+
+    CONSTRAINT fk_product_config_product
+        FOREIGN KEY (product_id)
         REFERENCES product(id),
-    CONSTRAINT fk_product_config_option 
-        FOREIGN KEY (config_option_id) 
+
+    CONSTRAINT fk_product_config_option
+        FOREIGN KEY (config_option_id)
         REFERENCES config_option(id),
-    CONSTRAINT uq_product_config 
+
+    CONSTRAINT uq_product_config
         UNIQUE (product_id, config_option_id)
 );
 
@@ -340,6 +349,29 @@ CREATE TABLE IF NOT EXISTS app_user (
     must_change_password BOOLEAN NOT NULL DEFAULT true,
     created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT chk_app_user_role CHECK (role IN ('admin', 'operator', 'client', 'manager')),
+    CONSTRAINT chk_app_user_role   CHECK (role   IN ('admin', 'operator', 'client', 'manager')),
     CONSTRAINT chk_app_user_status CHECK (status IN ('active', 'inactive'))
 );
+
+CREATE TABLE IF NOT EXISTS workstation_presence (
+    id               SERIAL PRIMARY KEY,
+    app_user_id      INTEGER NOT NULL,
+    workstation_id   INTEGER NOT NULL,
+    checked_in_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+    checked_out_at   TIMESTAMP,
+
+    CONSTRAINT fk_wp_app_user
+        FOREIGN KEY (app_user_id)
+        REFERENCES app_user(id)
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_wp_workstation
+        FOREIGN KEY (workstation_id)
+        REFERENCES workstation(id)
+        ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_wp_workstation ON workstation_presence(workstation_id);
+CREATE INDEX IF NOT EXISTS idx_wp_user        ON workstation_presence(app_user_id);
+CREATE INDEX IF NOT EXISTS idx_wp_active      ON workstation_presence(app_user_id, workstation_id)
+    WHERE checked_out_at IS NULL;

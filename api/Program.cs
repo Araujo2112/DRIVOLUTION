@@ -99,6 +99,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddSingleton<IModelTrainingService, ModelTrainingService>();
 builder.Services.AddHostedService<MlRetrainBackgroundService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IWorkstationPresenceService, WorkstationPresenceService>();
 
 // --- Repositories ---
 builder.Services.AddScoped<IProductionLineRepository, ProductionLineRepository>();
@@ -128,6 +129,7 @@ builder.Services.AddScoped<IProductionLineStatusRepository, ProductionLineStatus
 builder.Services.AddScoped<IPhaseTimeCoefficientRepository, PhaseTimeCoefficientRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
+builder.Services.AddScoped<IWorkstationPresenceRepository, WorkstationPresenceRepository>();
 
 // --- JWT Authentication ---
 builder.Services.AddAuthentication(options =>

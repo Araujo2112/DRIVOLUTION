@@ -43,6 +43,9 @@ public class ApplicationDbContext : DbContext
     // --- Utilizadores ---
     public DbSet<UserModel> AppUsers { get; set; }
 
+    // --- Presença em Workstation (Card L) ---
+    public DbSet<WorkstationPresenceModel> WorkstationPresences { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -282,5 +285,19 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(ptc => ptc.ModelId)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // AppUser → WorkstationPresence (1:N)
+        modelBuilder.Entity<WorkstationPresenceModel>()
+            .HasOne(p => p.AppUser)
+            .WithMany()
+            .HasForeignKey(p => p.AppUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Workstation → WorkstationPresence (1:N)
+        modelBuilder.Entity<WorkstationPresenceModel>()
+            .HasOne(p => p.Workstation)
+            .WithMany(w => w.WorkstationPresences)
+            .HasForeignKey(p => p.WorkstationId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

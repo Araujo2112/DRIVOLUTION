@@ -26,6 +26,11 @@ public class ClientOrderModel
     [Required]
     public int Quantity { get; set; } = 1;
 
+    [Column("app_user_id")]
+    public int? AppUserId { get; set; }
+
     // Navigation
+    public UserModel? AppUser { get; set; }
+
     public ICollection<ManufacturingOrderModel> ManufacturingOrders { get; set; } = new List<ManufacturingOrderModel>();
 }

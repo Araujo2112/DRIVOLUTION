@@ -1,10 +1,12 @@
 using Drivolution.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/ml")]
+[Authorize(Roles = "admin")]
 public class MlController : ControllerBase
 {
     private readonly IModelTrainingService _trainingService;

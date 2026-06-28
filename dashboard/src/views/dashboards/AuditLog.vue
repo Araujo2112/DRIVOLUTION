@@ -16,7 +16,7 @@
       <!-- Filtro por entidade -->
       <select v-model="filterEntity" class="text-sm min-w-[160px]">
         <option value="">{{ t('audit.filterAllEntities') }}</option>
-        <option v-for="e in ENTITIES" :key="e.value" :value="e.value">{{ e.label }}</option>
+        <option v-for="e in ENTITY_VALUES" :key="e" :value="e">{{ entityLabel(e) }}</option>
       </select>
 
       <!-- Filtro por utilizador -->
@@ -48,60 +48,43 @@
       {{ t('common.loading') }}
     </div>
 
-    <!-- Tabela -->
-    <div v-else class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
-      <div class="grid grid-cols-12 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
-        <span class="col-span-2 text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('audit.cols.date') }}</span>
-        <span class="col-span-2 text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('audit.cols.user') }}</span>
-        <span class="col-span-1 text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('audit.cols.action') }}</span>
-        <span class="col-span-2 text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('audit.cols.entity') }}</span>
-        <span class="col-span-5 text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('audit.cols.label') }}</span>
-      </div>
+    <!-- Vazio -->
+    <div
+      v-else-if="filtered.length === 0"
+      class="text-center py-16 text-background-500 border border-background-300 dark:border-background-700 rounded-xl"
+    >
+      <span class="material-symbols-rounded text-4xl block mb-2">history</span>
+      <p class="text-sm">{{ t('audit.empty') }}</p>
+    </div>
 
-      <div v-if="filtered.length === 0" class="text-center py-12 text-background-500">
-        <span class="material-symbols-rounded text-4xl block mb-2">history</span>
-        <p class="text-sm">{{ t('audit.empty') }}</p>
-      </div>
-
+    <!-- Lista de cartões (estilo activity feed) -->
+    <div v-else class="flex flex-col gap-2">
       <div
         v-for="log in filtered"
         :key="log.id"
-        class="grid grid-cols-12 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 items-center"
+        class="rounded-xl px-4 py-3 bg-primary-50 dark:bg-background-800 border border-primary-100 dark:border-background-700 flex items-center justify-between gap-4"
       >
-        <!-- Data -->
-        <div class="col-span-2">
-          <p class="text-sm text-background-700 dark:text-background-300">{{ formatDate(log.createdAt) }}</p>
-          <p class="text-xs text-background-400">{{ formatTime(log.createdAt) }}</p>
-        </div>
-
-        <!-- Utilizador -->
-        <div class="col-span-2 flex items-center gap-2">
-          <div class="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-950 flex items-center justify-center flex-shrink-0">
-            <span class="text-[10px] font-semibold text-primary-600 dark:text-primary-300">{{ initials(log.userName) }}</span>
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-950 flex items-center justify-center flex-shrink-0">
+            <span class="text-[11px] font-semibold text-primary-600 dark:text-primary-300">{{ initials(log.userName) }}</span>
           </div>
-          <span class="text-sm text-background-700 dark:text-background-300 truncate">{{ log.userName }}</span>
+
+          <div class="min-w-0">
+            <span
+              class="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full mb-1"
+              :class="actionClass(log.action)"
+            >
+              {{ t(`audit.actions.${log.action}`) }}
+            </span>
+            <p class="text-sm text-background-800 dark:text-background-100 truncate">
+              {{ sentence(log) }}
+            </p>
+          </div>
         </div>
 
-        <!-- Ação -->
-        <div class="col-span-1">
-          <span
-            class="text-xs font-medium px-2 py-0.5 rounded-full"
-            :class="actionClass(log.action)"
-          >
-            {{ t(`audit.actions.${log.action}`) }}
-          </span>
-        </div>
-
-        <!-- Entidade -->
-        <div class="col-span-2">
-          <span class="text-xs text-background-500 dark:text-background-400">
-            {{ entityLabel(log.entity) }}
-          </span>
-        </div>
-
-        <!-- Label -->
-        <div class="col-span-5">
-          <span class="text-sm text-background-700 dark:text-background-200 truncate block">{{ log.entityLabel }}</span>
+        <div class="text-right flex-shrink-0 leading-tight">
+          <p class="text-sm text-background-600 dark:text-background-300">{{ displayTime(log.createdAt) }}</p>
+          <p class="text-xs text-background-400">{{ formatDate(log.createdAt) }}</p>
         </div>
       </div>
     </div>
@@ -118,8 +101,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from '@/axios'
 import { toast } from '@/plugins/toast'
+import { formatDate as formatDateUtc, formatRelative } from '@/utils/dates'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface AuditLog {
@@ -134,17 +118,9 @@ interface AuditLog {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const ENTITIES = [
-  { value: 'car_model',        label: 'Modelo de Carro' },
-  { value: 'config',           label: 'Configuração' },
-  { value: 'config_option',    label: 'Opção de Config.' },
-  { value: 'phase',            label: 'Fase' },
-  { value: 'phase_sequence',   label: 'Sequência de Fases' },
-  { value: 'production_line',  label: 'Linha de Produção' },
-  { value: 'workstation',      label: 'Workstation' },
-  { value: 'support',          label: 'Suporte' },
-  { value: 'order',            label: 'Encomenda' },
-  { value: 'user',             label: 'Utilizador' },
+const ENTITY_VALUES = [
+  'car_model', 'config', 'config_option', 'phase', 'phase_sequence',
+  'production_line', 'workstation', 'support', 'order', 'user',
 ]
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -196,12 +172,15 @@ function clearFilters() {
   filterAction.value = ''
 }
 
+// utils/dates.ts já trata a normalização UTC (string sem "Z" tratada como UTC).
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return formatDateUtc(iso)
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+// Tempo relativo (estilo "há 5 min"); cai para a hora absoluta acima de 7 dias.
+function displayTime(iso: string) {
+  const loc = locale.value === 'en' ? 'en-US' : 'pt-PT'
+  return formatRelative(iso, loc) ?? formatDateUtc(iso)
 }
 
 function initials(name: string) {
@@ -209,7 +188,15 @@ function initials(name: string) {
 }
 
 function entityLabel(entity: string) {
-  return ENTITIES.find(e => e.value === entity)?.label ?? entity
+  return t(`audit.entities.${entity}`)
+}
+
+function sentence(log: AuditLog) {
+  return t(`audit.sentence.${log.action}`, {
+    user:   log.userName,
+    entity: entityLabel(log.entity),
+    label:  log.entityLabel,
+  })
 }
 
 function actionClass(action: string) {

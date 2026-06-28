@@ -1,4 +1,5 @@
 using Drivolution.DTO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Drivolution.Services.Interface;
 
@@ -6,6 +7,7 @@ namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "admin,manager,operator")]
 public class ProductPhaseController : ControllerBase
 {
     private readonly IProductPhaseService _service;

@@ -3,12 +3,14 @@ using Drivolution.Extensions;
 using Drivolution.Models;
 using Drivolution.Repository.Interface;
 using Drivolution.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "admin")]
 public class ConfigOptionController : ControllerBase
 {
     private readonly IConfigOptionRepository _repo;

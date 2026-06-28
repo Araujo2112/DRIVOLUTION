@@ -4,12 +4,14 @@ using Drivolution.Models;
 using Drivolution.Models.Constants;
 using Drivolution.Repository.Interface;
 using Drivolution.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "admin,manager,operator")]
 public class WorkstationController : ControllerBase
 {
     private readonly IWorkstationRepository _repo;
@@ -53,6 +55,7 @@ public class WorkstationController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Create([FromBody] CreateWorkstationDTO dto)
     {
         var entity = new WorkstationModel
@@ -73,6 +76,7 @@ public class WorkstationController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateWorkstationDTO dto)
     {
         var entity = await _repo.GetById(id);
@@ -89,6 +93,7 @@ public class WorkstationController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Delete(int id)
     {
         var entity = await _repo.GetById(id);

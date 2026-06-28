@@ -41,3 +41,28 @@ export function elapsedSeconds(utcString: string | null | undefined): number {
   const normalized = utcString.endsWith('Z') ? utcString : utcString + 'Z'
   return Math.floor((Date.now() - new Date(normalized).getTime()) / 1000)
 }
+
+/**
+ * Tempo relativo tipo "há 2 min", "há 3h", "há 5 dias".
+ * Acima de 7 dias, devolve null para o chamador usar a data normal (formatDateTime).
+ */
+export function formatRelative(utcString: string | null | undefined, locale: 'pt-PT' | 'en-US' = 'pt-PT'): string | null {
+  if (!utcString) return null
+  const seconds = elapsedSeconds(utcString)
+  if (seconds < 0) return null
+
+  const isPt = locale === 'pt-PT'
+
+  if (seconds < 60) return isPt ? 'agora mesmo' : 'just now'
+
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return isPt ? `há ${minutes} min` : `${minutes} min ago`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return isPt ? `há ${hours}h` : `${hours}h ago`
+
+  const days = Math.floor(hours / 24)
+  if (days < 7) return isPt ? `há ${days} dia${days > 1 ? 's' : ''}` : `${days} day${days > 1 ? 's' : ''} ago`
+
+  return null
+}

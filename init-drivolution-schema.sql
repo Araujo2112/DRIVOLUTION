@@ -382,7 +382,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
 
     CONSTRAINT chk_audit_log_action CHECK (action IN ('created', 'updated', 'deleted')),
-    CONSTRAINT chk_audit_log_entity CHECK (entity IN ('car_model', 'phase', 'production_line', 'workstation', 'support', 'order', 'user'))
+    CONSTRAINT chk_audit_log_entity CHECK (entity IN ('car_model', 'phase', 'phase_sequence', 'production_line', 'workstation', 'support', 'order', 'user', 'config', 'config_option'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_user     ON audit_log(user_id);

@@ -1,4 +1,5 @@
 using Drivolution.DTO;
+using Drivolution.Extensions;
 using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +12,12 @@ namespace Drivolution.Controllers;
 public class ClientOrderController : ControllerBase
 {
     private readonly IClientOrderService _service;
+    private readonly IAuditService       _audit;
 
-    public ClientOrderController(IClientOrderService service)
+    public ClientOrderController(IClientOrderService service, IAuditService audit)
     {
         _service = service;
+        _audit   = audit;
     }
 
     [HttpGet]
@@ -38,6 +41,10 @@ public class ClientOrderController : ControllerBase
         try
         {
             var result = await _service.Create(dto);
+
+            var (userId, userName) = User.GetAuditUser();
+            await _audit.LogAsync(userId, userName, "created", "order", result.OrderId, $"Encomenda #{result.OrderId}");
+
             return CreatedAtAction(nameof(GetById), new { id = result.OrderId }, result);
         }
         catch (KeyNotFoundException ex)
@@ -51,6 +58,10 @@ public class ClientOrderController : ControllerBase
     {
         var updated = await _service.Update(id, dto);
         if (!updated) return NotFound();
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "updated", "order", id, $"Encomenda #{id}");
+
         return NoContent();
     }
 
@@ -59,6 +70,10 @@ public class ClientOrderController : ControllerBase
     {
         var deleted = await _service.Delete(id);
         if (!deleted) return NotFound();
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "deleted", "order", id, $"Encomenda #{id}");
+
         return NoContent();
     }
 }

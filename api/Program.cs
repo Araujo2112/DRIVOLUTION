@@ -13,14 +13,11 @@ using Microsoft.OpenApi.Models;
 
 Env.Load();
 
-// ── Solução global para DateTime UTC com Npgsql ───────────────────────────────
-// Garante que todos os DateTime lidos da BD são tratados como UTC,
-// eliminando o erro "Cannot write DateTime with Kind=Unspecified"
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? throw new InvalidOperationException("JWT_ISSUER not set");
+var jwtIssuer   = Environment.GetEnvironmentVariable("JWT_ISSUER")   ?? throw new InvalidOperationException("JWT_ISSUER not set");
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? throw new InvalidOperationException("JWT_AUDIENCE not set");
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? throw new InvalidOperationException("JWT_SECRET not set");
+var jwtSecret   = Environment.GetEnvironmentVariable("JWT_SECRET")   ?? throw new InvalidOperationException("JWT_SECRET not set");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,23 +49,19 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Drivolution API v1", Version = "v1" });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        In = ParameterLocation.Header,
+        In          = ParameterLocation.Header,
         Description = "Please enter a valid token",
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
+        Name        = "Authorization",
+        Type        = SecuritySchemeType.Http,
         BearerFormat = "JWT",
-        Scheme = "Bearer"
+        Scheme      = "Bearer"
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
             []
         }
@@ -78,8 +71,6 @@ builder.Services.AddSwaggerGen(c =>
 // --- Database ---
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// --- FIWARE / Orion ---
 
 // --- Services ---
 builder.Services.AddScoped<IClientOrderService, ClientOrderService>();
@@ -100,6 +91,7 @@ builder.Services.AddSingleton<IModelTrainingService, ModelTrainingService>();
 builder.Services.AddHostedService<MlRetrainBackgroundService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IWorkstationPresenceService, WorkstationPresenceService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 // --- Repositories ---
 builder.Services.AddScoped<IProductionLineRepository, ProductionLineRepository>();
@@ -130,24 +122,25 @@ builder.Services.AddScoped<IPhaseTimeCoefficientRepository, PhaseTimeCoefficient
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IWorkstationPresenceRepository, WorkstationPresenceRepository>();
+builder.Services.AddScoped<IAuditRepository, AuditRepository>();
 
 // --- JWT Authentication ---
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
+        ValidateIssuer           = true,
+        ValidateAudience         = true,
+        ValidateLifetime         = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtIssuer,
-        ValidAudience = jwtAudience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+        ValidIssuer              = jwtIssuer,
+        ValidAudience            = jwtAudience,
+        IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
     };
 });
 

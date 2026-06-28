@@ -71,7 +71,8 @@ const auth = useAuthStore()
               {{ $t('sidebar.admin') }}
             </span>
           </div>
-          <SidebarItem icon="group" path="team">{{ $t('team.nav') }}</SidebarItem>
+          <SidebarItem icon="group"   path="team">{{ $t('team.nav') }}</SidebarItem>
+          <SidebarItem icon="history" path="audit">{{ $t('audit.nav') }}</SidebarItem>
         </template>
 
       </div>

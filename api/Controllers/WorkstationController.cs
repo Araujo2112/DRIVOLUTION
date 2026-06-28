@@ -1,7 +1,9 @@
 using Drivolution.DTO;
+using Drivolution.Extensions;
 using Drivolution.Models;
 using Drivolution.Models.Constants;
 using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Drivolution.Controllers;
@@ -11,7 +13,13 @@ namespace Drivolution.Controllers;
 public class WorkstationController : ControllerBase
 {
     private readonly IWorkstationRepository _repo;
-    public WorkstationController(IWorkstationRepository repo) => _repo = repo;
+    private readonly IAuditService          _audit;
+
+    public WorkstationController(IWorkstationRepository repo, IAuditService audit)
+    {
+        _repo  = repo;
+        _audit = audit;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -39,7 +47,7 @@ public class WorkstationController : ControllerBase
     [HttpGet("human-eligible")]
     public async Task<IActionResult> GetHumanEligible()
     {
-        var items = await _repo.GetAll();
+        var items    = await _repo.GetAll();
         var eligible = items.Where(w => WorkstationKind.HumanEligible.Contains(w.Kind));
         return Ok(eligible.Select(w => ToDTO(w)));
     }
@@ -49,13 +57,18 @@ public class WorkstationController : ControllerBase
     {
         var entity = new WorkstationModel
         {
-            ProductionLineId = dto.ProductionLineId,
-            Type = dto.Type,
-            Kind = dto.Kind,
+            ProductionLineId     = dto.ProductionLineId,
+            Type                 = dto.Type,
+            Kind                 = dto.Kind,
             ManufacturingPhaseId = dto.ManufacturingPhaseId,
         };
         var created = await _repo.Create(entity);
-        var full = await _repo.GetById(created.Id);
+        var full    = await _repo.GetById(created.Id);
+
+        var (userId, userName) = User.GetAuditUser();
+        var label = $"{full!.Type} (Linha {full.ProductionLine?.Name ?? full.ProductionLineId.ToString()})";
+        await _audit.LogAsync(userId, userName, "created", "workstation", created.Id, label);
+
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, ToDTO(full!));
     }
 
@@ -64,18 +77,27 @@ public class WorkstationController : ControllerBase
     {
         var entity = await _repo.GetById(id);
         if (entity == null) return NotFound();
-        if (dto.Type != null) entity.Type = dto.Type;
-        if (dto.Kind != null) entity.Kind = dto.Kind;
+        if (dto.Type                 != null)  entity.Type                 = dto.Type;
+        if (dto.Kind                 != null)  entity.Kind                 = dto.Kind;
         if (dto.ManufacturingPhaseId.HasValue) entity.ManufacturingPhaseId = dto.ManufacturingPhaseId;
         await _repo.Update(entity);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "updated", "workstation", entity.Id, entity.Type ?? $"Workstation {entity.Id}");
+
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        if (!await _repo.Exists(id)) return NotFound();
+        var entity = await _repo.GetById(id);
+        if (entity == null) return NotFound();
         await _repo.Delete(id);
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "deleted", "workstation", id, entity.Type ?? $"Workstation {id}");
+
         return NoContent();
     }
 

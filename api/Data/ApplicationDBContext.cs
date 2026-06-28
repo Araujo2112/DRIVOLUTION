@@ -162,7 +162,15 @@ public class ApplicationDbContext : DbContext
             .WithMany(co => co.ManufacturingOrders)
             .HasForeignKey(mo => mo.ClientOrderId)
             .OnDelete(DeleteBehavior.Restrict);
-
+        
+        // AppUser → ClientOrder (1:N, opcional)
+        modelBuilder.Entity<ClientOrderModel>()
+            .HasOne(co => co.AppUser)
+            .WithMany()
+            .HasForeignKey(co => co.AppUserId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+            
         // ManufacturingOrder → Product (1:N)
         modelBuilder.Entity<ProductModel>()
             .HasOne(p => p.ManufacturingOrder)

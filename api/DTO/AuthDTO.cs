@@ -56,3 +56,6 @@ public class ResetPasswordResponseDTO
 {
     public string TemporaryPassword { get; set; } = string.Empty;
 }
+
+// Usado para popular dropdowns de seleção de cliente (ex: criar encomenda)
+public record ClientOptionDTO(int Id, string Name);

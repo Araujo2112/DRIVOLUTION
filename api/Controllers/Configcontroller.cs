@@ -13,13 +13,15 @@ namespace Drivolution.Controllers;
 [Authorize(Roles = "admin")]
 public class ConfigController : ControllerBase
 {
-    private readonly IConfigRepository _repo;
-    private readonly IAuditService     _audit;
+    private readonly IConfigRepository    _repo;
+    private readonly ICarModelRepository  _carModelRepo;
+    private readonly IAuditService        _audit;
 
-    public ConfigController(IConfigRepository repo, IAuditService audit)
+    public ConfigController(IConfigRepository repo, ICarModelRepository carModelRepo, IAuditService audit)
     {
-        _repo  = repo;
-        _audit = audit;
+        _repo         = repo;
+        _carModelRepo = carModelRepo;
+        _audit        = audit;
     }
 
     [HttpGet("model/{modelId}")]
@@ -44,7 +46,7 @@ public class ConfigController : ControllerBase
         var created = await _repo.Create(entity);
 
         var (userId, userName) = User.GetAuditUser();
-        await _audit.LogAsync(userId, userName, "created", "config", created.Id, created.Item);
+        await _audit.LogAsync(userId, userName, "created", "config", created.Id, await BuildLabelAsync(created));
 
         return CreatedAtAction(nameof(GetById), new { id = created.Id },
             new ConfigDTO(created.Id, created.ModelId, created.Item, created.AllowMultiple));
@@ -60,7 +62,7 @@ public class ConfigController : ControllerBase
         await _repo.Update(entity);
 
         var (userId, userName) = User.GetAuditUser();
-        await _audit.LogAsync(userId, userName, "updated", "config", entity.Id, entity.Item);
+        await _audit.LogAsync(userId, userName, "updated", "config", entity.Id, await BuildLabelAsync(entity));
 
         return NoContent();
     }
@@ -70,11 +72,23 @@ public class ConfigController : ControllerBase
     {
         var entity = await _repo.GetById(id);
         if (entity == null) return NotFound();
+
+        var label = await BuildLabelAsync(entity);
         await _repo.Delete(id);
 
         var (userId, userName) = User.GetAuditUser();
-        await _audit.LogAsync(userId, userName, "deleted", "config", id, entity.Item);
+        await _audit.LogAsync(userId, userName, "deleted", "config", id, label);
 
         return NoContent();
+    }
+
+    // Inclui o nome do Modelo de Carro no label do audit log, para distinguir
+    // configs com o mesmo nome em modelos diferentes (ex: "teste" em 2 modelos).
+    private async Task<string> BuildLabelAsync(ConfigModel entity)
+    {
+        var carModel = await _carModelRepo.GetById(entity.ModelId);
+        return carModel != null
+            ? $"{entity.Item} (Modelo: {carModel.Name})"
+            : entity.Item;
     }
 }

@@ -3,7 +3,7 @@ import axios from '../axios'
 export interface ManufacturingOrder {
   id: number
   clientOrderId: number
-  customerName: string
+  clientName: string
   manufacturingOrderNumber: string
   startDate: string
   endDate: string | null

@@ -5,11 +5,9 @@
 
 $baseUrl = "http://localhost:8080/api"
 
-# Se a API exigir autenticação, descomenta e ajusta isto:
-# $loginBody = @{ username = "admin"; password = "admin" } | ConvertTo-Json
-# $loginRes = Invoke-RestMethod -Uri "$baseUrl/Auth/login" -Method Post -Body $loginBody -ContentType "application/json"
-# $headers = @{ Authorization = "Bearer $($loginRes.token)" }
-$headers = @{}  # deixa vazio se não precisar de token
+$loginBody = @{ email = "admin@drivolution.pt"; password = "12345678" } | ConvertTo-Json
+$loginRes = Invoke-RestMethod -Uri "$baseUrl/Auth/login" -Method Post -Body $loginBody -ContentType "application/json"
+$headers = @{ Authorization = "Bearer $($loginRes.token)" }
 
 function New-CarModel($name, $version, $type) {
     $body = @{ name = $name; version = $version; type = $type } | ConvertTo-Json

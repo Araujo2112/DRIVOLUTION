@@ -1,256 +1,397 @@
 <template>
-  <div class="min-h-screen bg-background-100 dark:bg-background-950 p-8">
-    <div class="max-w-screen-2xl mx-auto">
-      <div class="flex items-start justify-between mb-8">
-        <div>
-          <div class="flex items-center gap-3 mb-6">
-            <img
-              src="@/assets/icons/drivolution-logo.png"
-              alt="Drivolution logo"
-              class="h-9 w-auto"
-            />
-          </div>
+  <div class="p-8 w-full">
 
-          <h1 class="text-2xl font-medium text-background-900 dark:text-background-50">
-            Portal do Cliente
-          </h1>
-          <p class="text-sm text-background-600 dark:text-background-400 mt-1">
-            Consulte o estado das suas encomendas e acompanhe a produção dos seus veículos.
-          </p>
-        </div>
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-8">
+      <div>
+        <h1 class="text-2xl font-medium text-background-900 dark:text-background-50">
+          {{ t('orders.title') }}
+        </h1>
+        <p class="text-sm text-background-600 dark:text-background-400 mt-1">
+          {{ t('orders.subtitle') }}
+        </p>
+      </div>
+      <button
+        @click="openCreateModal"
+        class="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+      >
+        <span class="material-symbols-rounded text-base">add</span>
+        {{ t('orders.newOrder') }}
+      </button>
+    </div>
 
-        <div class="flex items-center gap-3">
-          <button
-            @click="loadOrders"
-            class="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-          >
-            <span class="material-symbols-rounded text-base">refresh</span>
-            Atualizar
-          </button>
+    <!-- Loading -->
+    <div v-if="loading" class="flex items-center gap-2 text-background-500 text-sm py-12">
+      <span class="material-symbols-rounded animate-spin text-lg">autorenew</span>
+      {{ t('common.loading') }}
+    </div>
 
-          <button
-            @click="logout"
-            class="flex items-center gap-2 bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 text-sm text-background-600 hover:text-danger-500 px-4 py-2 rounded-lg transition-colors"
-          >
-            <span class="material-symbols-rounded text-base">logout</span>
-            Sair
-          </button>
-        </div>
+    <!-- Listagem -->
+    <div v-else>
+      <div v-if="orders.length === 0" class="text-center py-16 text-background-500">
+        <span class="material-symbols-rounded text-5xl block mb-3">inbox</span>
+        <p class="text-sm">{{ t('orders.empty') }}</p>
       </div>
 
-      <div v-if="loading" class="flex items-center gap-2 text-background-500 text-sm py-12">
-        <span class="material-symbols-rounded animate-spin text-lg">autorenew</span>
-        A carregar encomendas...
-      </div>
-
-      <div v-else class="flex flex-col gap-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-5 flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-background-500 uppercase tracking-wider">
-                Encomendas
-              </p>
-              <p class="text-3xl font-medium text-primary-500 mt-2">
-                {{ orders.length }}
-              </p>
-            </div>
-            <span class="material-symbols-rounded text-primary-500 text-3xl opacity-70">
-              shopping_cart
-            </span>
-          </div>
-
-          <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-5 flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-background-500 uppercase tracking-wider">
-                Veículos
-              </p>
-              <p class="text-3xl font-medium text-background-900 dark:text-background-50 mt-2">
-                {{ totalVehicles }}
-              </p>
-            </div>
-            <span class="material-symbols-rounded text-background-500 text-3xl opacity-70">
-              directions_car
-            </span>
-          </div>
-
-          <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-5 flex items-center justify-between">
-            <div>
-              <p class="text-xs font-medium text-background-500 uppercase tracking-wider">
-                Concluídos
-              </p>
-              <p class="text-3xl font-medium text-success-500 mt-2">
-                {{ totalCompleted }}
-              </p>
-            </div>
-            <span class="material-symbols-rounded text-success-500 text-3xl opacity-70">
-              verified
-            </span>
-          </div>
+      <div v-else class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
+        <!-- Table Header -->
+        <div class="grid grid-cols-5 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('orders.fields.orderNumber') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('orders.fields.customer') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('orders.fields.date') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('orders.fields.quantity') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider text-right">{{ t('common.actions') }}</span>
         </div>
 
+        <!-- Table Rows -->
         <div
-          v-if="orders.length === 0"
-          class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl p-8 text-center text-background-500"
+          v-for="order in orders"
+          :key="order.id"
+          class="grid grid-cols-5 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
         >
-          Não existem encomendas associadas à sua conta.
-        </div>
-
-        <div
-          v-else
-          class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl overflow-hidden"
-        >
-          <table class="min-w-full text-sm">
-            <thead class="bg-background-100 dark:bg-background-900 text-background-500 uppercase text-xs">
-              <tr>
-                <th class="text-left px-6 py-4 font-medium">Encomenda</th>
-                <th class="text-left px-6 py-4 font-medium">Data</th>
-                <th class="text-left px-6 py-4 font-medium">Quantidade</th>
-                <th class="text-left px-6 py-4 font-medium">Concluídos</th>
-                <th class="text-left px-6 py-4 font-medium">Progresso</th>
-                <th class="text-left px-6 py-4 font-medium">Estado</th>
-                <th class="text-right px-6 py-4 font-medium">Ações</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr
-                v-for="order in orders"
-                :key="order.id"
-                class="border-t border-background-200 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-900 transition-colors"
-              >
-                <td class="px-6 py-5 font-medium text-background-900 dark:text-background-50">
-                  {{ order.orderNumber }}
-                </td>
-
-                <td class="px-6 py-5 text-background-600 dark:text-background-300">
-                  {{ formatDate(order.orderDate) }}
-                </td>
-
-                <td class="px-6 py-5 text-background-600 dark:text-background-300">
-                  {{ order.quantity }}
-                </td>
-
-                <td class="px-6 py-5 text-success-500 font-medium">
-                  {{ order.completedProducts }}
-                </td>
-
-                <td class="px-6 py-5">
-                  <div class="flex items-center gap-3">
-                    <div class="h-2 w-28 rounded-full bg-background-200 dark:bg-background-700 overflow-hidden">
-                      <div
-                        class="h-full rounded-full bg-primary-500"
-                        :style="{ width: `${progress(order)}%` }"
-                      />
-                    </div>
-                    <span class="text-sm font-medium text-primary-500">
-                      {{ progress(order) }}%
-                    </span>
-                  </div>
-                </td>
-
-                <td class="px-6 py-5">
-                  <span
-                    class="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium"
-                    :class="statusClass(order.status)"
-                  >
-                    {{ statusLabel(order.status) }}
-                  </span>
-                </td>
-
-                <td class="px-6 py-5 text-right">
-                  <button
-                    @click="goToOrder(order.id)"
-                    class="inline-flex items-center gap-1 text-primary-500 hover:text-primary-600 font-medium transition-colors"
-                  >
-                    Ver detalhe
-                    <span class="material-symbols-rounded text-base">arrow_forward</span>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ order.orderNumber }}</span>
+          <span class="text-sm text-background-700 dark:text-background-300">{{ order.clientName }}</span>
+          <span class="text-sm text-background-500">{{ formatDate(order.orderDate) }}</span>
+          <span class="text-sm text-background-700 dark:text-background-300">{{ order.quantity }} un.</span>
+          <div class="flex justify-end">
+            <button
+              @click="deleteOrder(order)"
+              class="p-1.5 rounded-lg text-background-400 hover:text-danger-500 hover:bg-danger-100 dark:hover:bg-background-700 transition-colors"
+            >
+              <span class="material-symbols-rounded text-base">delete</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Modal: Criar Encomenda -->
+    <div v-if="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="closeModal">
+      <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl w-full max-w-lg overflow-hidden">
+
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-background-300 dark:border-background-700">
+          <h2 class="text-base font-medium text-background-900 dark:text-background-50">{{ t('orders.newOrder') }}</h2>
+          <button @click="closeModal" class="text-background-500 hover:text-background-700 dark:hover:text-background-300">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="px-5 py-4 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+
+          <!-- Dados da Encomenda -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('orders.fields.orderNumber') }} *</label>
+            <input v-model="form.orderNumber" type="text" :placeholder="t('orders.fields.orderNumberPlaceholder')" />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('orders.fields.customer') }} *</label>
+            <select v-model="form.appUserId">
+              <option :value="0" disabled>{{ t('orders.fields.customerPlaceholder') }}</option>
+              <option v-for="client in clients" :key="client.id" :value="client.id">
+                {{ client.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('orders.fields.quantity') }} *</label>
+            <input v-model.number="form.quantity" type="number" min="1" placeholder="1" />
+          </div>
+
+          <!-- Selecionar Modelo -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('orders.fields.model') }} *</label>
+            <select v-model="form.modelId" @change="onModelChange">
+              <option value="0" disabled>{{ t('orders.fields.modelPlaceholder') }}</option>
+              <option v-for="model in models" :key="model.id" :value="model.id">
+                {{ model.name }} {{ model.version ? `(${model.version})` : '' }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Configurações do Modelo (carrega dinamicamente) -->
+          <div v-if="loadingConfigs" class="flex items-center gap-2 text-background-500 text-sm">
+            <span class="material-symbols-rounded animate-spin text-base">autorenew</span>
+            {{ t('common.loading') }}
+          </div>
+
+          <div v-if="configs.length > 0" class="flex flex-col gap-3">
+            <div class="text-xs font-medium text-background-500 uppercase tracking-wider pt-1 border-t border-background-200 dark:border-background-700">
+              {{ t('orders.configurations') }}
+            </div>
+
+            <div v-for="config in configs" :key="config.id" class="flex flex-col gap-1.5">
+              <label class="text-xs font-medium text-background-600 dark:text-background-400">
+                {{ config.item }}
+                <span v-if="!config.allowMultiple" class="text-background-400 font-normal">({{ t('orders.optionalDefault') }})</span>
+              </label>
+
+              <!-- Single-select: dropdown, comportamento original -->
+              <select v-if="!config.allowMultiple" v-model="selectedOptions[config.id]">
+                <option :value="undefined">{{ t('orders.useDefault') }}</option>
+                <option
+                  v-for="option in optionsByConfig[config.id]"
+                  :key="option.id"
+                  :value="option.id"
+                >
+                  {{ option.value }}{{ option.isDefault ? ` (${t('carModels.default')})` : '' }}
+                </option>
+              </select>
+
+              <!-- Multi-select: toggle por opção (acessórios) -->
+              <div v-else class="flex flex-col gap-1.5">
+                <label
+                  v-for="option in optionsByConfig[config.id]"
+                  :key="option.id"
+                  class="flex items-center gap-2 text-sm text-background-700 dark:text-background-300"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="(selectedAccessoryOptions[config.id] || []).includes(option.id)"
+                    @change="toggleAccessoryOption(config.id, option.id, ($event.target as HTMLInputElement).checked)"
+                    class="w-4 h-4 accent-primary-500"
+                  />
+                  {{ option.value }}
+                  <span v-if="option.isDefault" class="text-xs text-background-400">({{ t('carModels.default') }})</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="flex justify-end gap-2 px-5 py-4 border-t border-background-300 dark:border-background-700">
+          <button @click="closeModal" class="px-4 py-2 text-sm rounded-lg border border-background-300 dark:border-background-600 text-background-700 dark:text-background-300 hover:bg-background-100 dark:hover:bg-background-700 transition-colors">
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            @click="submitCreate"
+            :disabled="!isFormValid || submitting"
+            class="px-4 py-2 text-sm rounded-lg bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
+          >
+            <span v-if="submitting" class="material-symbols-rounded animate-spin text-base mr-1">autorenew</span>
+            {{ t('common.save') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Resultado da criação -->
+    <div v-if="showResultModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showResultModal = false">
+      <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl w-full max-w-lg overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-background-300 dark:border-background-700">
+          <h2 class="text-base font-medium text-background-900 dark:text-background-50">{{ t('orders.created') }}</h2>
+          <button @click="showResultModal = false" class="text-background-500 hover:text-background-700">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="px-5 py-4">
+          <p class="text-sm text-background-600 dark:text-background-400 mb-3">
+            {{ t('orders.createdDesc', { count: lastResult?.totalQuantity, customer: lastResult?.clientName }) }}
+          </p>
+          <div class="flex flex-col gap-2 max-h-64 overflow-y-auto">
+            <div
+              v-for="product in lastResult?.productsCreated"
+              :key="product.productId"
+              class="flex items-center justify-between px-3 py-2 bg-background-100 dark:bg-background-700 rounded-lg"
+            >
+              <span class="text-xs font-medium text-background-700 dark:text-background-300">{{ product.serialNumber }}</span>
+              <span class="text-xs text-background-500">{{ product.moNumber }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end px-5 py-4 border-t border-background-300 dark:border-background-700">
+          <button @click="showResultModal = false" class="px-4 py-2 text-sm rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors">
+            {{ t('common.close') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import router from '@/router'
-import { useAuthStore } from '@/stores/authStore'
-import {
-  clientPortalService,
-  type ClientOrderSummary,
-} from '@/services/clientPortalService'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { clientOrderService } from '@/services/clientOrderService'
+import type { ClientOrder, CreateClientOrderResult } from '@/services/clientOrderService'
+import { clientUserService } from '@/services/clientUserService'
+import type { ClientOption } from '@/services/clientUserService'
+import { carModelService, configService, configOptionService } from '@/services/carModelService'
+import type { CarModel, Config, ConfigOption } from '@/services/carModelService'
 import { toast } from '@/plugins/toast'
+import { useI18n } from 'vue-i18n'
 
-const auth = useAuthStore()
+const { t } = useI18n()
 
 const loading = ref(true)
-const orders = ref<ClientOrderSummary[]>([])
+const orders = ref<ClientOrder[]>([])
+const models = ref<CarModel[]>([])
+const clients = ref<ClientOption[]>([])
+const configs = ref<Config[]>([])
+const optionsByConfig = reactive<Record<number, ConfigOption[]>>({})
 
-const totalVehicles = computed(() => {
-  return orders.value.reduce((sum, order) => sum + order.quantity, 0)
+// Single-select (ex: Cor) — uma opção escolhida por config, ou undefined = usar default
+const selectedOptions = reactive<Record<number, number | undefined>>({})
+
+// Multi-select (ex: Acessórios) — lista de opções escolhidas por config
+const selectedAccessoryOptions = reactive<Record<number, number[]>>({})
+
+const showModal = ref(false)
+const showResultModal = ref(false)
+const loadingConfigs = ref(false)
+const submitting = ref(false)
+const lastResult = ref<CreateClientOrderResult | null>(null)
+
+const form = reactive({
+  orderNumber: '',
+  appUserId: 0,
+  orderDate: new Date().toISOString(),
+  quantity: 1,
+  modelId: 0,
 })
 
-const totalCompleted = computed(() => {
-  return orders.value.reduce((sum, order) => sum + order.completedProducts, 0)
-})
+const isFormValid = computed(() =>
+  form.orderNumber.trim() !== '' &&
+  form.appUserId !== 0 &&
+  form.quantity >= 1 &&
+  form.modelId !== 0
+)
 
 onMounted(async () => {
-  await loadOrders()
+  await Promise.all([loadOrders(), loadModels(), loadClients()])
 })
 
 async function loadOrders() {
   loading.value = true
-
   try {
-    const res = await clientPortalService.getOrders()
+    const res = await clientOrderService.getAll()
     orders.value = res.data
   } catch {
-    toast.error('Erro ao carregar encomendas.')
+    toast.error(t('errors.loadFailed'))
   } finally {
     loading.value = false
   }
 }
 
-function goToOrder(orderId: number) {
-  router.push(`/client/orders/${orderId}`)
-}
-
-function logout() {
-  auth.logout()
-}
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('pt-PT')
-}
-
-function progress(order: ClientOrderSummary) {
-  if (order.quantity === 0) return 0
-  return Math.round((order.completedProducts / order.quantity) * 100)
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case 'completed':
-      return 'Concluída'
-    case 'in_progress':
-      return 'Em produção'
-    default:
-      return 'Pendente'
+async function loadModels() {
+  try {
+    const res = await carModelService.getAll()
+    models.value = res.data
+  } catch {
+    // silencioso
   }
 }
 
-function statusClass(status: string) {
-  switch (status) {
-    case 'completed':
-      return 'bg-success-100 text-success-700'
-    case 'in_progress':
-      return 'bg-primary-100 text-primary-700'
-    default:
-      return 'bg-background-200 text-background-600'
+async function loadClients() {
+  try {
+    const res = await clientUserService.getClients()
+    clients.value = res.data
+  } catch {
+    // silencioso
   }
+}
+
+async function onModelChange() {
+  if (!form.modelId) return
+  loadingConfigs.value = true
+  configs.value = []
+  Object.keys(optionsByConfig).forEach(k => delete optionsByConfig[Number(k)])
+  Object.keys(selectedOptions).forEach(k => delete selectedOptions[Number(k)])
+  Object.keys(selectedAccessoryOptions).forEach(k => delete selectedAccessoryOptions[Number(k)])
+
+  try {
+    const res = await configService.getByModel(form.modelId)
+    configs.value = res.data
+
+    const optRes = await configOptionService.getAll()
+    for (const option of optRes.data) {
+      if (!optionsByConfig[option.configId]) optionsByConfig[option.configId] = []
+      optionsByConfig[option.configId].push(option)
+    }
+  } catch {
+    toast.error(t('errors.loadFailed'))
+  } finally {
+    loadingConfigs.value = false
+  }
+}
+
+function toggleAccessoryOption(configId: number, optionId: number, checked: boolean) {
+  if (!selectedAccessoryOptions[configId]) selectedAccessoryOptions[configId] = []
+  const arr = selectedAccessoryOptions[configId]
+  if (checked) {
+    if (!arr.includes(optionId)) arr.push(optionId)
+  } else {
+    const idx = arr.indexOf(optionId)
+    if (idx !== -1) arr.splice(idx, 1)
+  }
+}
+
+function openCreateModal() {
+  form.orderNumber = ''
+  form.appUserId = 0
+  form.orderDate = new Date().toISOString().split('T')[0]
+  form.quantity = 1
+  form.modelId = 0
+  configs.value = []
+  Object.keys(selectedOptions).forEach(k => delete selectedOptions[Number(k)])
+  Object.keys(selectedAccessoryOptions).forEach(k => delete selectedAccessoryOptions[Number(k)])
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+}
+
+async function submitCreate() {
+  submitting.value = true
+  try {
+    const fromSingles = Object.entries(selectedOptions)
+      .filter(([, val]) => val !== undefined)
+      .map(([, val]) => ({ configOptionId: val as number }))
+
+    const fromAccessories = Object.values(selectedAccessoryOptions)
+      .flat()
+      .map(optionId => ({ configOptionId: optionId }))
+
+    const selectedConfigOptions = [...fromSingles, ...fromAccessories]
+
+    const res = await clientOrderService.create({
+      orderNumber: form.orderNumber,
+      appUserId: form.appUserId,
+      orderDate: new Date(form.orderDate).toISOString(),
+      quantity: form.quantity,
+      modelId: form.modelId,
+      configs: selectedConfigOptions,
+    })
+
+    lastResult.value = res.data
+    closeModal()
+    showResultModal.value = true
+    toast.success(t('orders.createdSuccess'))
+    await loadOrders()
+  } catch {
+    toast.error(t('errors.saveFailed'))
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function deleteOrder(order: ClientOrder) {
+  try {
+    await clientOrderService.delete(order.id)
+    toast.success(t('orders.deleted'))
+    await loadOrders()
+  } catch {
+    toast.error(t('errors.deleteFailed'))
+  }
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('pt-PT')
 }
 </script>

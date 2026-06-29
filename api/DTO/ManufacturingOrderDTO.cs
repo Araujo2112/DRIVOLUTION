@@ -1,6 +1,6 @@
 namespace Drivolution.DTO;
 
-public record ManufacturingOrderDTO(int Id, int ClientOrderId, string CustomerName, string ManufacturingOrderNumber, DateTime StartDate, DateTime? EndDate, string? Status);
+public record ManufacturingOrderDTO(int Id, int ClientOrderId, string ClientName, string ManufacturingOrderNumber, DateTime StartDate, DateTime? EndDate, string? Status);
 public record CreateManufacturingOrderDTO(int ClientOrderId, string ManufacturingOrderNumber, DateTime StartDate);
 public record UpdateManufacturingOrderDTO(string? Status, DateTime? EndDate);
 
@@ -8,7 +8,7 @@ public record UpdateManufacturingOrderDTO(string? Status, DateTime? EndDate);
 public record ManufacturingOrderDetailDTO(
     int Id,
     int ClientOrderId,
-    string CustomerName,
+    string ClientName,
     string ManufacturingOrderNumber,
     DateTime StartDate,
     DateTime? EndDate,

@@ -49,12 +49,12 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Drivolution API v1", Version = "v1" });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        In           = ParameterLocation.Header,
-        Description  = "Please enter a valid token",
-        Name         = "Authorization",
-        Type         = SecuritySchemeType.Http,
+        In          = ParameterLocation.Header,
+        Description = "Please enter a valid token",
+        Name        = "Authorization",
+        Type        = SecuritySchemeType.Http,
         BearerFormat = "JWT",
-        Scheme       = "Bearer"
+        Scheme      = "Bearer"
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -82,6 +82,8 @@ builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddHostedService<AlertBackgroundService>();
 builder.Services.AddScoped<IWipDashboardService, WipDashboardService>();
 builder.Services.AddScoped<IEtaPredictionService, EtaPredictionService>();
+builder.Services.AddScoped<IClientPortalRepository, ClientPortalRepository>();
+builder.Services.AddScoped<IClientPortalService, ClientPortalService>();
 builder.Services.AddSingleton<IPhaseTimeWeightCalculator, PhaseTimeWeightCalculator>();
 builder.Services.AddScoped<ICarModelEtaSimulationService, CarModelEtaSimulationService>();
 builder.Services.AddScoped<IProductionLineStatusService, ProductionLineStatusService>();
@@ -91,7 +93,6 @@ builder.Services.AddSingleton<IModelTrainingService, ModelTrainingService>();
 builder.Services.AddHostedService<MlRetrainBackgroundService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IWorkstationPresenceService, WorkstationPresenceService>();
-builder.Services.AddScoped<IClientPortalService, ClientPortalService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 
 // --- Repositories ---
@@ -123,7 +124,6 @@ builder.Services.AddScoped<IPhaseTimeCoefficientRepository, PhaseTimeCoefficient
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IWorkstationPresenceRepository, WorkstationPresenceRepository>();
-builder.Services.AddScoped<IClientPortalRepository, ClientPortalRepository>();
 builder.Services.AddScoped<IAuditRepository, AuditRepository>();
 
 // --- JWT Authentication ---

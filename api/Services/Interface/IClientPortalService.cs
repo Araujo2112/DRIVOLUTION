@@ -1,10 +1,10 @@
-using Drivolution.DTO.Client;
+using Drivolution.DTO;
 
-namespace Drivolution.Services.Interface;
-
-public interface IClientPortalService
+namespace Drivolution.Services.Interface
 {
-    Task<List<ClientOrderSummaryDTO>> GetOrders(int appUserId);
-
-    Task<List<ClientOrderProductDTO>> GetProducts(int appUserId, int orderId);
+    public interface IClientPortalService
+    {
+        Task<List<ClientOrderSummaryDTO>> GetOrdersAsync(int appUserId);
+        Task<ClientOrderDetailDTO?> GetOrderDetailAsync(int orderId, int appUserId);
+    }
 }

@@ -13,19 +13,16 @@
 
     <!-- Filtros -->
     <div class="flex flex-wrap gap-3 mb-6">
-      <!-- Filtro por entidade -->
       <select v-model="filterEntity" class="text-sm min-w-[160px]">
         <option value="">{{ t('audit.filterAllEntities') }}</option>
         <option v-for="e in ENTITY_VALUES" :key="e" :value="e">{{ entityLabel(e) }}</option>
       </select>
 
-      <!-- Filtro por utilizador -->
       <select v-model="filterUserId" class="text-sm min-w-[160px]">
         <option value="">{{ t('audit.filterAllUsers') }}</option>
         <option v-for="u in uniqueUsers" :key="u.id" :value="u.id">{{ u.name }}</option>
       </select>
 
-      <!-- Filtro por ação -->
       <select v-model="filterAction" class="text-sm min-w-[140px]">
         <option value="">{{ t('audit.filterAllActions') }}</option>
         <option value="created">{{ t('audit.actions.created') }}</option>
@@ -48,43 +45,52 @@
       {{ t('common.loading') }}
     </div>
 
-    <!-- Vazio -->
-    <div
-      v-else-if="filtered.length === 0"
-      class="text-center py-16 text-background-500 border border-background-300 dark:border-background-700 rounded-xl"
-    >
-      <span class="material-symbols-rounded text-4xl block mb-2">history</span>
-      <p class="text-sm">{{ t('audit.empty') }}</p>
-    </div>
+    <!-- Tabela -->
+    <div v-else class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
+      <div class="grid grid-cols-12 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
+        <span class="col-span-2 text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('audit.cols.date') }}</span>
+        <span class="col-span-2 text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('audit.cols.user') }}</span>
+        <span class="col-span-1 text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('audit.cols.action') }}</span>
+        <span class="col-span-7 text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('audit.cols.label') }}</span>
+      </div>
 
-    <!-- Lista de cartões (estilo activity feed) -->
-    <div v-else class="flex flex-col gap-2">
+      <div v-if="filtered.length === 0" class="text-center py-12 text-background-500">
+        <span class="material-symbols-rounded text-4xl block mb-2">history</span>
+        <p class="text-sm">{{ t('audit.empty') }}</p>
+      </div>
+
       <div
         v-for="log in filtered"
         :key="log.id"
-        class="rounded-xl px-4 py-3 bg-primary-50 dark:bg-background-800 border border-primary-100 dark:border-background-700 flex items-center justify-between gap-4"
+        class="grid grid-cols-12 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 items-center"
       >
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-950 flex items-center justify-center flex-shrink-0">
-            <span class="text-[11px] font-semibold text-primary-600 dark:text-primary-300">{{ initials(log.userName) }}</span>
-          </div>
-
-          <div class="min-w-0">
-            <span
-              class="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full mb-1"
-              :class="actionClass(log.action)"
-            >
-              {{ t(`audit.actions.${log.action}`) }}
-            </span>
-            <p class="text-sm text-background-800 dark:text-background-100 truncate">
-              {{ sentence(log) }}
-            </p>
-          </div>
+        <!-- Data -->
+        <div class="col-span-2">
+          <p class="text-sm text-background-700 dark:text-background-300">{{ displayTime(log.createdAt) }}</p>
+          <p class="text-xs text-background-400">{{ formatDate(log.createdAt) }}</p>
         </div>
 
-        <div class="text-right flex-shrink-0 leading-tight">
-          <p class="text-sm text-background-600 dark:text-background-300">{{ displayTime(log.createdAt) }}</p>
-          <p class="text-xs text-background-400">{{ formatDate(log.createdAt) }}</p>
+        <!-- Utilizador -->
+        <div class="col-span-2 flex items-center gap-2 min-w-0">
+          <div class="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-950 flex items-center justify-center flex-shrink-0">
+            <span class="text-[10px] font-semibold text-primary-600 dark:text-primary-300">{{ initials(log.userName) }}</span>
+          </div>
+          <span class="text-sm text-background-700 dark:text-background-300 truncate">{{ log.userName }}</span>
+        </div>
+
+        <!-- Ação -->
+        <div class="col-span-1">
+          <span
+            class="text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+            :class="actionClass(log.action)"
+          >
+            {{ t(`audit.actions.${log.action}`) }}
+          </span>
+        </div>
+
+        <!-- Frase por extenso (ação + entidade + objeto) -->
+        <div class="col-span-7 min-w-0">
+          <span class="text-sm text-background-700 dark:text-background-200 truncate block">{{ sentence(log) }}</span>
         </div>
       </div>
     </div>

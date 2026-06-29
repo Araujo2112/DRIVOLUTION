@@ -37,14 +37,14 @@ public class ClientOrderService : IClientOrderService
     public async Task<IEnumerable<ClientOrderDTO>> GetAll()
     {
         var items = await _repo.GetAll();
-        return items.Select(c => new ClientOrderDTO(c.Id, c.OrderNumber, c.OrderDate, c.CustomerName, c.Quantity));
+        return items.Select(c => new ClientOrderDTO(c.Id, c.OrderNumber, c.OrderDate, c.AppUserId, c.AppUser?.Name ?? "", c.Quantity));
     }
 
     public async Task<ClientOrderDTO?> GetById(int id)
     {
         var item = await _repo.GetById(id);
         if (item == null) return null;
-        return new ClientOrderDTO(item.Id, item.OrderNumber, item.OrderDate, item.CustomerName, item.Quantity);
+        return new ClientOrderDTO(item.Id, item.OrderNumber, item.OrderDate, item.AppUserId, item.AppUser?.Name ?? "", item.Quantity);
     }
 
     private async Task<List<int>> ResolveOptionIds(ConfigModel configCategory, List<ConfigSelectionDTO>? selections)
@@ -93,7 +93,7 @@ public class ClientOrderService : IClientOrderService
         {
             OrderNumber = dto.OrderNumber,
             OrderDate = dto.OrderDate,
-            CustomerName = dto.CustomerName,
+            AppUserId = dto.AppUserId,
             Quantity = dto.Quantity
         };
         var createdOrder = await _repo.Create(clientOrder);
@@ -139,7 +139,7 @@ public class ClientOrderService : IClientOrderService
             summaryItems.Add(new ProductSummaryDTO(product.Id, product.SerialNumber, mo.ManufacturingOrderNumber));
         }
 
-        return new CreateClientOrderResultDTO(createdOrder.Id, createdOrder.CustomerName, createdOrder.Quantity, summaryItems);
+        return new CreateClientOrderResultDTO(createdOrder.Id, createdOrder.AppUser?.Name ?? "", createdOrder.Quantity, summaryItems);
     }
 
     public async Task<bool> Update(int id, UpdateClientOrderDTO dto)
@@ -149,7 +149,7 @@ public class ClientOrderService : IClientOrderService
 
         if (dto.OrderNumber != null) entity.OrderNumber = dto.OrderNumber;
         if (dto.OrderDate != null) entity.OrderDate = dto.OrderDate.Value;
-        if (dto.CustomerName != null) entity.CustomerName = dto.CustomerName;
+        if (dto.AppUserId != null) entity.AppUserId = dto.AppUserId.Value;
         if (dto.Quantity != null) entity.Quantity = dto.Quantity.Value;
 
         await _repo.Update(entity);

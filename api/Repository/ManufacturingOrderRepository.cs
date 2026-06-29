@@ -8,12 +8,13 @@ public class ManufacturingOrderRepository : IManufacturingOrderRepository
     private readonly ApplicationDbContext _context;
     public ManufacturingOrderRepository(ApplicationDbContext context) => _context = context;
     public async Task<IEnumerable<ManufacturingOrderModel>> GetAll() =>
-        await _context.ManufacturingOrders.Include(mo => mo.ClientOrder).ToListAsync();
+        await _context.ManufacturingOrders.Include(mo => mo.ClientOrder).ThenInclude(c => c.AppUser).ToListAsync();
     public async Task<ManufacturingOrderModel?> GetById(int id) =>
-        await _context.ManufacturingOrders.Include(mo => mo.ClientOrder).FirstOrDefaultAsync(mo => mo.Id == id);
+        await _context.ManufacturingOrders.Include(mo => mo.ClientOrder).ThenInclude(c => c.AppUser).FirstOrDefaultAsync(mo => mo.Id == id);
     public async Task<ManufacturingOrderModel?> GetByIdWithDetails(int id) =>
         await _context.ManufacturingOrders
             .Include(mo => mo.ClientOrder)
+                .ThenInclude(c => c.AppUser)
             .Include(mo => mo.Products)
                 .ThenInclude(p => p.CarModel)
             .Include(mo => mo.Products)
@@ -25,11 +26,14 @@ public class ManufacturingOrderRepository : IManufacturingOrderRepository
                     .ThenInclude(pp => pp.ManufacturingPhase)
             .FirstOrDefaultAsync(mo => mo.Id == id);
     public async Task<IEnumerable<ManufacturingOrderModel>> GetByStatus(string status) =>
-        await _context.ManufacturingOrders.Where(mo => mo.Status == status).Include(mo => mo.ClientOrder).ToListAsync();
+        await _context.ManufacturingOrders.Where(mo => mo.Status == status).Include(mo => mo.ClientOrder).ThenInclude(c => c.AppUser).ToListAsync();
     public async Task<ManufacturingOrderModel> Create(ManufacturingOrderModel entity)
     {
         _context.ManufacturingOrders.Add(entity);
         await _context.SaveChangesAsync();
+        await _context.Entry(entity).Reference(mo => mo.ClientOrder).LoadAsync();
+        if (entity.ClientOrder != null)
+            await _context.Entry(entity.ClientOrder).Reference(c => c.AppUser).LoadAsync();
         return entity;
     }
     public async Task Update(ManufacturingOrderModel entity)

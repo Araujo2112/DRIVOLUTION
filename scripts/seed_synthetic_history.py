@@ -59,6 +59,9 @@ def main():
 
         ensure_phase_sequences(cur, models, phases)
 
+        client_user_id = ensure_test_client_user(cur)
+        print(f"✓ Conta de cliente de teste (app_user_id={client_user_id})")
+
         for model_name, model_id in models.items():
             if model_name not in deltas:
                 print(f"  [aviso] sem deltas definidos para '{model_name}', a saltar.")
@@ -68,7 +71,7 @@ def main():
             print(f"\n=== Gerando histórico para {model_name} (id={model_id}) ===")
             create_history_for_model(
                 cur, model_name, model_id, configs, deltas[model_name], base_deltas,
-                phases, workstations, lines
+                phases, workstations, lines, client_user_id
             )
 
         conn.commit()
@@ -84,6 +87,22 @@ def main():
 def load_models(cur):
     cur.execute("SELECT id, name FROM model ORDER BY id;")
     return {name: mid for mid, name in cur.fetchall()}
+
+
+def ensure_test_client_user(cur):
+    """
+    Garante uma conta app_user com role='client' para usar como app_user_id
+    nas client_order sintéticas. Reutiliza se já existir (ON CONFLICT por email).
+    Hash de password fixo e inválido — esta conta nunca faz login real.
+    """
+    cur.execute(
+        "INSERT INTO app_user (name, email, password_hash, role, status, must_change_password) "
+        "VALUES (%s, %s, %s, 'client', 'active', false) "
+        "ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email "
+        "RETURNING id;",
+        ("Cliente de Teste (seed)", "seed-client@drivolution.test", "SEED_ACCOUNT_NO_LOGIN")
+    )
+    return cur.fetchone()[0]
 
 
 def load_phases(cur):
@@ -148,14 +167,14 @@ def lookup_delta_minutes(model_deltas, config_item, option_value, phase_name):
 
 
 def create_history_for_model(cur, model_name, model_id, configs, model_deltas, base_deltas,
-                              phases, workstations, lines):
+                              phases, workstations, lines, client_user_id):
     order_number = f"SEED-{model_id}-{random.randint(1000, 9999)}"
     order_date = datetime.utcnow() - timedelta(days=random.randint(1, ORDER_SPREAD_DAYS))
 
     cur.execute(
-        "INSERT INTO client_order (order_number, order_date, customer_name, quantity) "
+        "INSERT INTO client_order (order_number, order_date, app_user_id, quantity) "
         "VALUES (%s, %s, %s, %s) RETURNING id;",
-        (order_number, order_date, "Cliente Interno (dados sintéticos)", PRODUCTS_PER_MODEL)
+        (order_number, order_date, client_user_id, PRODUCTS_PER_MODEL)
     )
     client_order_id = cur.fetchone()[0]
 

@@ -76,11 +76,14 @@ def main():
 
         ensure_phase_sequences(cur, models, phases)
 
+        client_user_id = ensure_test_client_user(cur)
+        print(f"✓ Conta de cliente de teste (app_user_id={client_user_id})")
+
         now = datetime.utcnow()
         cur.execute(
-            "INSERT INTO client_order (order_number, order_date, customer_name, quantity) "
+            "INSERT INTO client_order (order_number, order_date, app_user_id, quantity) "
             "VALUES (%s, %s, %s, %s) RETURNING id;",
-            ("ORD-WIP-TEST", now - timedelta(days=2), "WIP Test Client", 20)
+            ("ORD-WIP-TEST", now - timedelta(days=2), client_user_id, 20)
         )
         client_order_id = cur.fetchone()[0]
         print(f"✓ ClientOrder criada (id={client_order_id})")
@@ -258,6 +261,24 @@ def load_phases(cur):
 def load_supports(cur):
     cur.execute("SELECT id, rfid_tag FROM support ORDER BY id;")
     return [{"id": sid, "rfid_tag": tag} for sid, tag in cur.fetchall()]
+
+
+def ensure_test_client_user(cur):
+    """
+    Garante uma conta app_user com role='client' para usar como app_user_id
+    nas client_order de seed. Reutiliza se já existir (ON CONFLICT por email).
+
+    O password_hash é um valor fixo, claramente inválido para BCrypt — esta
+    conta nunca é usada para login real, só para satisfazer a FK de teste.
+    """
+    cur.execute(
+        "INSERT INTO app_user (name, email, password_hash, role, status, must_change_password) "
+        "VALUES (%s, %s, %s, 'client', 'active', false) "
+        "ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email "
+        "RETURNING id;",
+        ("Cliente de Teste (seed)", "seed-client@drivolution.test", "SEED_ACCOUNT_NO_LOGIN")
+    )
+    return cur.fetchone()[0]
 
 
 def ensure_phase_sequences(cur, models, phases):

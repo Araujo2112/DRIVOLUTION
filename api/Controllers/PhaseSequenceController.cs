@@ -14,12 +14,14 @@ namespace Drivolution.Controllers;
 public class PhaseSequenceController : ControllerBase
 {
     private readonly IPhaseSequenceRepository _repo;
+    private readonly ICarModelRepository      _carModelRepo;
     private readonly IAuditService            _audit;
 
-    public PhaseSequenceController(IPhaseSequenceRepository repo, IAuditService audit)
+    public PhaseSequenceController(IPhaseSequenceRepository repo, ICarModelRepository carModelRepo, IAuditService audit)
     {
-        _repo  = repo;
-        _audit = audit;
+        _repo         = repo;
+        _carModelRepo = carModelRepo;
+        _audit        = audit;
     }
 
     [HttpGet("model/{modelId}")]
@@ -36,7 +38,7 @@ public class PhaseSequenceController : ControllerBase
         var created = await _repo.Create(entity);
 
         var (userId, userName) = User.GetAuditUser();
-        await _audit.LogAsync(userId, userName, "created", "phase_sequence", created.Id, $"Modelo {created.ModelId} – Ordem {created.Order}");
+        await _audit.LogAsync(userId, userName, "created", "phase_sequence", created.Id, await BuildLabelAsync(created));
 
         return CreatedAtAction(nameof(GetByModel), new { modelId = created.ModelId },
             new PhaseSequenceDTO(created.Id, created.Order, created.ManufacturingPhaseId, "", created.ModelId));
@@ -51,7 +53,7 @@ public class PhaseSequenceController : ControllerBase
         await _repo.Update(entity);
 
         var (userId, userName) = User.GetAuditUser();
-        await _audit.LogAsync(userId, userName, "updated", "phase_sequence", entity.Id, $"Modelo {entity.ModelId} – Ordem {entity.Order}");
+        await _audit.LogAsync(userId, userName, "updated", "phase_sequence", entity.Id, await BuildLabelAsync(entity));
 
         return NoContent();
     }
@@ -61,11 +63,21 @@ public class PhaseSequenceController : ControllerBase
     {
         var entity = await _repo.GetById(id);
         if (entity == null) return NotFound();
+
+        var label = await BuildLabelAsync(entity);
         await _repo.Delete(id);
 
         var (userId, userName) = User.GetAuditUser();
-        await _audit.LogAsync(userId, userName, "deleted", "phase_sequence", id, $"Modelo {entity.ModelId} – Ordem {entity.Order}");
+        await _audit.LogAsync(userId, userName, "deleted", "phase_sequence", id, label);
 
         return NoContent();
+    }
+
+    // Inclui o nome do Modelo de Carro (em vez do ID) no label do audit log.
+    private async Task<string> BuildLabelAsync(PhaseSequenceModel entity)
+    {
+        var carModel = await _carModelRepo.GetById(entity.ModelId);
+        var modelName = carModel?.Name ?? $"ID {entity.ModelId}";
+        return $"Modelo: {modelName} – Ordem {entity.Order}";
     }
 }

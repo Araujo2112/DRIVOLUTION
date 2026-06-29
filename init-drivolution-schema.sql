@@ -21,14 +21,6 @@ CREATE TABLE IF NOT EXISTS model (
     type VARCHAR(100)
 );
 
-CREATE TABLE IF NOT EXISTS client_order (
-    id SERIAL PRIMARY KEY,
-    order_number VARCHAR(100) NOT NULL,
-    order_date TIMESTAMP NOT NULL,
-    customer_name VARCHAR(150) NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 1
-);
-
 CREATE TABLE IF NOT EXISTS manufacturing_phase (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -73,6 +65,34 @@ CREATE TABLE IF NOT EXISTS support (
         FOREIGN KEY (production_line_id)
         REFERENCES production_line(id)
 );
+
+CREATE TABLE IF NOT EXISTS app_user (
+    id                   SERIAL PRIMARY KEY,
+    name                 VARCHAR(100) NOT NULL,
+    email                VARCHAR(150) NOT NULL UNIQUE,
+    password_hash        VARCHAR(255) NOT NULL,
+    role                 VARCHAR(20)  NOT NULL DEFAULT 'operator',
+    status               VARCHAR(20)  NOT NULL DEFAULT 'active',
+    must_change_password BOOLEAN      NOT NULL DEFAULT true,
+    created_at           TIMESTAMP    NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_app_user_role   CHECK (role   IN ('admin', 'operator', 'client', 'manager')),
+    CONSTRAINT chk_app_user_status CHECK (status IN ('active', 'inactive'))
+);
+
+-- ============================================================
+-- Card K.O — Portal do Cliente
+-- customer_name removido; nome vem de app_user via JOIN
+-- ============================================================
+CREATE TABLE IF NOT EXISTS client_order (
+    id           SERIAL PRIMARY KEY,
+    order_number VARCHAR(100) NOT NULL,
+    order_date   TIMESTAMP    NOT NULL,
+    quantity     INTEGER      NOT NULL DEFAULT 1,
+    app_user_id  INTEGER      NOT NULL REFERENCES app_user(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_client_order_user ON client_order(app_user_id);
 
 CREATE TABLE IF NOT EXISTS manufacturing_order (
     id SERIAL PRIMARY KEY,
@@ -339,20 +359,6 @@ CREATE TABLE IF NOT EXISTS phase_time_coefficient (
         REFERENCES model(id)
 );
 
-CREATE TABLE IF NOT EXISTS app_user (
-    id              SERIAL PRIMARY KEY,
-    name            VARCHAR(100) NOT NULL,
-    email           VARCHAR(150) NOT NULL UNIQUE,
-    password_hash   VARCHAR(255) NOT NULL,
-    role            VARCHAR(20)  NOT NULL DEFAULT 'operator',
-    status          VARCHAR(20)  NOT NULL DEFAULT 'active',
-    must_change_password BOOLEAN NOT NULL DEFAULT true,
-    created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT chk_app_user_role   CHECK (role   IN ('admin', 'operator', 'client', 'manager')),
-    CONSTRAINT chk_app_user_status CHECK (status IN ('active', 'inactive'))
-);
-
 CREATE TABLE IF NOT EXISTS workstation_presence (
     id               SERIAL PRIMARY KEY,
     app_user_id      INTEGER NOT NULL,
@@ -381,7 +387,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     entity_label VARCHAR(255),
     created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT chk_audit_log_action CHECK (action IN ('created', 'updated', 'deleted')),
+    CONSTRAINT chk_audit_log_action CHECK (action IN ('created', 'updated', 'deleted', 'activated', 'deactivated', 'password_reset')),
     CONSTRAINT chk_audit_log_entity CHECK (entity IN ('car_model', 'phase', 'phase_sequence', 'production_line', 'workstation', 'support', 'order', 'user', 'config', 'config_option'))
 );
 

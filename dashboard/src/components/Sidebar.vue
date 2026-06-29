@@ -43,6 +43,13 @@ const auth = useAuthStore()
           </SidebarItem>
           <SidebarItem icon="assignment" path="manufacturingOrders">{{ $t('mo.nav') }}</SidebarItem>
           <SidebarItem icon="directions_car" path="products">{{ $t('products.nav') }}</SidebarItem>
+          <SidebarItem
+            v-if="auth.isAdmin || auth.isManager"
+            icon="people"
+            path="clients"
+          >
+            {{ $t('clients.nav') }}
+          </SidebarItem>
         </template>
 
         <template v-if="auth.isAdmin || auth.isManager || auth.isOperator">

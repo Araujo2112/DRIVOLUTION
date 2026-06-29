@@ -18,19 +18,17 @@ public class ClientOrderModel
     [Required]
     public DateTime OrderDate { get; set; }
 
-    [Column("customer_name")]
+    [Column("app_user_id")]
     [Required]
-    public string CustomerName { get; set; } = string.Empty;
+    public int AppUserId { get; set; }
 
     [Column("quantity")]
     [Required]
     public int Quantity { get; set; } = 1;
 
-    [Column("app_user_id")]
-    public int? AppUserId { get; set; }
-
     // Navigation
-    public UserModel? AppUser { get; set; }
+    [ForeignKey("AppUserId")]
+    public UserModel AppUser { get; set; } = null!;
 
     public ICollection<ManufacturingOrderModel> ManufacturingOrders { get; set; } = new List<ManufacturingOrderModel>();
 }

@@ -33,6 +33,12 @@ FIWARE_SERVICEPATH = "/"
 APIKEY    = "drivolution-key"
 RESOURCE  = "/iot/json"
 
+# Credenciais do admin seedado na BD (init-drivolution-schema.sql).
+# A maioria dos endpoints da API agora exige [Authorize], por isso o script
+# precisa de um JWT válido antes de poder criar fases/linhas/workstations/etc.
+ADMIN_EMAIL    = "admin@drivolution.pt"
+ADMIN_PASSWORD = "12345678"
+
 HEADERS_LD = {
     "Content-Type": "application/ld+json",
     "FIWARE-Service": FIWARE_SERVICE,
@@ -47,6 +53,9 @@ IOT_HEADERS = {
     "FIWARE-Service": FIWARE_SERVICE,
     "FIWARE-ServicePath": FIWARE_SERVICEPATH,
 }
+
+# Preenchido por login() — usado em todos os pedidos à API do Drivolution.
+AUTH_HEADERS = {}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Dados a replicar (espelho exato do ambiente do Tiago)
@@ -98,14 +107,33 @@ SKIDS = [
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+def login():
+    """Autentica como admin e guarda o JWT para usar em todos os pedidos seguintes."""
+    print("A autenticar como admin...", end="", flush=True)
+    r = requests.post(
+        f"{API_BASE}/Auth/login",
+        json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        timeout=10,
+    )
+    if r.status_code != 200:
+        print(" ✗")
+        print(f"   Login falhou ({r.status_code}): {r.text[:200]}")
+        print("   Confirma ADMIN_EMAIL/ADMIN_PASSWORD no topo deste script.")
+        sys.exit(1)
+
+    token = r.json()["token"]
+    AUTH_HEADERS["Authorization"] = f"Bearer {token}"
+    print(" ✓")
+
+
 def post(path, body):
-    r = requests.post(f"{API_BASE}/{path}", json=body, timeout=10)
+    r = requests.post(f"{API_BASE}/{path}", json=body, headers=AUTH_HEADERS, timeout=10)
     if r.status_code not in (200, 201):
         raise RuntimeError(f"POST /{path} → {r.status_code}: {r.text[:200]}")
     return r.json()
 
 def get(path):
-    r = requests.get(f"{API_BASE}/{path}", timeout=10)
+    r = requests.get(f"{API_BASE}/{path}", headers=AUTH_HEADERS, timeout=10)
     if r.status_code != 200:
         raise RuntimeError(f"GET /{path} → {r.status_code}: {r.text[:200]}")
     data = r.json()
@@ -115,7 +143,7 @@ def wait_for_api():
     print("A aguardar a API...", end="", flush=True)
     for _ in range(20):
         try:
-            requests.get(f"{API_BASE}/ManufacturingPhase", timeout=3)
+            requests.get(f"{API_BASE.replace('/api','')}/", timeout=3)
             print(" ✓")
             return
         except Exception:
@@ -323,6 +351,7 @@ def main():
     print("=" * 55)
 
     wait_for_api()
+    login()
     check_existing()
 
     phase_ids = create_phases()

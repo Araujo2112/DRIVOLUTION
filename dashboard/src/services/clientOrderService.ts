@@ -4,14 +4,15 @@ export interface ClientOrder {
   id: number
   orderNumber: string
   orderDate: string
-  customerName: string
+  appUserId: number
+  clientName: string
   quantity: number
 }
 
 export interface CreateClientOrderDTO {
   orderNumber: string
   orderDate: string
-  customerName: string
+  appUserId: number
   quantity: number
   modelId: number
   configs: { configOptionId: number }[]
@@ -25,7 +26,7 @@ export interface ProductSummary {
 
 export interface CreateClientOrderResult {
   orderId: number
-  customerName: string
+  clientName: string
   totalQuantity: number
   productsCreated: ProductSummary[]
 }

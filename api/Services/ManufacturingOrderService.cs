@@ -36,7 +36,7 @@ public class ManufacturingOrderService : IManufacturingOrderService
         return new ManufacturingOrderDetailDTO(
             mo.Id,
             mo.ClientOrderId,
-            mo.ClientOrder?.CustomerName ?? "",
+            mo.ClientOrder?.AppUser?.Name ?? "",
             mo.ManufacturingOrderNumber,
             mo.StartDate,
             mo.EndDate,
@@ -108,7 +108,7 @@ public class ManufacturingOrderService : IManufacturingOrderService
         new ManufacturingOrderDTO(
             mo.Id, 
             mo.ClientOrderId, 
-            mo.ClientOrder?.CustomerName ?? "", 
+            mo.ClientOrder?.AppUser?.Name ?? "", 
             mo.ManufacturingOrderNumber, 
             mo.StartDate, 
             mo.EndDate, 

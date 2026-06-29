@@ -1,3 +1,5 @@
+import { createI18n } from 'vue-i18n'
+
 export const messages = {
   pt: {
     common: {
@@ -95,6 +97,9 @@ export const messages = {
         created: 'Criado',
         updated: 'Editado',
         deleted: 'Eliminado',
+        activated: 'Ativado',
+        deactivated: 'Desativado',
+        password_reset: 'Password Reposta',
       },
       entities: {
         car_model: 'Modelo de Carro',
@@ -112,6 +117,9 @@ export const messages = {
         created: '{user} criou {entity} "{label}"',
         updated: '{user} editou {entity} "{label}"',
         deleted: '{user} eliminou {entity} "{label}"',
+        activated: '{user} ativou a conta de "{label}"',
+        deactivated: '{user} desativou a conta de "{label}"',
+        password_reset: '{user} repôs a password de "{label}"',
       },
     },
     presence: {
@@ -343,7 +351,7 @@ export const messages = {
         quantity: 'Quantidade',
         model: 'Modelo',
         customer: 'Cliente',
-        customerPlaceholder: 'Ex: Toyota Portugal',
+        customerPlaceholder: 'Selecionar cliente...',
         date: 'Data',
         orderNumberPlaceholder: 'Ex: ORD-2024-001',
         modelPlaceholder: 'Selecionar modelo...',
@@ -354,6 +362,8 @@ export const messages = {
       createdSuccess: 'Encomenda criada com sucesso.',
       optionalDefault: 'opcional, usa padrão se não selecionado',
       useDefault: '-- Usar opção padrão --',
+      selectClientFirst: 'Seleciona primeiro um cliente.',
+      noClients: 'Nenhum cliente registado. Cria primeiro um cliente em Clientes.',
     },
     mo: {
       nav: 'Ordens de Fabrico',
@@ -706,8 +716,69 @@ export const messages = {
       },
       noData: 'Sem dados.',
     },
+
+    // ── Card K.O — Portal do Cliente ─────────────────────────
+    client: {
+      portal: 'Portal do Cliente',
+      logout: 'Sair',
+      orders: {
+        title: 'As Minhas Encomendas',
+        subtitle: 'Acompanhe o estado de produção dos seus veículos',
+        orderNumber: 'Encomenda',
+        inProgress: 'Em produção',
+        done: 'Concluída',
+        empty: 'Não tem encomendas associadas à sua conta.',
+      },
+      detail: {
+        title: 'Encomenda',
+        back: 'Voltar',
+        cars: 'veículos',
+        completed: 'Concluído',
+        inProduction: 'Em produção',
+        eta: 'Previsão',
+        etaUnavailable: 'Previsão indisponível',
+        notFound: 'Encomenda não encontrada.',
+      },
+    },
+
+    // ── Card K.O — Gestão de Clientes ────────────────────────
+    clients: {
+      nav: 'Clientes',
+      title: 'Clientes',
+      subtitle: 'Gerir contas de acesso ao portal do cliente.',
+      new: 'Novo Cliente',
+      empty: 'Nenhum cliente registado.',
+      edit: 'Editar',
+      editTitle: 'Editar Cliente',
+      resetPassword: 'Repor Password',
+      resetPasswordTitle: 'Repor Password',
+      reset: 'Repor',
+      deactivate: 'Desativar',
+      activate: 'Ativar',
+      cancel: 'Cancelar',
+      create: 'Criar',
+      save: 'Guardar',
+      saving: 'A guardar...',
+      statusActive: 'Ativo',
+      statusInactive: 'Inativo',
+      validationRequired: 'Preencha todos os campos.',
+      errorCreate: 'Erro ao criar cliente.',
+      fields: {
+        name: 'Nome',
+        email: 'Email',
+        status: 'Estado',
+        createdAt: 'Criado em',
+      },
+      placeholders: {
+        name: 'Nome do cliente',
+        email: 'email@empresa.com',
+        password: 'Password inicial',
+        newPassword: 'Nova password',
+      },
+    },
   },
 
+  // ════════════════════════════════════════════════════════════
   en: {
     common: {
       save: 'Save',
@@ -804,6 +875,9 @@ export const messages = {
         created: 'Created',
         updated: 'Updated',
         deleted: 'Deleted',
+        activated: 'Activated',
+        deactivated: 'Deactivated',
+        password_reset: 'Password Reset',
       },
       entities: {
         car_model: 'Car Model',
@@ -821,6 +895,9 @@ export const messages = {
         created: '{user} created {entity} "{label}"',
         updated: '{user} updated {entity} "{label}"',
         deleted: '{user} deleted {entity} "{label}"',
+        activated: '{user} activated "{label}"\'s account',
+        deactivated: '{user} deactivated "{label}"\'s account',
+        password_reset: '{user} reset the password of "{label}"',
       },
     },
     presence: {
@@ -1052,7 +1129,7 @@ export const messages = {
         quantity: 'Quantity',
         model: 'Model',
         customer: 'Customer',
-        customerPlaceholder: 'E.g. Toyota Portugal',
+        customerPlaceholder: 'Select client...',
         date: 'Date',
         orderNumberPlaceholder: 'E.g. ORD-2024-001',
         modelPlaceholder: 'Select model...',
@@ -1063,6 +1140,8 @@ export const messages = {
       createdSuccess: 'Order created successfully.',
       optionalDefault: 'optional, uses default if not selected',
       useDefault: '-- Use default option --',
+      selectClientFirst: 'Please select a client first.',
+      noClients: 'No clients registered. Create a client under Clients first.',
     },
     mo: {
       nav: 'Manufacturing Orders',
@@ -1415,5 +1494,74 @@ export const messages = {
       },
       noData: 'No data.',
     },
+
+    // ── Card K.O — Client Portal ──────────────────────────────
+    client: {
+      portal: 'Client Portal',
+      logout: 'Logout',
+      orders: {
+        title: 'My Orders',
+        subtitle: 'Track the production status of your vehicles',
+        orderNumber: 'Order',
+        inProgress: 'In production',
+        done: 'Completed',
+        empty: 'No orders linked to your account.',
+      },
+      detail: {
+        title: 'Order',
+        back: 'Back',
+        cars: 'vehicles',
+        completed: 'Completed',
+        inProduction: 'In production',
+        eta: 'ETA',
+        etaUnavailable: 'ETA unavailable',
+        notFound: 'Order not found.',
+      },
+    },
+
+    // ── Card K.O — Client Account Management ─────────────────
+    clients: {
+      nav: 'Clients',
+      title: 'Clients',
+      subtitle: 'Manage client portal accounts.',
+      new: 'New Client',
+      empty: 'No clients registered.',
+      edit: 'Edit',
+      editTitle: 'Edit Client',
+      resetPassword: 'Reset Password',
+      resetPasswordTitle: 'Reset Password',
+      reset: 'Reset',
+      deactivate: 'Deactivate',
+      activate: 'Activate',
+      cancel: 'Cancel',
+      create: 'Create',
+      save: 'Save',
+      saving: 'Saving...',
+      statusActive: 'Active',
+      statusInactive: 'Inactive',
+      validationRequired: 'Please fill in all fields.',
+      errorCreate: 'Error creating client.',
+      fields: {
+        name: 'Name',
+        email: 'Email',
+        status: 'Status',
+        createdAt: 'Created at',
+      },
+      placeholders: {
+        name: 'Client name',
+        email: 'email@company.com',
+        password: 'Initial password',
+        newPassword: 'New password',
+      },
+    },
   },
 }
+
+const i18n = createI18n({
+  legacy: false,
+  locale: localStorage.getItem('drivolution_locale') ?? 'pt',
+  fallbackLocale: 'pt',
+  messages,
+})
+
+export default i18n

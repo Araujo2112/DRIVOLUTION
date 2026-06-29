@@ -69,7 +69,7 @@
                 <div class="text-xs text-background-400 mt-0.5">ID #{{ order.id }}</div>
               </div>
             </div>
-            <span class="text-sm text-background-700 dark:text-background-300">{{ order.customerName }}</span>
+            <span class="text-sm text-background-700 dark:text-background-300">{{ order.clientName }}</span>
             <span class="text-sm text-background-500">{{ formatDate(order.startDate) }}</span>
             <div>
               <span class="text-xs font-medium px-2 py-1 rounded-full" :class="statusClass(order.status)">

@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using Drivolution.DTO;
+using Drivolution.Extensions;
 using Drivolution.Repository.Interface;
+using Drivolution.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,10 +21,12 @@ public class UserController : ControllerBase
     private const int    TemporaryPasswordLength = 12;
 
     private readonly IUserRepository _userRepo;
+    private readonly IAuditService   _audit;
 
-    public UserController(IUserRepository userRepo)
+    public UserController(IUserRepository userRepo, IAuditService audit)
     {
         _userRepo = userRepo;
+        _audit    = audit;
     }
 
     // GET /api/User
@@ -31,6 +35,20 @@ public class UserController : ControllerBase
     {
         var users = await _userRepo.GetAllAsync();
         return Ok(users.Select(MapToDTO));
+    }
+
+    // GET /api/User/clients — lista de contas "client" ativas, para dropdowns
+    // (ex: selecionar cliente ao criar uma encomenda). Aberto a admin e manager,
+    // que são os roles que podem criar encomendas.
+    [HttpGet("clients")]
+    [Authorize(Roles = "admin,manager")]
+    public async Task<IActionResult> GetClients()
+    {
+        var users = await _userRepo.GetAllAsync();
+        var clients = users
+            .Where(u => u.Role == "client" && u.Status == "active")
+            .Select(u => new ClientOptionDTO(u.Id, u.Name));
+        return Ok(clients);
     }
 
     // PUT /api/User/{id}  — editar nome, role e estado
@@ -45,13 +63,21 @@ public class UserController : ControllerBase
         if (user.Role == "admin")
             return BadRequest("Não é possível editar a conta de administrador.");
 
-        if (!string.IsNullOrWhiteSpace(dto.Name))
+        var (auditUserId, auditUserName) = User.GetAuditUser();
+        var previousStatus = user.Status;
+        var nameOrRoleChanged = false;
+
+        if (!string.IsNullOrWhiteSpace(dto.Name) && dto.Name.Trim() != user.Name)
+        {
             user.Name = dto.Name.Trim();
+            nameOrRoleChanged = true;
+        }
 
         if (!string.IsNullOrWhiteSpace(dto.Role))
         {
             if (!ValidRoles.Contains(dto.Role))
                 return BadRequest($"Role inválido. Valores aceites: {string.Join(", ", ValidRoles)}.");
+            if (dto.Role != user.Role) nameOrRoleChanged = true;
             user.Role = dto.Role;
         }
 
@@ -63,6 +89,20 @@ public class UserController : ControllerBase
         }
 
         await _userRepo.UpdateAsync(user);
+
+        // Ativar/desativar é auditado como ação própria, distinta de uma edição normal —
+        // é uma ação de segurança (corta/reabre acesso de alguém à plataforma).
+        if (previousStatus != user.Status)
+        {
+            var action = user.Status == "active" ? "activated" : "deactivated";
+            await _audit.LogAsync(auditUserId, auditUserName, action, "user", user.Id, user.Name);
+        }
+
+        if (nameOrRoleChanged)
+        {
+            await _audit.LogAsync(auditUserId, auditUserName, "updated", "user", user.Id, user.Name);
+        }
+
         return Ok(MapToDTO(user));
     }
 
@@ -82,6 +122,9 @@ public class UserController : ControllerBase
         user.MustChangePassword  = true;
 
         await _userRepo.UpdateAsync(user);
+
+        var (auditUserId, auditUserName) = User.GetAuditUser();
+        await _audit.LogAsync(auditUserId, auditUserName, "password_reset", "user", user.Id, user.Name);
 
         return Ok(new ResetPasswordResponseDTO { TemporaryPassword = temporaryPassword });
     }

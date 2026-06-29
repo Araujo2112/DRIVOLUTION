@@ -474,7 +474,7 @@ function initHierarchyGraph() {
   const addNode = (n: Omit<HNode, 'x' | 'y'>) => nodes.push({ ...n, x: 0, y: 0 })
   const addEdge = (e: HEdge) => edges.push(e)
 
-  const clientName = clientOrder.value?.customerName ?? manufacturingOrder.value?.customerName ?? 'Cliente'
+  const clientName = clientOrder.value?.clientName ?? manufacturingOrder.value?.clientName ?? 'Cliente'
   addNode({
     id: 'client', type: 'client', typeLabel: t('timeline.graphNodes.client'),
     nameLabel: clientName,
@@ -492,7 +492,7 @@ function initHierarchyGraph() {
     tooltipRows: clientOrder.value ? [
       { label: 'Número', value: clientOrder.value.orderNumber },
       { label: 'Data', value: formatDate(clientOrder.value.orderDate) },
-      { label: 'Cliente', value: clientOrder.value.customerName },
+      { label: 'Cliente', value: clientOrder.value.clientName },
     ] : [],
   })
   addEdge({ source: 'client', target: 'order', label: t('timeline.graphEdges.order') })

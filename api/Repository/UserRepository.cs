@@ -16,7 +16,7 @@ public class UserRepository : IUserRepository
     }
 
     // Paginação restrita a role="client" — só usada pela página de gestão de
-    // Clientes. A listagem genérica (Equipa) continua a usar GetAllAsync().
+    // Clientes. A Equipa (admin/manager/operator) usa GetTeamPagedAsync, abaixo.
     public async Task<PagedResultDTO<UserModel>> GetClientsPagedAsync(int page, int pageSize, string? search)
     {
         var query = _context.AppUsers.Where(u => u.Role == "client");
@@ -25,6 +25,40 @@ public class UserRepository : IUserRepository
         {
             var s = search.Trim().ToLower();
             query = query.Where(u => u.Name.ToLower().Contains(s));
+        }
+
+        var total = await query.CountAsync();
+
+        var data = await query
+            .OrderBy(u => u.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResultDTO<UserModel>
+        {
+            Data = data,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
+    // Paginação da Equipa (admin/manager/operator) — exclui role="client",
+    // que é gerido à parte em GetClientsPagedAsync/Clients.vue.
+    public async Task<PagedResultDTO<UserModel>> GetTeamPagedAsync(int page, int pageSize, string? search, string? role)
+    {
+        var query = _context.AppUsers.Where(u => u.Role != "client");
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            query = query.Where(u => u.Name.ToLower().Contains(s));
+        }
+
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            query = query.Where(u => u.Role == role);
         }
 
         var total = await query.CountAsync();

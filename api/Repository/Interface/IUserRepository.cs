@@ -6,6 +6,7 @@ namespace Drivolution.Repository.Interface;
 public interface IUserRepository
 {
     Task<PagedResultDTO<UserModel>> GetClientsPagedAsync(int page, int pageSize, string? search);
+    Task<PagedResultDTO<UserModel>> GetTeamPagedAsync(int page, int pageSize, string? search, string? role);
     Task<UserModel?> GetByEmailAsync(string email);
     Task<UserModel?> GetByIdAsync(int id);
     Task<IEnumerable<UserModel>> GetAllAsync();

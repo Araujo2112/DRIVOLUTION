@@ -26,27 +26,34 @@
         <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-background-400 text-base pointer-events-none">search</span>
         <input
           v-model="search"
+          @input="onSearchInput"
           type="text"
           :placeholder="t('team.searchPlaceholder')"
           class="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 placeholder-background-400 focus:outline-none focus:border-primary-400"
         />
       </div>
 
-      <select v-model="roleFilter" class="w-40 shrink-0">
-        <option value="all">{{ t('team.allRoles') }}</option>
+      <select v-model="roleFilter" @change="onRoleFilterChange" class="w-40 shrink-0">
+        <option value="">{{ t('common.allRoles') }}</option>
         <option value="admin">{{ t('team.roles.admin') }}</option>
         <option value="manager">{{ t('team.roles.manager') }}</option>
         <option value="operator">{{ t('team.roles.operator') }}</option>
       </select>
 
       <button
-        v-if="search || roleFilter !== 'all'"
+        v-if="search || roleFilter"
         @click="clearFilters"
         class="shrink-0 px-3 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 text-background-500 hover:text-background-700 dark:hover:text-background-300 hover:bg-background-100 dark:hover:bg-background-700 transition-colors"
-        title="Limpar filtros"
+        :title="t('common.clearFilters')"
       >
         <span class="material-symbols-rounded text-base align-middle">close</span>
       </button>
+
+      <select v-model="pageSize" @change="onPageSizeChange" class="ml-auto w-20 shrink-0">
+        <option :value="25">25</option>
+        <option :value="50">50</option>
+        <option :value="100">100</option>
+      </select>
     </div>
 
     <!-- Loading -->
@@ -70,13 +77,8 @@
         <p class="text-sm">{{ t('team.empty') }}</p>
       </div>
 
-      <div v-else-if="filteredUsers.length === 0" class="text-center py-12 text-background-500">
-        <span class="material-symbols-rounded text-4xl block mb-2">search_off</span>
-        <p class="text-sm">{{ t('team.noResults') }}</p>
-      </div>
-
       <div
-        v-for="user in filteredUsers"
+        v-for="user in users"
         :key="user.id"
         class="grid grid-cols-[2fr_1.5fr_1fr_1fr_44px] px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
       >
@@ -113,6 +115,36 @@
             <span class="material-symbols-rounded text-lg">edit</span>
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Paginação -->
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-background-600 dark:text-background-400">
+      <span>{{ t('common.showing', { from: (currentPage - 1) * pageSize + 1, to: Math.min(currentPage * pageSize, total), total }) }}</span>
+      <div class="flex gap-1">
+        <button
+          @click="goToPage(currentPage - 1)"
+          :disabled="currentPage === 1"
+          class="px-3 py-1.5 rounded-lg border border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <span class="material-symbols-rounded text-base">chevron_left</span>
+        </button>
+        <button
+          v-for="p in visiblePages"
+          :key="p"
+          @click="goToPage(p)"
+          class="px-3 py-1.5 rounded-lg border transition-colors"
+          :class="p === currentPage ? 'bg-primary-500 text-white border-primary-500' : 'border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700'"
+        >
+          {{ p }}
+        </button>
+        <button
+          @click="goToPage(currentPage + 1)"
+          :disabled="currentPage === totalPages"
+          class="px-3 py-1.5 rounded-lg border border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <span class="material-symbols-rounded text-base">chevron_right</span>
+        </button>
       </div>
     </div>
 
@@ -335,6 +367,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from '@/axios'
 import { toast } from '@/plugins/toast'
+import { clientUserService } from '@/services/clientUserService'
 
 const { t } = useI18n()
 
@@ -352,23 +385,21 @@ const loading = ref(false)
 const users   = ref<AppUser[]>([])
 const saving  = ref(false)
 
-// Filtros (client-side — lista pequena, sem necessidade de paginação no servidor)
-const search     = ref('')
-const roleFilter = ref<'all' | 'admin' | 'manager' | 'operator'>('all')
+// Filtro + paginação
+const search = ref('')
+const roleFilter = ref('')
+const total = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(25)
 
-const filteredUsers = computed(() => {
-  const term = search.value.trim().toLowerCase()
-  return users.value.filter(u => {
-    const matchesSearch = !term || u.name.toLowerCase().includes(term)
-    const matchesRole   = roleFilter.value === 'all' || u.role === roleFilter.value
-    return matchesSearch && matchesRole
-  })
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const start = Math.max(1, currentPage.value - 2)
+  const end = Math.min(totalPages.value, currentPage.value + 2)
+  for (let i = start; i <= end; i++) pages.push(i)
+  return pages
 })
-
-function clearFilters() {
-  search.value = ''
-  roleFilter.value = 'all'
-}
 
 // Modal: criar
 const showCreateModal  = ref(false)
@@ -398,13 +429,51 @@ onMounted(loadUsers)
 async function loadUsers() {
   loading.value = true
   try {
-    const res = await axios.get('/User')
-    users.value = res.data?.$values ?? res.data ?? []
+    const res = await clientUserService.getTeamPaged({
+      page: currentPage.value,
+      pageSize: pageSize.value,
+      search: search.value || undefined,
+      role: roleFilter.value || undefined,
+    })
+    users.value = res.data
+    total.value = res.total
   } catch {
     toast.error(t('errors.loadFailed'))
   } finally {
     loading.value = false
   }
+}
+
+let debounceTimer: ReturnType<typeof setTimeout>
+function onSearchInput() {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadUsers()
+  }, 300)
+}
+
+function onRoleFilterChange() {
+  currentPage.value = 1
+  loadUsers()
+}
+
+function onPageSizeChange() {
+  currentPage.value = 1
+  loadUsers()
+}
+
+function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  loadUsers()
+}
+
+function clearFilters() {
+  search.value = ''
+  roleFilter.value = ''
+  currentPage.value = 1
+  loadUsers()
 }
 
 // ── Modal: criar ──────────────────────────────────────────────────────────────

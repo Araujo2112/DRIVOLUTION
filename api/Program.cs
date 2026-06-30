@@ -74,6 +74,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // --- Services ---
 builder.Services.AddScoped<IClientOrderService, ClientOrderService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IProductPhaseService, ProductPhaseService>();
 builder.Services.AddScoped<ILocalizationHistoryService, LocalizationHistoryService>();
 builder.Services.AddScoped<IQualityCheckService, QualityCheckService>();

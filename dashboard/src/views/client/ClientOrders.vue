@@ -22,7 +22,7 @@
 
     <!-- Search bar + status filter + page size -->
     <div class="flex items-center justify-between gap-3 mb-4">
-      <div class="flex items-center gap-2 flex-1 flex-wrap">
+      <div class="flex items-center gap-2 flex-1">
         <input
           v-model="searchQuery"
           type="text"
@@ -31,6 +31,7 @@
         />
         <select
           v-model="statusFilter"
+          @change="currentPage = 1"
           class="w-auto px-3 py-2 text-sm border border-background-300 dark:border-background-600 rounded-lg bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option value="">{{ t('common.allStatuses') }}</option>
@@ -39,22 +40,9 @@
           <option value="completed">{{ t('orders.status.completed') }}</option>
           <option value="cancelled">{{ t('orders.status.cancelled') }}</option>
         </select>
-        <input
-          v-model="dateFrom"
-          type="date"
-          :placeholder="t('common.dateFrom')"
-          class="px-3 py-2 text-sm border border-background-300 dark:border-background-600 rounded-lg bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-        <span class="text-sm text-background-400">–</span>
-        <input
-          v-model="dateTo"
-          type="date"
-          :placeholder="t('common.dateTo')"
-          class="px-3 py-2 text-sm border border-background-300 dark:border-background-600 rounded-lg bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
       </div>
       <select
-        v-if="orders.length > pageSize"
+        v-if="totalItems > 25"
         v-model="pageSize"
         @change="currentPage = 1"
         class="w-20 px-2 py-2 text-sm border border-background-300 dark:border-background-600 rounded-lg bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50"
@@ -121,8 +109,8 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalOrders > 0" class="flex items-center justify-between mt-4 text-sm text-background-500">
-        <span>{{ t('common.showing', { from: paginationFrom, to: paginationTo, total: totalOrders }) }}</span>
+      <div v-if="totalItems > 0" class="flex items-center justify-between mt-4 text-sm text-background-500">
+        <span>{{ t('common.showing', { from: paginationFrom, to: paginationTo, total: totalItems }) }}</span>
         <div class="flex items-center gap-2">
           <button
             @click="currentPage--"
@@ -328,9 +316,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { clientOrderService } from '@/services/clientOrderService'
-import type { ClientOrder, CreateClientOrderResult, GetOrdersParams } from '@/services/clientOrderService'
+import type { ClientOrder, CreateClientOrderResult } from '@/services/clientOrderService'
 import { carModelService, configService, configOptionService } from '@/services/carModelService'
 import type { CarModel, Config, ConfigOption } from '@/services/carModelService'
 import { clientUserService } from '@/services/clientUserService'
@@ -353,27 +341,26 @@ const selectedAccessoryOptions = reactive<Record<number, number[]>>({})
 // --- Search & Pagination (server-side) ---
 const searchQuery = ref('')
 const statusFilter = ref('')
-const dateFrom = ref('')
-const dateTo = ref('')
 const currentPage = ref(1)
 const pageSize = ref(25)
-const totalOrders = ref(0)
+const totalItems = ref(0)
 
-const totalPages = computed(() => Math.max(1, Math.ceil(totalOrders.value / pageSize.value)))
-const paginationFrom = computed(() => totalOrders.value === 0 ? 0 : (currentPage.value - 1) * pageSize.value + 1)
-const paginationTo = computed(() => Math.min(currentPage.value * pageSize.value, totalOrders.value))
+const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / pageSize.value)))
+const paginationFrom = computed(() => totalItems.value === 0 ? 0 : (currentPage.value - 1) * pageSize.value + 1)
+const paginationTo = computed(() => Math.min(currentPage.value * pageSize.value, totalItems.value))
 
-// Debounce para não disparar pedido a cada letra
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-watch([searchQuery, statusFilter, dateFrom, dateTo], () => {
-  if (searchTimeout) clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
+let searchDebounceHandle: ReturnType<typeof setTimeout> | undefined
+watch(searchQuery, () => {
+  clearTimeout(searchDebounceHandle)
+  searchDebounceHandle = setTimeout(() => {
     currentPage.value = 1
     loadOrders()
   }, 300)
 })
-watch(currentPage, loadOrders)
-watch(pageSize, () => { currentPage.value = 1; loadOrders() })
+
+watch([currentPage, pageSize, statusFilter], () => {
+  loadOrders()
+})
 
 // --- Status badge ---
 function statusBadgeClass(status: string) {
@@ -442,17 +429,14 @@ onMounted(async () => {
 async function loadOrders() {
   loading.value = true
   try {
-    const params: GetOrdersParams = {
+    const res = await clientOrderService.getPaged({
       page: currentPage.value,
       pageSize: pageSize.value,
-      search: searchQuery.value || undefined,
+      search: searchQuery.value.trim() || undefined,
       status: statusFilter.value || undefined,
-      dateFrom: dateFrom.value || undefined,
-      dateTo: dateTo.value || undefined,
-    }
-    const res = await clientOrderService.getPaged(params)
+    })
     orders.value = res.data.data
-    totalOrders.value = res.data.total
+    totalItems.value = res.data.total
   } catch {
     toast.error(t('errors.loadFailed'))
   } finally {

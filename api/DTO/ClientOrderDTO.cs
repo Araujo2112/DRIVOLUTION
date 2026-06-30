@@ -2,16 +2,17 @@ namespace Drivolution.DTO;
 
 // CustomerName (texto livre) substituído por ClientName, que vem do JOIN com
 // app_user (AppUserId) — a encomenda está agora sempre ligada a uma conta real.
-public record ClientOrderDTO(int Id, string OrderNumber, DateTime OrderDate, int AppUserId, string ClientName, int Quantity);
+// Status é derivado das ManufacturingOrders associadas (calculado no Service).
+public record ClientOrderDTO(int Id, string OrderNumber, DateTime OrderDate, int AppUserId, string ClientName, int Quantity, string Status);
 
 public record ConfigSelectionDTO(int ConfigOptionId);
 
 public record CreateClientOrderDTO(
-    string OrderNumber, 
-    DateTime OrderDate, 
-    int AppUserId, 
-    int Quantity, 
-    int ModelId, 
+    string OrderNumber,
+    DateTime OrderDate,
+    int AppUserId,
+    int Quantity,
+    int ModelId,
     List<ConfigSelectionDTO>? Configs
 );
 

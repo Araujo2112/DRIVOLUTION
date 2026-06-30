@@ -23,6 +23,18 @@ public class SupportController : ControllerBase
     }
 
     [HttpGet]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25,
+        [FromQuery] string? search = null,
+        [FromQuery] int? productionLineId = null,
+        [FromQuery] bool? occupied = null)
+    {
+        var result = await _repo.GetPaged(page, pageSize, search, productionLineId, occupied);
+        return Ok(result);
+    }
+
+    [HttpGet("all")]
     public async Task<IActionResult> GetAll()
     {
         var items = await _repo.GetAll();

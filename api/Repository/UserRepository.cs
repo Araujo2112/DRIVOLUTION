@@ -1,4 +1,5 @@
 using Drivolution.Data;
+using Drivolution.DTO;
 using Drivolution.Models;
 using Drivolution.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,35 @@ public class UserRepository : IUserRepository
     public UserRepository(ApplicationDbContext context)
     {
         _context = context;
+    }
+
+    // Paginação restrita a role="client" — só usada pela página de gestão de
+    // Clientes. A listagem genérica (Equipa) continua a usar GetAllAsync().
+    public async Task<PagedResultDTO<UserModel>> GetClientsPagedAsync(int page, int pageSize, string? search)
+    {
+        var query = _context.AppUsers.Where(u => u.Role == "client");
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            query = query.Where(u => u.Name.ToLower().Contains(s));
+        }
+
+        var total = await query.CountAsync();
+
+        var data = await query
+            .OrderBy(u => u.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResultDTO<UserModel>
+        {
+            Data = data,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
     public async Task<UserModel?> GetByEmailAsync(string email)

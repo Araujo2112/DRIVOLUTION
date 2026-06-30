@@ -2,29 +2,20 @@
   <div class="p-8 w-full">
 
     <!-- Header -->
-    <div class="flex items-start justify-between mb-8">
-      <div>
-        <h1 class="text-2xl font-medium text-background-900 dark:text-background-50">
-          {{ t('alertsHistory.title') }}
-        </h1>
-        <p class="text-sm text-background-600 dark:text-background-400 mt-1">
-          {{ t('alertsHistory.subtitle') }}
-        </p>
-      </div>
-      <button
-        @click="loadAlerts"
-        class="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-      >
-        <span class="material-symbols-rounded text-base">refresh</span>
-        {{ t('common.refresh') }}
-      </button>
+    <div class="mb-6">
+      <h1 class="text-2xl font-medium text-background-900 dark:text-background-50">
+        {{ t('alertsHistory.title') }}
+      </h1>
+      <p class="text-sm text-background-600 dark:text-background-400 mt-1">
+        {{ t('alertsHistory.subtitle') }}
+      </p>
     </div>
 
     <!-- Filtros -->
-    <div class="flex gap-4 mb-6">
+    <div class="flex gap-4 mb-6 items-end">
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('alertsHistory.filterType') }}</label>
-        <select v-model="filterType">
+        <select v-model="filterType" @change="onFilterChange" class="w-44">
           <option value="">{{ t('alertsHistory.filterAll') }}</option>
           <option value="time_exceeded">{{ t('alerts.timeExceeded') }}</option>
           <option value="wrong_sequence">{{ t('alerts.wrongSequence') }}</option>
@@ -32,13 +23,20 @@
       </div>
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('alertsHistory.filterStatus') }}</label>
-        <select v-model="filterStatus">
+        <select v-model="filterStatus" @change="onFilterChange" class="w-44">
           <option value="">{{ t('alertsHistory.filterAll') }}</option>
           <option value="open">{{ t('alertsHistory.status.open') }}</option>
           <option value="acknowledged">{{ t('alertsHistory.status.acknowledged') }}</option>
           <option value="resolved">{{ t('alertsHistory.status.resolved') }}</option>
         </select>
       </div>
+
+      <!-- Registos por página -->
+      <select v-model="pageSize" @change="onPageSizeChange" class="ml-auto w-20">
+        <option :value="25">25</option>
+        <option :value="50">50</option>
+        <option :value="100">100</option>
+      </select>
     </div>
 
     <!-- Loading -->
@@ -49,7 +47,7 @@
 
     <!-- Listagem -->
     <div v-else>
-      <div v-if="filteredAlerts.length === 0" class="text-center py-16 text-background-500">
+      <div v-if="alerts.length === 0" class="text-center py-16 text-background-500">
         <span class="material-symbols-rounded text-5xl block mb-3">notifications_off</span>
         <p class="text-sm">{{ t('alertsHistory.empty') }}</p>
       </div>
@@ -67,7 +65,7 @@
 
         <!-- Table Rows -->
         <div
-          v-for="alert in filteredAlerts"
+          v-for="alert in alerts"
           :key="alert.id"
           class="grid grid-cols-6 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
         >
@@ -102,6 +100,36 @@
           </div>
         </div>
       </div>
+
+      <!-- Paginação -->
+      <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-background-600 dark:text-background-400">
+        <span>{{ t('common.showing', { from: (currentPage - 1) * pageSize + 1, to: Math.min(currentPage * pageSize, total), total }) }}</span>
+        <div class="flex gap-1">
+          <button
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="px-3 py-1.5 rounded-lg border border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <span class="material-symbols-rounded text-base">chevron_left</span>
+          </button>
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="goToPage(p)"
+            class="px-3 py-1.5 rounded-lg border transition-colors"
+            :class="p === currentPage ? 'bg-primary-500 text-white border-primary-500' : 'border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700'"
+          >
+            {{ p }}
+          </button>
+          <button
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="px-3 py-1.5 rounded-lg border border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <span class="material-symbols-rounded text-base">chevron_right</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -109,29 +137,41 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import axios from '@/axios'
+import { alertService } from '@/services/alertService'
+import type { Alert } from '@/services/alertService'
 import { toast } from '@/plugins/toast'
 
 const { t } = useI18n()
 
 const loading = ref(false)
-const alerts = ref<any[]>([])
+const alerts = ref<Alert[]>([])
+const total = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(25)
+
 const filterType = ref('')
 const filterStatus = ref('')
 
-const filteredAlerts = computed(() => {
-  return alerts.value.filter(a => {
-    if (filterType.value && a.type !== filterType.value) return false
-    if (filterStatus.value && a.status !== filterStatus.value) return false
-    return true
-  })
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const start = Math.max(1, currentPage.value - 2)
+  const end = Math.min(totalPages.value, currentPage.value + 2)
+  for (let i = start; i <= end; i++) pages.push(i)
+  return pages
 })
 
 async function loadAlerts() {
   loading.value = true
   try {
-    const res = await axios.get('/Alert')
-    alerts.value = res.data
+    const res = await alertService.getPaged({
+      page: currentPage.value,
+      pageSize: pageSize.value,
+      type: filterType.value || undefined,
+      status: filterStatus.value || undefined,
+    })
+    alerts.value = res.data.data
+    total.value = res.data.total
   } catch {
     toast.error(t('errors.loadFailed'))
   } finally {
@@ -139,9 +179,25 @@ async function loadAlerts() {
   }
 }
 
+function onFilterChange() {
+  currentPage.value = 1
+  loadAlerts()
+}
+
+function onPageSizeChange() {
+  currentPage.value = 1
+  loadAlerts()
+}
+
+function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  loadAlerts()
+}
+
 async function acknowledge(id: number) {
   try {
-    await axios.put(`/Alert/${id}/acknowledge`)
+    await alertService.acknowledge(id)
     toast.success(t('alertsHistory.acknowledged'))
     await loadAlerts()
   } catch {

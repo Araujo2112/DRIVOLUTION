@@ -23,14 +23,31 @@ public class ClientAccountController : ControllerBase
         _audit       = audit;
     }
 
-    // GET /api/client-accounts — lista todos os utilizadores com role=client
+    // GET /api/client-accounts?page=1&pageSize=25&search= — paginado, filtra role=client no servidor
     [HttpGet]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25,
+        [FromQuery] string? search = null)
+    {
+        var paged = await _userRepo.GetClientsPagedAsync(page, pageSize, search);
+        return Ok(new PagedResultDTO<UserInfoDTO>
+        {
+            Data = paged.Data.Select(MapToDTO),
+            Total = paged.Total,
+            Page = paged.Page,
+            PageSize = paged.PageSize
+        });
+    }
+
+    // GET /api/client-accounts/all — lista completa, sem paginação
+    [HttpGet("all")]
     public async Task<IActionResult> GetAll()
     {
         var all = await _userRepo.GetAllAsync();
         var clients = all
             .Where(u => u.Role == "client")
-            .Select(u => new ClientOptionDTO(u.Id, u.Name));
+            .Select(MapToDTO);
         return Ok(clients);
     }
 
@@ -57,7 +74,7 @@ public class ClientAccountController : ControllerBase
         return Ok(result.Value);
     }
 
-    // PUT /api/client-accounts/{id} — edita nome e email
+    // PUT /api/client-accounts/{id} — edita nome, email e estado
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateClientAccountDTO dto)
     {
@@ -66,13 +83,29 @@ public class ClientAccountController : ControllerBase
         var user = await _userRepo.GetByIdAsync(id);
         if (user == null || user.Role != "client") return NotFound();
 
+        var previousStatus = user.Status;
+        var nameOrEmailChanged = dto.Name != user.Name || dto.Email != user.Email;
+
         user.Name  = dto.Name;
         user.Email = dto.Email;
+
+        if (!string.IsNullOrWhiteSpace(dto.Status))
+            user.Status = dto.Status;
+
         await _userRepo.UpdateAsync(user);
 
-        await _audit.LogAsync(userId, userName, "updated", "user", id, user.Name);
+        // Mudança de estado é auditada como ação própria (segurança: corta/reabre
+        // acesso ao portal), distinta de uma edição normal de nome/email.
+        if (previousStatus != user.Status)
+        {
+            var action = user.Status == "active" ? "activated" : "deactivated";
+            await _audit.LogAsync(userId, userName, action, "user", id, user.Name);
+        }
 
-        return Ok();
+        if (nameOrEmailChanged)
+            await _audit.LogAsync(userId, userName, "updated", "user", id, user.Name);
+
+        return Ok(MapToDTO(user));
     }
 
     // PUT /api/client-accounts/{id}/toggle-status — ativa/desativa (nunca elimina)
@@ -112,6 +145,19 @@ public class ClientAccountController : ControllerBase
 
         return Ok(new ResetPasswordResponseDTO { TemporaryPassword = temporaryPassword });
     }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static UserInfoDTO MapToDTO(Drivolution.Models.UserModel u) => new()
+    {
+        Id                 = u.Id,
+        Name               = u.Name,
+        Email              = u.Email,
+        Role               = u.Role,
+        Status             = u.Status,
+        MustChangePassword = u.MustChangePassword,
+        CreatedAt          = u.CreatedAt,
+    };
 
     // Mesma lógica de geração usada em UserController — sem caracteres ambíguos.
     private const string PasswordChars           = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";

@@ -43,6 +43,7 @@ namespace Drivolution.DTO
     {
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
     }
 
     // DTO para repor password (PUT /api/client-accounts/{id}/reset-password)

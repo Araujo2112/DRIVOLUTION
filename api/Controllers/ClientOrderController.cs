@@ -21,13 +21,27 @@ public class ClientOrderController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int      page     = 1,
+        [FromQuery] int      pageSize = 25,
+        [FromQuery] string?  search   = null,
+        [FromQuery] string?  status   = null,
+        [FromQuery] DateTime? dateFrom = null,
+        [FromQuery] DateTime? dateTo   = null)
     {
-        var items = await _service.GetAll();
-        return Ok(items);
+        var result = await _service.GetPaged(page, pageSize, search, status, dateFrom, dateTo);
+        return Ok(result);
     }
 
-    [HttpGet("{id}")]
+    // Endpoint legacy para o portal do cliente (client/ClientOrders.vue)
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _service.GetPaged(1, int.MaxValue, null, null, null, null);
+        return Ok(result.Data);
+    }
+
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
         var item = await _service.GetById(id);
@@ -61,6 +75,18 @@ public class ClientOrderController : ControllerBase
 
         var (userId, userName) = User.GetAuditUser();
         await _audit.LogAsync(userId, userName, "updated", "order", id, $"Encomenda #{id}");
+
+        return NoContent();
+    }
+
+    [HttpPatch("{id}/cancel")]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var cancelled = await _service.Cancel(id);
+        if (!cancelled) return BadRequest("Encomenda não encontrada ou não pode ser cancelada (já concluída ou já cancelada).");
+
+        var (userId, userName) = User.GetAuditUser();
+        await _audit.LogAsync(userId, userName, "updated", "order", id, $"Encomenda #{id} cancelada");
 
         return NoContent();
     }

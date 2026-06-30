@@ -34,17 +34,78 @@ public class ClientOrderService : IClientOrderService
         _configOptionRepo = configOptionRepo;
     }
 
-    public async Task<IEnumerable<ClientOrderDTO>> GetAll()
+    // Deriva o estado da encomenda a partir das suas ManufacturingOrders.
+    // Regras (por prioridade):
+    //   - Sem MOs         → "pending"
+    //   - Todas Concluídas → "completed"
+    //   - Todas Canceladas → "cancelled"
+    //   - Alguma Em Progresso (e não todas concluídas/canceladas) → "in_progress"
+    //   - Caso contrário  → "pending"
+    private static string DeriveStatus(ICollection<ManufacturingOrderModel> mos)
     {
-        var items = await _repo.GetAll();
-        return items.Select(c => new ClientOrderDTO(c.Id, c.OrderNumber, c.OrderDate, c.AppUserId, c.AppUser?.Name ?? "", c.Quantity));
+        if (!mos.Any()) return OrderStatus.Pending;
+        if (mos.All(m => m.Status == OrderStatus.Completed)) return OrderStatus.Completed;
+        if (mos.All(m => m.Status == OrderStatus.Cancelled)) return OrderStatus.Cancelled;
+        if (mos.Any(m => m.Status == OrderStatus.InProgress)) return OrderStatus.InProgress;
+        return OrderStatus.Pending;
+    }
+
+    public async Task<PagedResultDTO<ClientOrderDTO>> GetPaged(int page, int pageSize, string? search, string? status, DateTime? dateFrom, DateTime? dateTo)
+    {
+        var all = await _repo.GetAll();
+
+        // Calcular status em memória e aplicar filtros
+        var filtered = all
+            .Select(c => new { Model = c, Status = DeriveStatus(c.ManufacturingOrders) })
+            .Where(x =>
+            {
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var q = search.Trim().ToLower();
+                    if (!x.Model.OrderNumber.ToLower().Contains(q) &&
+                        !(x.Model.AppUser?.Name ?? "").ToLower().Contains(q))
+                        return false;
+                }
+                if (!string.IsNullOrWhiteSpace(status) && x.Status != status)
+                    return false;
+                if (dateFrom.HasValue && x.Model.OrderDate.Date < dateFrom.Value.Date)
+                    return false;
+                if (dateTo.HasValue && x.Model.OrderDate.Date > dateTo.Value.Date)
+                    return false;
+                return true;
+            })
+            .ToList();
+
+        var total = filtered.Count;
+        var data = filtered
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new ClientOrderDTO(
+                x.Model.Id,
+                x.Model.OrderNumber,
+                x.Model.OrderDate,
+                x.Model.AppUserId,
+                x.Model.AppUser?.Name ?? "",
+                x.Model.Quantity,
+                x.Status
+            ));
+
+        return new PagedResultDTO<ClientOrderDTO> { Data = data, Total = total, Page = page, PageSize = pageSize };
     }
 
     public async Task<ClientOrderDTO?> GetById(int id)
     {
         var item = await _repo.GetById(id);
         if (item == null) return null;
-        return new ClientOrderDTO(item.Id, item.OrderNumber, item.OrderDate, item.AppUserId, item.AppUser?.Name ?? "", item.Quantity);
+        return new ClientOrderDTO(
+            item.Id,
+            item.OrderNumber,
+            item.OrderDate,
+            item.AppUserId,
+            item.AppUser?.Name ?? "",
+            item.Quantity,
+            DeriveStatus(item.ManufacturingOrders)
+        );
     }
 
     private async Task<List<int>> ResolveOptionIds(ConfigModel configCategory, List<ConfigSelectionDTO>? selections)
@@ -160,6 +221,30 @@ public class ClientOrderService : IClientOrderService
     {
         if (!await _repo.Exists(id)) return false;
         await _repo.Delete(id);
+        return true;
+    }
+
+    // Cancela uma encomenda: marca todas as ManufacturingOrders ainda não concluídas
+    // como "cancelled". Não elimina nenhum registo.
+    // Retorna false se a encomenda não existir ou já estiver totalmente concluída/cancelada.
+    public async Task<bool> Cancel(int id)
+    {
+        var entity = await _repo.GetById(id); // já inclui ManufacturingOrders via Include
+        if (entity == null) return false;
+
+        var cancellable = entity.ManufacturingOrders
+            .Where(m => m.Status != OrderStatus.Completed && m.Status != OrderStatus.Cancelled)
+            .ToList();
+
+        if (!cancellable.Any()) return false;
+
+        foreach (var mo in cancellable)
+        {
+            mo.Status = OrderStatus.Cancelled;
+            mo.EndDate = DateTime.UtcNow;
+            await _manufacturingOrderRepo.Update(mo);
+        }
+
         return true;
     }
 }

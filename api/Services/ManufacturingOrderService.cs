@@ -4,7 +4,6 @@ using Drivolution.Models.Constants;
 using Drivolution.Repository.Interface;
 using Drivolution.Services.Interface;
 
-
 namespace Drivolution.Services;
 
 public class ManufacturingOrderService : IManufacturingOrderService
@@ -16,10 +15,17 @@ public class ManufacturingOrderService : IManufacturingOrderService
         _repo = repo;
     }
 
-    public async Task<IEnumerable<ManufacturingOrderDTO>> GetAll()
+    public async Task<PagedResultDTO<ManufacturingOrderDTO>> GetPaged(
+        int page, int pageSize, string? search, string? status, DateTime? dateFrom, DateTime? dateTo)
     {
-        var items = await _repo.GetAll();
-        return items.Select(MapToDTO);
+        var paged = await _repo.GetPaged(page, pageSize, search, status, dateFrom, dateTo);
+        return new PagedResultDTO<ManufacturingOrderDTO>
+        {
+            Data = paged.Data.Select(MapToDTO),
+            Total = paged.Total,
+            Page = paged.Page,
+            PageSize = paged.PageSize
+        };
     }
 
     public async Task<ManufacturingOrderDTO?> GetById(int id)
@@ -32,7 +38,7 @@ public class ManufacturingOrderService : IManufacturingOrderService
     {
         var mo = await _repo.GetByIdWithDetails(id);
         if (mo == null) return null;
- 
+
         return new ManufacturingOrderDetailDTO(
             mo.Id,
             mo.ClientOrderId,
@@ -62,12 +68,6 @@ public class ManufacturingOrderService : IManufacturingOrderService
                 )).ToList()
             )).ToList()
         );
-    }
-
-    public async Task<IEnumerable<ManufacturingOrderDTO>> GetByStatus(string status)
-    {
-        var items = await _repo.GetByStatus(status);
-        return items.Select(MapToDTO);
     }
 
     public async Task<ManufacturingOrderDTO> Create(CreateManufacturingOrderDTO dto)
@@ -103,15 +103,14 @@ public class ManufacturingOrderService : IManufacturingOrderService
         return true;
     }
 
-    // Helper para não repetir código de mapeamento
     private ManufacturingOrderDTO MapToDTO(ManufacturingOrderModel mo) =>
         new ManufacturingOrderDTO(
-            mo.Id, 
-            mo.ClientOrderId, 
-            mo.ClientOrder?.AppUser?.Name ?? "", 
-            mo.ManufacturingOrderNumber, 
-            mo.StartDate, 
-            mo.EndDate, 
+            mo.Id,
+            mo.ClientOrderId,
+            mo.ClientOrder?.AppUser?.Name ?? "",
+            mo.ManufacturingOrderNumber,
+            mo.StartDate,
+            mo.EndDate,
             mo.Status
         );
 }

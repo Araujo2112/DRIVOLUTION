@@ -18,7 +18,17 @@ public class ManufacturingOrderController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _service.GetAll());
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25,
+        [FromQuery] string? search = null,
+        [FromQuery] string? status = null,
+        [FromQuery] DateTime? dateFrom = null,
+        [FromQuery] DateTime? dateTo = null)
+    {
+        var result = await _service.GetPaged(page, pageSize, search, status, dateFrom, dateTo);
+        return Ok(result);
+    }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
@@ -33,9 +43,6 @@ public class ManufacturingOrderController : ControllerBase
         var item = await _service.GetByIdWithDetails(id);
         return item == null ? NotFound() : Ok(item);
     }
-
-    [HttpGet("status/{status}")]
-    public async Task<IActionResult> GetByStatus(string status) => Ok(await _service.GetByStatus(status));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateManufacturingOrderDTO dto)

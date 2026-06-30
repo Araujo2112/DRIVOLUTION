@@ -20,6 +20,35 @@
       </button>
     </div>
 
+    <!-- Filtros -->
+    <div class="flex gap-3 mb-6 items-center">
+      <div class="relative w-64 shrink-0">
+        <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-background-400 text-base pointer-events-none">search</span>
+        <input
+          v-model="search"
+          type="text"
+          :placeholder="t('team.searchPlaceholder')"
+          class="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 placeholder-background-400 focus:outline-none focus:border-primary-400"
+        />
+      </div>
+
+      <select v-model="roleFilter" class="w-40 shrink-0">
+        <option value="all">{{ t('team.allRoles') }}</option>
+        <option value="admin">{{ t('team.roles.admin') }}</option>
+        <option value="manager">{{ t('team.roles.manager') }}</option>
+        <option value="operator">{{ t('team.roles.operator') }}</option>
+      </select>
+
+      <button
+        v-if="search || roleFilter !== 'all'"
+        @click="clearFilters"
+        class="shrink-0 px-3 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 text-background-500 hover:text-background-700 dark:hover:text-background-300 hover:bg-background-100 dark:hover:bg-background-700 transition-colors"
+        title="Limpar filtros"
+      >
+        <span class="material-symbols-rounded text-base align-middle">close</span>
+      </button>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="flex items-center gap-2 text-background-500 text-sm py-12">
       <span class="material-symbols-rounded animate-spin text-lg">autorenew</span>
@@ -28,11 +57,12 @@
 
     <!-- Tabela -->
     <div v-else class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
-      <div class="grid grid-cols-5 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
-        <span class="text-xs font-medium text-background-500 uppercase tracking-wider col-span-2">{{ t('team.fields.name') }}</span>
+      <div class="grid grid-cols-[2fr_1.5fr_1fr_1fr_44px] px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
+        <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('team.fields.name') }}</span>
         <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('team.fields.email') }}</span>
         <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('team.fields.role') }}</span>
         <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('team.fields.status') }}</span>
+        <span></span>
       </div>
 
       <div v-if="users.length === 0" class="text-center py-12 text-background-500">
@@ -40,22 +70,25 @@
         <p class="text-sm">{{ t('team.empty') }}</p>
       </div>
 
+      <div v-else-if="filteredUsers.length === 0" class="text-center py-12 text-background-500">
+        <span class="material-symbols-rounded text-4xl block mb-2">search_off</span>
+        <p class="text-sm">{{ t('team.noResults') }}</p>
+      </div>
+
       <div
-        v-for="user in users"
+        v-for="user in filteredUsers"
         :key="user.id"
-        @click="user.role !== 'admin' ? openEditModal(user) : null"
-        class="grid grid-cols-5 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
-        :class="user.role !== 'admin' ? 'cursor-pointer' : 'cursor-default'"
+        class="grid grid-cols-[2fr_1.5fr_1fr_1fr_44px] px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
       >
-        <div class="col-span-2 flex items-center gap-3">
+        <div class="flex items-center gap-3 min-w-0">
           <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-950 flex items-center justify-center flex-shrink-0">
             <span class="text-xs font-semibold text-primary-600 dark:text-primary-300">
               {{ initials(user.name) }}
             </span>
           </div>
-          <span class="text-sm font-medium text-background-800 dark:text-background-100">{{ user.name }}</span>
+          <span class="text-sm font-medium text-background-800 dark:text-background-100 truncate">{{ user.name }}</span>
         </div>
-        <span class="text-sm text-background-600 dark:text-background-400">{{ user.email }}</span>
+        <span class="text-sm text-background-600 dark:text-background-400 truncate">{{ user.email }}</span>
         <span
           class="text-xs font-medium px-2 py-1 rounded-full w-fit"
           :class="roleClass(user.role)"
@@ -70,6 +103,16 @@
         >
           {{ user.status === 'active' ? t('team.statusActive') : t('team.statusInactive') }}
         </span>
+        <div class="flex justify-end">
+          <button
+            v-if="user.role !== 'admin'"
+            @click="openEditModal(user)"
+            :title="t('common.edit')"
+            class="w-8 h-8 flex items-center justify-center rounded-lg text-background-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950 dark:hover:text-primary-300 transition-colors"
+          >
+            <span class="material-symbols-rounded text-lg">edit</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -288,7 +331,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from '@/axios'
 import { toast } from '@/plugins/toast'
@@ -308,6 +351,24 @@ interface AppUser {
 const loading = ref(false)
 const users   = ref<AppUser[]>([])
 const saving  = ref(false)
+
+// Filtros (client-side — lista pequena, sem necessidade de paginação no servidor)
+const search     = ref('')
+const roleFilter = ref<'all' | 'admin' | 'manager' | 'operator'>('all')
+
+const filteredUsers = computed(() => {
+  const term = search.value.trim().toLowerCase()
+  return users.value.filter(u => {
+    const matchesSearch = !term || u.name.toLowerCase().includes(term)
+    const matchesRole   = roleFilter.value === 'all' || u.role === roleFilter.value
+    return matchesSearch && matchesRole
+  })
+})
+
+function clearFilters() {
+  search.value = ''
+  roleFilter.value = 'all'
+}
 
 // Modal: criar
 const showCreateModal  = ref(false)

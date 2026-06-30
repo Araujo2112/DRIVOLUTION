@@ -1,6 +1,7 @@
+using Drivolution.DTO;
 using Drivolution.Models;
-using Drivolution.Repository.Interface;
 using Drivolution.Services.Interface;
+using Drivolution.Repository.Interface;
 
 namespace Drivolution.Services;
 
@@ -12,6 +13,9 @@ public class AlertService : IAlertService
     {
         _alertRepo = alertRepo;
     }
+
+    public async Task<PagedResultDTO<AlertModel>> GetPagedAsync(int page, int pageSize, string? type, string? status)
+        => await _alertRepo.GetPagedAsync(page, pageSize, type, status);
 
     public async Task<IEnumerable<AlertModel>> GetAllAsync()
         => await _alertRepo.GetAllAsync();

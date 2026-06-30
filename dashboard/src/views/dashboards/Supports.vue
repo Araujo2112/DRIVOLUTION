@@ -20,6 +20,52 @@
       </button>
     </div>
 
+    <!-- Filtros -->
+    <div class="flex gap-3 mb-6 items-center">
+
+      <!-- Search tag / tipo -->
+      <div class="relative w-64 shrink-0">
+        <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-background-400 text-base pointer-events-none">search</span>
+        <input
+          v-model="search"
+          @input="onSearchInput"
+          type="text"
+          :placeholder="t('supports.searchPlaceholder')"
+          class="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 placeholder-background-400 focus:outline-none focus:border-primary-400"
+        />
+      </div>
+
+      <!-- Linha -->
+      <select v-model="lineFilter" @change="onFilterChange" class="w-44 shrink-0">
+        <option value="">{{ t('supports.allLines') }}</option>
+        <option v-for="line in lines" :key="line.id" :value="line.id">{{ line.name }}</option>
+      </select>
+
+      <!-- Estado -->
+      <select v-model="statusFilter" @change="onFilterChange" class="w-40 shrink-0">
+        <option value="">{{ t('supports.allStatus') }}</option>
+        <option value="occupied">{{ t('supports.occupied') }}</option>
+        <option value="free">{{ t('supports.free') }}</option>
+      </select>
+
+      <!-- Limpar -->
+      <button
+        v-if="search || lineFilter || statusFilter"
+        @click="clearFilters"
+        class="shrink-0 px-3 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 text-background-500 hover:text-background-700 dark:hover:text-background-300 hover:bg-background-100 dark:hover:bg-background-700 transition-colors"
+        title="Limpar filtros"
+      >
+        <span class="material-symbols-rounded text-base align-middle">close</span>
+      </button>
+
+      <!-- Registos por página -->
+      <select v-model="pageSize" @change="onPageSizeChange" class="ml-auto w-20 shrink-0">
+        <option :value="25">25</option>
+        <option :value="50">50</option>
+        <option :value="100">100</option>
+      </select>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="flex items-center gap-2 text-background-500 text-sm py-12">
       <span class="material-symbols-rounded animate-spin text-lg">autorenew</span>
@@ -68,18 +114,13 @@
 
           <!-- Linha -->
           <div class="col-span-2">
-            <span class="text-sm text-background-600 dark:text-background-400">
-              {{ lineNameById(support.productionLineId) }}
-            </span>
+            <span class="text-sm text-background-600 dark:text-background-400">{{ support.productionLineName }}</span>
           </div>
 
           <!-- Estado ocupado/livre -->
           <div class="col-span-2">
-            <div v-if="currentBySupport[support.id] === undefined" class="flex items-center gap-1 text-xs text-background-400">
-              <span class="material-symbols-rounded animate-spin text-sm">autorenew</span>
-            </div>
             <span
-              v-else-if="currentBySupport[support.id]"
+              v-if="support.isOccupied"
               class="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-warning-100 text-warning-700"
             >
               <span class="w-1.5 h-1.5 rounded-full bg-warning-500"></span>
@@ -93,20 +134,19 @@
 
           <!-- Produto atual -->
           <div class="col-span-3">
-            <div v-if="currentBySupport[support.id]">
+            <div v-if="support.isOccupied">
               <div class="text-sm font-medium text-background-900 dark:text-background-50">
-                {{ currentBySupport[support.id]!.serialNumber ?? `ID #${currentBySupport[support.id]!.productId}` }}
+                {{ support.currentSerialNumber ?? `ID #${support.currentProductId}` }}
               </div>
-              <div class="text-xs text-background-400">{{ currentBySupport[support.id]!.modelName }}</div>
+              <div class="text-xs text-background-400">{{ support.currentModelName }}</div>
             </div>
             <span v-else class="text-xs text-background-400">—</span>
           </div>
 
           <!-- Ações -->
           <div class="col-span-2 flex justify-end gap-1">
-            <!-- Associar produto (se livre) -->
             <button
-              v-if="!currentBySupport[support.id]"
+              v-if="!support.isOccupied"
               @click="openAssociate(support)"
               class="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors"
             >
@@ -114,25 +154,53 @@
               {{ t('supports.associate') }}
             </button>
 
-            <!-- Libertar (se ocupado) -->
             <button
-              v-if="currentBySupport[support.id]"
-              @click="releaseSupport(support.id)"
+              v-if="support.isOccupied"
+              @click="releaseSupport(support)"
               class="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border border-warning-500 text-warning-600 hover:bg-warning-50 dark:hover:bg-background-700 font-medium transition-colors"
             >
               <span class="material-symbols-rounded text-sm">link_off</span>
               {{ t('supports.release') }}
             </button>
 
-            <!-- Apagar suporte (só se livre) -->
             <button
-              v-if="!currentBySupport[support.id]"
+              v-if="!support.isOccupied"
               @click="deleteSupport(support)"
               class="p-1.5 rounded-lg text-background-400 hover:text-danger-500 hover:bg-danger-100 dark:hover:bg-background-700 transition-colors"
             >
               <span class="material-symbols-rounded text-base">delete</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Paginação -->
+      <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-background-600 dark:text-background-400">
+        <span>{{ t('common.showing', { from: (currentPage - 1) * pageSize + 1, to: Math.min(currentPage * pageSize, total), total }) }}</span>
+        <div class="flex gap-1">
+          <button
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="px-3 py-1.5 rounded-lg border border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <span class="material-symbols-rounded text-base">chevron_left</span>
+          </button>
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="goToPage(p)"
+            class="px-3 py-1.5 rounded-lg border transition-colors"
+            :class="p === currentPage ? 'bg-primary-500 text-white border-primary-500' : 'border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700'"
+          >
+            {{ p }}
+          </button>
+          <button
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="px-3 py-1.5 rounded-lg border border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <span class="material-symbols-rounded text-base">chevron_right</span>
+          </button>
         </div>
       </div>
     </div>
@@ -186,7 +254,6 @@
         </div>
         <div class="px-5 py-4 flex flex-col gap-4">
 
-          <!-- Info do suporte selecionado -->
           <div class="flex items-center gap-3 p-3 rounded-lg bg-background-100 dark:bg-background-700 border border-background-300 dark:border-background-600">
             <span class="material-symbols-rounded text-primary-500">nfc</span>
             <div>
@@ -194,12 +261,11 @@
                 {{ associateForm.selectedSupport?.rfidTag ?? t('supports.noTag') }}
               </div>
               <div class="text-xs text-background-400">
-                {{ associateForm.selectedSupport?.type ?? '—' }} · {{ lineNameById(associateForm.selectedSupport?.productionLineId ?? 0) }}
+                {{ associateForm.selectedSupport?.type ?? '—' }} · {{ associateForm.selectedSupport?.productionLineName }}
               </div>
             </div>
           </div>
 
-          <!-- Dropdown de produto -->
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('supports.fields.product') }} *</label>
             <select v-model="associateForm.productId">
@@ -228,7 +294,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { supportService, supportedProductService } from '@/services/supportService'
-import type { Support, SupportedProduct } from '@/services/supportService'
+import type { SupportPaged } from '@/services/supportService'
 import { productionLineService } from '@/services/productionLineService'
 import type { ProductionLine } from '@/services/productionLineService'
 import { productService } from '@/services/productService'
@@ -240,12 +306,17 @@ const { t } = useI18n()
 
 // ── Estado ─────────────────────────────────────────────────────────────────────
 const loading = ref(true)
-const supports = ref<Support[]>([])
+const supports = ref<SupportPaged[]>([])
 const lines = ref<ProductionLine[]>([])
 const allProducts = ref<Product[]>([])
+const total = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(25)
 
-// current: undefined = ainda a carregar, null = livre, SupportedProduct = ocupado
-const currentBySupport = reactive<Record<number, SupportedProduct | null | undefined>>({})
+// Filtros
+const search = ref('')
+const lineFilter = ref<number | ''>('')
+const statusFilter = ref('')
 
 // ── Modais ─────────────────────────────────────────────────────────────────────
 const showCreateModal = ref(false)
@@ -257,28 +328,42 @@ const createForm = reactive<{ productionLineId: number; rfidTag: string; type: s
   type: '',
 })
 
-const associateForm = reactive<{ selectedSupport: Support | null; productId: number }>({
+const associateForm = reactive<{ selectedSupport: SupportPaged | null; productId: number }>({
   selectedSupport: null,
   productId: 0,
 })
 
 // ── Computed ───────────────────────────────────────────────────────────────────
-// Produtos que não estão associados a nenhum suporte ativo
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const start = Math.max(1, currentPage.value - 2)
+  const end = Math.min(totalPages.value, currentPage.value + 2)
+  for (let i = start; i <= end; i++) pages.push(i)
+  return pages
+})
+
+// Produtos livres = todos menos os já ocupados na página atual.
+// Nota: como a listagem é paginada, isto reflete apenas os ocupados visíveis;
+// para um filtro 100% exato seria preciso um endpoint dedicado de produtos livres.
 const occupiedProductIds = computed(() =>
-  Object.values(currentBySupport)
-    .filter(Boolean)
-    .map(sp => sp!.productId)
+  supports.value.filter(s => s.isOccupied).map(s => s.currentProductId)
 )
 
 const freeProducts = computed(() =>
   allProducts.value.filter(p => !occupiedProductIds.value.includes(p.id))
 )
 
-function lineNameById(id: number): string {
-  return lines.value.find(l => l.id === id)?.name ?? `Linha #${id}`
+// ── Lifecycle ──────────────────────────────────────────────────────────────────
+let debounceTimer: ReturnType<typeof setTimeout>
+function onSearchInput() {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadSupports()
+  }, 300)
 }
 
-// ── Lifecycle ──────────────────────────────────────────────────────────────────
 onMounted(async () => {
   await Promise.all([loadSupports(), loadLines(), loadProducts()])
 })
@@ -287,28 +372,19 @@ onMounted(async () => {
 async function loadSupports() {
   loading.value = true
   try {
-    const res = await supportService.getAll()
-    const raw = res.data as any
-    supports.value = raw?.$values ?? res.data ?? []
-    // Carregar estado atual de cada suporte em paralelo
-    await Promise.all(supports.value.map(s => loadCurrentForSupport(s.id)))
+    const res = await supportService.getPaged({
+      page: currentPage.value,
+      pageSize: pageSize.value,
+      search: search.value || undefined,
+      productionLineId: lineFilter.value || undefined,
+      occupied: statusFilter.value === 'occupied' ? true : statusFilter.value === 'free' ? false : undefined,
+    })
+    supports.value = res.data.data
+    total.value = res.data.total
   } catch {
     toast.error(t('errors.loadFailed'))
   } finally {
     loading.value = false
-  }
-}
-
-async function loadCurrentForSupport(supportId: number) {
-  currentBySupport[supportId] = undefined // loading
-  try {
-    const res = await supportedProductService.getCurrent(supportId)
-    currentBySupport[supportId] = res.data
-  } catch (err: any) {
-    // 404 = livre
-    if (err?.response?.status === 404) {
-      currentBySupport[supportId] = null
-    }
   }
 }
 
@@ -321,10 +397,33 @@ async function loadLines() {
 
 async function loadProducts() {
   try {
-    const res = await productService.getAll()
-    const raw = res.data as any
-    allProducts.value = raw?.$values ?? res.data ?? []
+    const res = await productService.getPaged({ page: 1, pageSize: 1000 })
+    allProducts.value = res.data.data
   } catch {}
+}
+
+function onFilterChange() {
+  currentPage.value = 1
+  loadSupports()
+}
+
+function onPageSizeChange() {
+  currentPage.value = 1
+  loadSupports()
+}
+
+function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  loadSupports()
+}
+
+function clearFilters() {
+  search.value = ''
+  lineFilter.value = ''
+  statusFilter.value = ''
+  currentPage.value = 1
+  loadSupports()
 }
 
 // ── Criar suporte ──────────────────────────────────────────────────────────────
@@ -350,7 +449,7 @@ async function submitCreateSupport() {
   }
 }
 
-async function deleteSupport(support: Support) {
+async function deleteSupport(support: SupportPaged) {
   try {
     await supportService.delete(support.id)
     toast.success(t('supports.deleted'))
@@ -361,7 +460,7 @@ async function deleteSupport(support: Support) {
 }
 
 // ── Associar produto ───────────────────────────────────────────────────────────
-function openAssociate(support: Support) {
+function openAssociate(support: SupportPaged) {
   associateForm.selectedSupport = support
   associateForm.productId = 0
   showAssociateModal.value = true
@@ -375,20 +474,22 @@ async function submitAssociate() {
     })
     showAssociateModal.value = false
     toast.success(t('supports.associated'))
-    await loadCurrentForSupport(associateForm.selectedSupport!.id)
+    await loadSupports()
   } catch {
     toast.error(t('errors.saveFailed'))
   }
 }
 
 // ── Libertar suporte ───────────────────────────────────────────────────────────
-async function releaseSupport(supportId: number) {
-  const current = currentBySupport[supportId]
-  if (!current) return
+async function releaseSupport(support: SupportPaged) {
   try {
-    await supportedProductService.release(current.id)
+    // getCurrent ainda é necessário aqui: a listagem paginada não devolve o id
+    // do registo SupportedProduct (só os dados do produto), e é esse id que a
+    // rota de libertar precisa.
+    const res = await supportedProductService.getCurrent(support.id)
+    await supportedProductService.release(res.data.id)
     toast.success(t('supports.released'))
-    await loadCurrentForSupport(supportId)
+    await loadSupports()
   } catch {
     toast.error(t('errors.saveFailed'))
   }

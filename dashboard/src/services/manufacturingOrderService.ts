@@ -10,16 +10,37 @@ export interface ManufacturingOrder {
   status: string | null
 }
 
+export interface PagedResult<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface UpdateManufacturingOrderDTO {
   status?: string
   endDate?: string
 }
 
 export const manufacturingOrderService = {
-  getAll: () => axios.get<ManufacturingOrder[]>('/ManufacturingOrder'),
-  getById: (id: number) => axios.get<ManufacturingOrder>(`/ManufacturingOrder/${id}`),
-  getByStatus: (status: string) => axios.get<ManufacturingOrder[]>(`/ManufacturingOrder/status/${status}`),
-  getDetails: (id: number) => axios.get(`/ManufacturingOrder/${id}/details`),
-  update: (id: number, dto: UpdateManufacturingOrderDTO) => axios.put(`/ManufacturingOrder/${id}`, dto),
-  delete: (id: number) => axios.delete(`/ManufacturingOrder/${id}`),
+  getPaged: (params: {
+    page?: number
+    pageSize?: number
+    search?: string
+    status?: string
+    dateFrom?: string
+    dateTo?: string
+  }) => axios.get<PagedResult<ManufacturingOrder>>('/ManufacturingOrder', { params }),
+
+  getById: (id: number) =>
+    axios.get<ManufacturingOrder>(`/ManufacturingOrder/${id}`),
+
+  getDetails: (id: number) =>
+    axios.get(`/ManufacturingOrder/${id}/details`),
+
+  update: (id: number, dto: UpdateManufacturingOrderDTO) =>
+    axios.put(`/ManufacturingOrder/${id}`, dto),
+
+  delete: (id: number) =>
+    axios.delete(`/ManufacturingOrder/${id}`),
 }

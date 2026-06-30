@@ -13,21 +13,68 @@
       </div>
     </div>
 
-    <!-- Filtros de Status -->
-    <div class="flex gap-2 mb-6 flex-wrap">
-      <button
-        v-for="filter in statusFilters"
-        :key="filter.value"
-        @click="setFilter(filter.value)"
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border"
-        :class="activeFilter === filter.value
-          ? 'bg-primary-500 text-white border-primary-500'
-          : 'bg-background-50 dark:bg-background-800 text-background-600 dark:text-background-400 border-background-300 dark:border-background-700 hover:border-primary-300'"
+    <!-- Barra de filtros: tudo numa linha -->
+    <div class="flex gap-3 mb-6 items-center">
+
+      <!-- Search (largura fixa razoável) -->
+      <div class="relative w-64 shrink-0">
+        <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-background-400 text-base pointer-events-none">search</span>
+        <input
+          v-model="search"
+          type="text"
+          :placeholder="t('mo.searchPlaceholder')"
+          class="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 placeholder-background-400 focus:outline-none focus:border-primary-400"
+        />
+      </div>
+
+      <!-- Dropdown Estado (largura fixa) -->
+      <select
+        v-model="activeStatus"
+        @change="onStatusChange"
+        class="w-36 shrink-0 px-3 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 bg-background-50 dark:bg-background-800 text-background-700 dark:text-background-300 focus:outline-none focus:border-primary-400"
       >
-        <span class="w-2 h-2 rounded-full" :class="filter.dot"></span>
-        {{ filter.label }}
-        <span class="text-xs opacity-70">({{ countByStatus(filter.value) }})</span>
+        <option value="all">{{ t('mo.status.all') }}</option>
+        <option :value="EntityStatus.Pending">{{ t('mo.status.pending') }}</option>
+        <option :value="EntityStatus.InProgress">{{ t('mo.status.inProgress') }}</option>
+        <option :value="EntityStatus.Completed">{{ t('mo.status.completed') }}</option>
+        <option :value="EntityStatus.Cancelled">{{ t('mo.status.cancelled') }}</option>
+      </select>
+
+      <!-- Data início (largura fixa) -->
+      <input
+        v-model="dateFrom"
+        type="date"
+        class="w-36 shrink-0 px-3 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 bg-background-50 dark:bg-background-800 text-background-700 dark:text-background-300 focus:outline-none focus:border-primary-400"
+      />
+
+      <!-- Data fim (largura fixa) -->
+      <input
+        v-model="dateTo"
+        type="date"
+        class="w-36 shrink-0 px-3 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 bg-background-50 dark:bg-background-800 text-background-700 dark:text-background-300 focus:outline-none focus:border-primary-400"
+      />
+
+      <!-- Registos por página (empurrado para a direita) -->
+      <select
+        v-model="pageSize"
+        @change="onPageSizeChange"
+        class="ml-auto w-20 shrink-0 px-3 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 bg-background-50 dark:bg-background-800 text-background-700 dark:text-background-300 focus:outline-none focus:border-primary-400"
+      >
+        <option :value="25">25</option>
+        <option :value="50">50</option>
+        <option :value="100">100</option>
+      </select>
+
+      <!-- Limpar (só aparece quando há filtros ativos) -->
+      <button
+        v-if="search || dateFrom || dateTo || activeStatus !== 'all'"
+        @click="clearFilters"
+        class="shrink-0 px-3 py-2 text-sm rounded-lg border border-background-300 dark:border-background-700 text-background-500 hover:text-background-700 dark:hover:text-background-300 hover:bg-background-100 dark:hover:bg-background-700 transition-colors"
+        title="Limpar filtros"
+      >
+        <span class="material-symbols-rounded text-base align-middle">close</span>
       </button>
+
     </div>
 
     <!-- Loading -->
@@ -38,13 +85,13 @@
 
     <!-- Listagem -->
     <div v-else>
-      <div v-if="filteredOrders.length === 0" class="text-center py-16 text-background-500">
+      <div v-if="orders.length === 0" class="text-center py-16 text-background-500">
         <span class="material-symbols-rounded text-5xl block mb-3">assignment_turned_in</span>
         <p class="text-sm">{{ t('mo.empty') }}</p>
       </div>
 
       <div v-else class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
-        <!-- Header -->
+        <!-- Header tabela -->
         <div class="grid grid-cols-6 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
           <span class="text-xs font-medium text-background-500 uppercase tracking-wider col-span-2">{{ t('mo.fields.number') }}</span>
           <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('mo.fields.customer') }}</span>
@@ -54,7 +101,7 @@
         </div>
 
         <!-- Rows -->
-        <template v-for="order in filteredOrders" :key="order.id">
+        <template v-for="order in orders" :key="order.id">
           <div
             class="grid grid-cols-6 px-4 py-3 border-b border-background-200 dark:border-background-700 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center cursor-pointer"
             @click="toggleOrder(order)"
@@ -96,7 +143,6 @@
               <span class="material-symbols-rounded animate-spin text-sm">autorenew</span>
               {{ t('common.loading') }}
             </div>
-
             <div v-else class="flex flex-col gap-3">
               <div
                 v-for="product in detailsByOrder[order.id]?.products"
@@ -127,6 +173,38 @@
             </div>
           </div>
         </template>
+      </div>
+
+      <!-- Paginação -->
+      <div v-if="totalPages > 1" class="flex items-center justify-between mt-4 text-sm text-background-600 dark:text-background-400">
+        <span>{{ t('common.showing', { from: (currentPage - 1) * pageSize + 1, to: Math.min(currentPage * pageSize, total), total }) }}</span>
+        <div class="flex gap-1">
+          <button
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="px-3 py-1.5 rounded-lg border border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <span class="material-symbols-rounded text-base">chevron_left</span>
+          </button>
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            @click="goToPage(p)"
+            class="px-3 py-1.5 rounded-lg border transition-colors"
+            :class="p === currentPage
+              ? 'bg-primary-500 text-white border-primary-500'
+              : 'border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700'"
+          >
+            {{ p }}
+          </button>
+          <button
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="px-3 py-1.5 rounded-lg border border-background-300 dark:border-background-700 hover:bg-background-100 dark:hover:bg-background-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <span class="material-symbols-rounded text-base">chevron_right</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -168,7 +246,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { manufacturingOrderService } from '@/services/manufacturingOrderService'
 import type { ManufacturingOrder } from '@/services/manufacturingOrderService'
@@ -176,37 +254,52 @@ import { toast } from '@/plugins/toast'
 import { useI18n } from 'vue-i18n'
 import { EntityStatus } from '@/constants/status'
 
-
 const { t } = useI18n()
 const router = useRouter()
 
+// Estado
 const loading = ref(true)
 const orders = ref<ManufacturingOrder[]>([])
-const activeFilter = ref('all')
-const showStatusModal = ref(false)
-const selectedOrder = ref<ManufacturingOrder | null>(null)
-const newStatus = ref<string>(EntityStatus.Pending)
+const total = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(25)
+
+// Filtros
+const search = ref('')
+const activeStatus = ref('all')
+const dateFrom = ref('')
+const dateTo = ref('')
+
+// Expand / detalhes
 const expandedOrderId = ref<number | null>(null)
 const detailsByOrder = reactive<Record<number, any>>({})
 const loadingDetails = reactive<Record<number, boolean>>({})
 
-const statusFilters = computed(() => [
-  { value: 'all', label: t('mo.status.all'), dot: 'bg-background-400' },
-  { value: EntityStatus.Pending, label: t('mo.status.pending'), dot: 'bg-warning-500' },
-  { value: EntityStatus.InProgress, label: t('mo.status.inProgress'), dot: 'bg-primary-500' },
-  { value: EntityStatus.Completed, label: t('mo.status.completed'), dot: 'bg-success-500' },
-  { value: EntityStatus.Cancelled, label: t('mo.status.cancelled'), dot: 'bg-danger-500' },
-])
+// Modal
+const showStatusModal = ref(false)
+const selectedOrder = ref<ManufacturingOrder | null>(null)
+const newStatus = ref<string>(EntityStatus.Pending)
 
-const filteredOrders = computed(() => {
-  if (activeFilter.value === 'all') return orders.value
-  return orders.value.filter(o => o.status === activeFilter.value)
+// Computed
+const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const start = Math.max(1, currentPage.value - 2)
+  const end = Math.min(totalPages.value, currentPage.value + 2)
+  for (let i = start; i <= end; i++) pages.push(i)
+  return pages
 })
 
-function countByStatus(status: string) {
-  if (status === 'all') return orders.value.length
-  return orders.value.filter(o => o.status === status).length
-}
+// Watchers com debounce para search e datas
+let debounceTimer: ReturnType<typeof setTimeout>
+watch([search, dateFrom, dateTo], () => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadOrders()
+  }, 300)
+})
 
 onMounted(async () => {
   await loadOrders()
@@ -215,13 +308,46 @@ onMounted(async () => {
 async function loadOrders() {
   loading.value = true
   try {
-    const res = await manufacturingOrderService.getAll()
-    orders.value = res.data
+    const res = await manufacturingOrderService.getPaged({
+      page: currentPage.value,
+      pageSize: pageSize.value,
+      search: search.value || undefined,
+      status: activeStatus.value === 'all' ? undefined : activeStatus.value,
+      dateFrom: dateFrom.value || undefined,
+      dateTo: dateTo.value || undefined,
+    })
+    orders.value = res.data.data
+    total.value = res.data.total
   } catch {
     toast.error(t('errors.loadFailed'))
   } finally {
     loading.value = false
   }
+}
+
+function onStatusChange() {
+  currentPage.value = 1
+  loadOrders()
+}
+
+function onPageSizeChange() {
+  currentPage.value = 1
+  loadOrders()
+}
+
+function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  loadOrders()
+}
+
+function clearFilters() {
+  search.value = ''
+  dateFrom.value = ''
+  dateTo.value = ''
+  activeStatus.value = 'all'
+  currentPage.value = 1
+  loadOrders()
 }
 
 async function toggleOrder(order: ManufacturingOrder) {
@@ -243,10 +369,6 @@ async function toggleOrder(order: ManufacturingOrder) {
   }
 }
 
-function setFilter(status: string) {
-  activeFilter.value = status
-}
-
 function openUpdateStatus(order: ManufacturingOrder) {
   selectedOrder.value = order
   newStatus.value = order.status ?? EntityStatus.Pending
@@ -265,14 +387,9 @@ async function submitUpdateStatus() {
   }
 }
 
-// Navega para a Timeline do produto clicado (vindo da lista expandida de uma MO)
 function goToProductTimeline(serialNumber: string | null) {
   if (!serialNumber) return
-
-  router.push({
-    name: 'ProductTimeline',
-    query: { vin: serialNumber }
-  })
+  router.push({ name: 'ProductTimeline', query: { vin: serialNumber } })
 }
 
 function formatDate(dateStr: string) {
@@ -281,21 +398,21 @@ function formatDate(dateStr: string) {
 
 function statusClass(status: string | null) {
   switch (status) {
-    case EntityStatus.Pending: return 'bg-warning-100 text-warning-700'
+    case EntityStatus.Pending:    return 'bg-warning-100 text-warning-700'
     case EntityStatus.InProgress: return 'bg-primary-50 text-primary-600'
-    case EntityStatus.Completed: return 'bg-success-100 text-success-700'
-    case EntityStatus.Cancelled: return 'bg-danger-100 text-danger-700'
-    default: return 'bg-background-200 text-background-600'
+    case EntityStatus.Completed:  return 'bg-success-100 text-success-700'
+    case EntityStatus.Cancelled:  return 'bg-danger-100 text-danger-700'
+    default:                      return 'bg-background-200 text-background-600'
   }
 }
 
 function statusLabel(status: string | null) {
   switch (status) {
-    case EntityStatus.Pending: return t('mo.status.pending')
+    case EntityStatus.Pending:    return t('mo.status.pending')
     case EntityStatus.InProgress: return t('mo.status.inProgress')
-    case EntityStatus.Completed: return t('mo.status.completed')
-    case EntityStatus.Cancelled: return t('mo.status.cancelled')
-    default: return t('mo.status.unknown')
+    case EntityStatus.Completed:  return t('mo.status.completed')
+    case EntityStatus.Cancelled:  return t('mo.status.cancelled')
+    default:                      return t('mo.status.unknown')
   }
 }
 </script>

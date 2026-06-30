@@ -17,6 +17,25 @@ export interface SupportedProduct {
   datetimeEnd: string | null
 }
 
+export interface SupportPaged {
+  id: number
+  productionLineId: number
+  productionLineName: string
+  rfidTag: string | null
+  type: string | null
+  isOccupied: boolean
+  currentProductId: number | null
+  currentSerialNumber: string | null
+  currentModelName: string | null
+}
+
+export interface PagedResult<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface CreateSupportDTO {
   productionLineId: number
   rfidTag?: string | null
@@ -29,7 +48,15 @@ export interface CreateSupportedProductDTO {
 }
 
 export const supportService = {
-  getAll: () => axios.get<Support[]>('/Support'),
+  getPaged: (params: {
+    page?: number
+    pageSize?: number
+    search?: string
+    productionLineId?: number
+    occupied?: boolean
+  }) => axios.get<PagedResult<SupportPaged>>('/Support', { params }),
+
+  getAll: () => axios.get<Support[]>('/Support/all'),
   create: (dto: CreateSupportDTO) => axios.post<Support>('/Support', dto),
   delete: (id: number) => axios.delete(`/Support/${id}`),
 }

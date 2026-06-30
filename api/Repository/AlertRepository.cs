@@ -1,4 +1,5 @@
 using Drivolution.Data;
+using Drivolution.DTO;
 using Drivolution.Models;
 using Microsoft.EntityFrameworkCore;
 using Drivolution.Repository.Interface;
@@ -12,6 +13,36 @@ public class AlertRepository : IAlertRepository
     public AlertRepository(ApplicationDbContext context)
     {
         _context = context;
+    }
+
+    public async Task<PagedResultDTO<AlertModel>> GetPagedAsync(int page, int pageSize, string? type, string? status)
+    {
+        var query = _context.Alerts
+            .Include(a => a.Product)
+            .Include(a => a.ProductPhase)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(type))
+            query = query.Where(a => a.Type == type);
+
+        if (!string.IsNullOrWhiteSpace(status))
+            query = query.Where(a => a.Status == status);
+
+        var total = await query.CountAsync();
+
+        var data = await query
+            .OrderByDescending(a => a.TriggeredAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResultDTO<AlertModel>
+        {
+            Data = data,
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
     public async Task<IEnumerable<AlertModel>> GetAllAsync()

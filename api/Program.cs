@@ -82,6 +82,7 @@ builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddHostedService<AlertBackgroundService>();
 builder.Services.AddScoped<IWipDashboardService, WipDashboardService>();
 builder.Services.AddScoped<IEtaPredictionService, EtaPredictionService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IClientPortalRepository, ClientPortalRepository>();
 builder.Services.AddScoped<IClientPortalService, ClientPortalService>();
 builder.Services.AddSingleton<IPhaseTimeWeightCalculator, PhaseTimeWeightCalculator>();

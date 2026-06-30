@@ -41,7 +41,7 @@ export const useAlertStore = defineStore('alert', () => {
 
   const fetchAllAlerts = async () => {
     try {
-      const res = await axios.get('/Alert')
+      const res = await axios.get('/Alert/all')
       allAlerts.value = res.data?.$values ?? res.data ?? []
     } catch (err) {
       console.error('Erro ao buscar histórico de alertas:', err)

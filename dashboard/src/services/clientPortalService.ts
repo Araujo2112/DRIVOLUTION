@@ -34,6 +34,13 @@ export interface ClientAccount {
   createdAt: string
 }
 
+export interface PagedResult<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export const clientPortalService = {
   // Portal do cliente (role=client)
   getMyOrders(): Promise<ClientOrderSummary[]> {
@@ -44,9 +51,14 @@ export const clientPortalService = {
     return axios.get(`/client/orders/${orderId}/products`).then(r => r.data)
   },
 
-  // Gestão de contas de cliente (admin/manager)
+  // Gestão de contas de cliente (admin/manager) — paginado, com busca por nome
+  getClientsPaged(params: { page?: number; pageSize?: number; search?: string }): Promise<PagedResult<ClientAccount>> {
+    return axios.get('/client-accounts', { params }).then(r => r.data)
+  },
+
+  // Lista completa, sem paginação (uso pontual, ex: exports)
   getClients(): Promise<ClientAccount[]> {
-    return axios.get('/client-accounts').then(r => r.data?.$values ?? r.data ?? [])
+    return axios.get('/client-accounts/all').then(r => r.data?.$values ?? r.data ?? [])
   },
 
   // A password não é escolhida — é gerada automaticamente pelo backend (igual
@@ -55,7 +67,7 @@ export const clientPortalService = {
     return axios.post('/client-accounts', data).then(r => r.data)
   },
 
-  updateClient(id: number, data: { name: string; email: string }): Promise<void> {
+  updateClient(id: number, data: { name: string; email: string; status?: string }): Promise<void> {
     return axios.put(`/client-accounts/${id}`, data)
   },
 

@@ -29,12 +29,13 @@ public class UserController : ControllerBase
         _audit    = audit;
     }
 
-    // GET /api/User
+    // GET /api/User — lista de utilizadores da plataforma (Equipa: admin/manager/operator).
+    // Contas role=client são geridas à parte em /api/client-accounts (ver Clients.vue).
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var users = await _userRepo.GetAllAsync();
-        return Ok(users.Select(MapToDTO));
+        return Ok(users.Where(u => u.Role != "client").Select(MapToDTO));
     }
 
     // GET /api/User/clients — lista de contas "client" ativas, para dropdowns

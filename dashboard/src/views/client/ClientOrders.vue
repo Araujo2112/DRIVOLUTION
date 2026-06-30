@@ -20,6 +20,51 @@
       </button>
     </div>
 
+    <!-- Search bar + status filter + page size -->
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-2 flex-1 flex-wrap">
+        <input
+          v-model="searchQuery"
+          type="text"
+          :placeholder="t('orders.searchPlaceholder')"
+          class="w-full max-w-sm px-3 py-2 text-sm border border-background-300 dark:border-background-600 rounded-lg bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        <select
+          v-model="statusFilter"
+          class="w-auto px-3 py-2 text-sm border border-background-300 dark:border-background-600 rounded-lg bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          <option value="">{{ t('common.allStatuses') }}</option>
+          <option value="pending">{{ t('orders.status.pending') }}</option>
+          <option value="in_progress">{{ t('orders.status.in_progress') }}</option>
+          <option value="completed">{{ t('orders.status.completed') }}</option>
+          <option value="cancelled">{{ t('orders.status.cancelled') }}</option>
+        </select>
+        <input
+          v-model="dateFrom"
+          type="date"
+          :placeholder="t('common.dateFrom')"
+          class="px-3 py-2 text-sm border border-background-300 dark:border-background-600 rounded-lg bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        <span class="text-sm text-background-400">–</span>
+        <input
+          v-model="dateTo"
+          type="date"
+          :placeholder="t('common.dateTo')"
+          class="px-3 py-2 text-sm border border-background-300 dark:border-background-600 rounded-lg bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+      </div>
+      <select
+        v-if="orders.length > pageSize"
+        v-model="pageSize"
+        @change="currentPage = 1"
+        class="w-20 px-2 py-2 text-sm border border-background-300 dark:border-background-600 rounded-lg bg-background-50 dark:bg-background-800 text-background-900 dark:text-background-50"
+      >
+        <option :value="25">25</option>
+        <option :value="50">50</option>
+        <option :value="100">100</option>
+      </select>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="flex items-center gap-2 text-background-500 text-sm py-12">
       <span class="material-symbols-rounded animate-spin text-lg">autorenew</span>
@@ -35,11 +80,12 @@
 
       <div v-else class="border border-background-300 dark:border-background-700 rounded-xl overflow-hidden">
         <!-- Table Header -->
-        <div class="grid grid-cols-5 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
+        <div class="grid grid-cols-6 px-4 py-3 bg-background-100 dark:bg-background-800 border-b border-background-300 dark:border-background-700">
           <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('orders.fields.orderNumber') }}</span>
           <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('orders.fields.customer') }}</span>
           <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('orders.fields.date') }}</span>
           <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('orders.fields.quantity') }}</span>
+          <span class="text-xs font-medium text-background-500 uppercase tracking-wider">{{ t('common.status') }}</span>
           <span class="text-xs font-medium text-background-500 uppercase tracking-wider text-right">{{ t('common.actions') }}</span>
         </div>
 
@@ -47,20 +93,84 @@
         <div
           v-for="order in orders"
           :key="order.id"
-          class="grid grid-cols-5 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
+          class="grid grid-cols-6 px-4 py-3 border-b border-background-200 dark:border-background-700 last:border-0 bg-background-50 dark:bg-background-800 hover:bg-background-100 dark:hover:bg-background-750 transition-colors items-center"
         >
           <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ order.orderNumber }}</span>
           <span class="text-sm text-background-700 dark:text-background-300">{{ order.clientName }}</span>
           <span class="text-sm text-background-500">{{ formatDate(order.orderDate) }}</span>
           <span class="text-sm text-background-700 dark:text-background-300">{{ order.quantity }} un.</span>
+
+          <!-- Status Badge -->
+          <span :class="statusBadgeClass(order.status)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit">
+            {{ t(`orders.status.${order.status}`) }}
+          </span>
+
+          <!-- Ações -->
           <div class="flex justify-end">
             <button
-              @click="deleteOrder(order)"
-              class="p-1.5 rounded-lg text-background-400 hover:text-danger-500 hover:bg-danger-100 dark:hover:bg-background-700 transition-colors"
+              v-if="order.status !== 'cancelled' && order.status !== 'completed'"
+              @click="openCancelModal(order)"
+              class="p-1.5 rounded-lg text-background-400 hover:text-warning-500 hover:bg-warning-100 dark:hover:bg-background-700 transition-colors"
+              :title="t('orders.cancelOrder')"
             >
-              <span class="material-symbols-rounded text-base">delete</span>
+              <span class="material-symbols-rounded text-base">cancel</span>
             </button>
+            <span v-else class="w-8" />
           </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="totalOrders > 0" class="flex items-center justify-between mt-4 text-sm text-background-500">
+        <span>{{ t('common.showing', { from: paginationFrom, to: paginationTo, total: totalOrders }) }}</span>
+        <div class="flex items-center gap-2">
+          <button
+            @click="currentPage--"
+            :disabled="currentPage === 1"
+            class="px-3 py-1 rounded-lg border border-background-300 dark:border-background-600 disabled:opacity-40 hover:bg-background-100 dark:hover:bg-background-700 transition-colors"
+          >{{ t('common.prev') }}</button>
+          <span class="tabular-nums">{{ currentPage }} / {{ totalPages }}</span>
+          <button
+            @click="currentPage++"
+            :disabled="currentPage >= totalPages"
+            class="px-3 py-1 rounded-lg border border-background-300 dark:border-background-600 disabled:opacity-40 hover:bg-background-100 dark:hover:bg-background-700 transition-colors"
+          >{{ t('common.next') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Cancelar Encomenda -->
+    <div v-if="showCancelModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showCancelModal = false">
+      <div class="bg-background-50 dark:bg-background-800 border border-background-300 dark:border-background-700 rounded-xl w-full max-w-md overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-background-300 dark:border-background-700">
+          <h2 class="text-base font-medium text-background-900 dark:text-background-50">{{ t('orders.cancelTitle') }}</h2>
+          <button @click="showCancelModal = false" class="text-background-500 hover:text-background-700 dark:hover:text-background-300">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="px-5 py-4">
+          <p class="text-sm text-background-600 dark:text-background-400">
+            {{ t('orders.cancelConfirm', { number: orderToCancel?.orderNumber }) }}
+          </p>
+          <p class="text-xs text-background-400 dark:text-background-500 mt-2">
+            {{ t('orders.cancelNote') }}
+          </p>
+        </div>
+        <div class="flex justify-end gap-2 px-5 py-4 border-t border-background-300 dark:border-background-700">
+          <button
+            @click="showCancelModal = false"
+            class="px-4 py-2 text-sm rounded-lg border border-background-300 dark:border-background-600 text-background-700 dark:text-background-300 hover:bg-background-100 dark:hover:bg-background-700 transition-colors"
+          >
+            {{ t('common.back') }}
+          </button>
+          <button
+            @click="confirmCancel"
+            :disabled="cancelling"
+            class="px-4 py-2 text-sm rounded-lg bg-warning-500 hover:bg-warning-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
+          >
+            <span v-if="cancelling" class="material-symbols-rounded animate-spin text-base mr-1">autorenew</span>
+            {{ t('orders.cancelConfirmBtn') }}
+          </button>
         </div>
       </div>
     </div>
@@ -80,12 +190,13 @@
         <!-- Modal Body -->
         <div class="px-5 py-4 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
 
-          <!-- Dados da Encomenda -->
+          <!-- Número da Encomenda -->
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('orders.fields.orderNumber') }} *</label>
             <input v-model="form.orderNumber" type="text" :placeholder="t('orders.fields.orderNumberPlaceholder')" />
           </div>
 
+          <!-- Cliente (dropdown) -->
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('orders.fields.customer') }} *</label>
             <select v-model="form.appUserId">
@@ -96,6 +207,7 @@
             </select>
           </div>
 
+          <!-- Quantidade -->
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-medium text-background-600 dark:text-background-400">{{ t('orders.fields.quantity') }} *</label>
             <input v-model.number="form.quantity" type="number" min="1" placeholder="1" />
@@ -129,7 +241,7 @@
                 <span v-if="!config.allowMultiple" class="text-background-400 font-normal">({{ t('orders.optionalDefault') }})</span>
               </label>
 
-              <!-- Single-select: dropdown, comportamento original -->
+              <!-- Single-select -->
               <select v-if="!config.allowMultiple" v-model="selectedOptions[config.id]">
                 <option :value="undefined">{{ t('orders.useDefault') }}</option>
                 <option
@@ -141,7 +253,7 @@
                 </option>
               </select>
 
-              <!-- Multi-select: toggle por opção (acessórios) -->
+              <!-- Multi-select -->
               <div v-else class="flex flex-col gap-1.5">
                 <label
                   v-for="option in optionsByConfig[config.id]"
@@ -216,31 +328,90 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { clientOrderService } from '@/services/clientOrderService'
-import type { ClientOrder, CreateClientOrderResult } from '@/services/clientOrderService'
-import { clientUserService } from '@/services/clientUserService'
-import type { ClientOption } from '@/services/clientUserService'
+import type { ClientOrder, CreateClientOrderResult, GetOrdersParams } from '@/services/clientOrderService'
 import { carModelService, configService, configOptionService } from '@/services/carModelService'
 import type { CarModel, Config, ConfigOption } from '@/services/carModelService'
+import { clientUserService } from '@/services/clientUserService'
+import type { ClientOption } from '@/services/clientUserService'
 import { toast } from '@/plugins/toast'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
+// --- Data ---
 const loading = ref(true)
 const orders = ref<ClientOrder[]>([])
 const models = ref<CarModel[]>([])
 const clients = ref<ClientOption[]>([])
 const configs = ref<Config[]>([])
 const optionsByConfig = reactive<Record<number, ConfigOption[]>>({})
-
-// Single-select (ex: Cor) — uma opção escolhida por config, ou undefined = usar default
 const selectedOptions = reactive<Record<number, number | undefined>>({})
-
-// Multi-select (ex: Acessórios) — lista de opções escolhidas por config
 const selectedAccessoryOptions = reactive<Record<number, number[]>>({})
 
+// --- Search & Pagination (server-side) ---
+const searchQuery = ref('')
+const statusFilter = ref('')
+const dateFrom = ref('')
+const dateTo = ref('')
+const currentPage = ref(1)
+const pageSize = ref(25)
+const totalOrders = ref(0)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(totalOrders.value / pageSize.value)))
+const paginationFrom = computed(() => totalOrders.value === 0 ? 0 : (currentPage.value - 1) * pageSize.value + 1)
+const paginationTo = computed(() => Math.min(currentPage.value * pageSize.value, totalOrders.value))
+
+// Debounce para não disparar pedido a cada letra
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+watch([searchQuery, statusFilter, dateFrom, dateTo], () => {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 1
+    loadOrders()
+  }, 300)
+})
+watch(currentPage, loadOrders)
+watch(pageSize, () => { currentPage.value = 1; loadOrders() })
+
+// --- Status badge ---
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case 'completed':  return 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+    case 'in_progress': return 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+    case 'cancelled':  return 'bg-background-100 text-background-500 dark:bg-background-700 dark:text-background-400'
+    default:           return 'bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400' // pending
+  }
+}
+
+// --- Cancel modal ---
+const showCancelModal = ref(false)
+const orderToCancel = ref<ClientOrder | null>(null)
+const cancelling = ref(false)
+
+function openCancelModal(order: ClientOrder) {
+  orderToCancel.value = order
+  showCancelModal.value = true
+}
+
+async function confirmCancel() {
+  if (!orderToCancel.value) return
+  cancelling.value = true
+  try {
+    await clientOrderService.cancel(orderToCancel.value.id)
+    toast.success(t('orders.cancelSuccess'))
+    showCancelModal.value = false
+    orderToCancel.value = null
+    await loadOrders()
+  } catch {
+    toast.error(t('errors.saveFailed'))
+  } finally {
+    cancelling.value = false
+  }
+}
+
+// --- Modal state ---
 const showModal = ref(false)
 const showResultModal = ref(false)
 const loadingConfigs = ref(false)
@@ -262,15 +433,26 @@ const isFormValid = computed(() =>
   form.modelId !== 0
 )
 
+// --- Lifecycle ---
 onMounted(async () => {
   await Promise.all([loadOrders(), loadModels(), loadClients()])
 })
 
+// --- Loaders ---
 async function loadOrders() {
   loading.value = true
   try {
-    const res = await clientOrderService.getAll()
-    orders.value = res.data
+    const params: GetOrdersParams = {
+      page: currentPage.value,
+      pageSize: pageSize.value,
+      search: searchQuery.value || undefined,
+      status: statusFilter.value || undefined,
+      dateFrom: dateFrom.value || undefined,
+      dateTo: dateTo.value || undefined,
+    }
+    const res = await clientOrderService.getPaged(params)
+    orders.value = res.data.data
+    totalOrders.value = res.data.total
   } catch {
     toast.error(t('errors.loadFailed'))
   } finally {
@@ -282,18 +464,14 @@ async function loadModels() {
   try {
     const res = await carModelService.getAll()
     models.value = res.data
-  } catch {
-    // silencioso
-  }
+  } catch { /* silencioso */ }
 }
 
 async function loadClients() {
   try {
     const res = await clientUserService.getClients()
     clients.value = res.data
-  } catch {
-    // silencioso
-  }
+  } catch { /* silencioso */ }
 }
 
 async function onModelChange() {
@@ -358,15 +536,13 @@ async function submitCreate() {
       .flat()
       .map(optionId => ({ configOptionId: optionId }))
 
-    const selectedConfigOptions = [...fromSingles, ...fromAccessories]
-
     const res = await clientOrderService.create({
       orderNumber: form.orderNumber,
-      appUserId: form.appUserId,
       orderDate: new Date(form.orderDate).toISOString(),
+      appUserId: form.appUserId,
       quantity: form.quantity,
       modelId: form.modelId,
-      configs: selectedConfigOptions,
+      configs: [...fromSingles, ...fromAccessories],
     })
 
     lastResult.value = res.data
@@ -378,16 +554,6 @@ async function submitCreate() {
     toast.error(t('errors.saveFailed'))
   } finally {
     submitting.value = false
-  }
-}
-
-async function deleteOrder(order: ClientOrder) {
-  try {
-    await clientOrderService.delete(order.id)
-    toast.success(t('orders.deleted'))
-    await loadOrders()
-  } catch {
-    toast.error(t('errors.deleteFailed'))
   }
 }
 

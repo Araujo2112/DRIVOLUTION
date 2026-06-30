@@ -17,6 +17,17 @@ public class AlertController : ControllerBase
     }
 
     [HttpGet]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25,
+        [FromQuery] string? type = null,
+        [FromQuery] string? status = null)
+    {
+        var result = await _alertService.GetPagedAsync(page, pageSize, type, status);
+        return Ok(result);
+    }
+
+    [HttpGet("all")]
     public async Task<IActionResult> GetAll()
         => Ok(await _alertService.GetAllAsync());
 

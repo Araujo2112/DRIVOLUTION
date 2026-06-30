@@ -10,6 +10,13 @@ export interface Product {
   productionDate: string | null
 }
 
+export interface PagedResult<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface ProductPhase {
   productPhaseId: number
   productId: number
@@ -31,7 +38,15 @@ export interface ProductTimeline {
 }
 
 export const productService = {
-  getAll: () => axios.get<Product[]>('/Product'),
+  getPaged: (params: {
+    page?: number
+    pageSize?: number
+    search?: string
+    modelId?: number
+    dateFrom?: string
+    dateTo?: string
+  }) => axios.get<PagedResult<Product>>('/Product', { params }),
+
   getById: (id: number) => axios.get<Product>(`/Product/${id}`),
   getTimeline: (id: number) => axios.get<ProductTimeline>(`/products/${id}/timeline`),
 }

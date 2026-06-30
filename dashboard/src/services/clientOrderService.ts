@@ -1,5 +1,7 @@
 import axios from '../axios'
 
+export type OrderStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
+
 export interface ClientOrder {
   id: number
   orderNumber: string
@@ -7,6 +9,23 @@ export interface ClientOrder {
   appUserId: number
   clientName: string
   quantity: number
+  status: OrderStatus
+}
+
+export interface PagedResult<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface GetOrdersParams {
+  page?: number
+  pageSize?: number
+  search?: string
+  status?: string
+  dateFrom?: string
+  dateTo?: string
 }
 
 export interface CreateClientOrderDTO {
@@ -32,8 +51,11 @@ export interface CreateClientOrderResult {
 }
 
 export const clientOrderService = {
-  getAll: () => axios.get<ClientOrder[]>('/ClientOrder'),
+  getAll: () => axios.get<ClientOrder[]>('/ClientOrder/all'),
+  getPaged: (params: GetOrdersParams = {}) =>
+    axios.get<PagedResult<ClientOrder>>('/ClientOrder', { params }),
   getById: (id: number) => axios.get<ClientOrder>(`/ClientOrder/${id}`),
   create: (dto: CreateClientOrderDTO) => axios.post<CreateClientOrderResult>('/ClientOrder', dto),
+  cancel: (id: number) => axios.patch(`/ClientOrder/${id}/cancel`),
   delete: (id: number) => axios.delete(`/ClientOrder/${id}`),
 }

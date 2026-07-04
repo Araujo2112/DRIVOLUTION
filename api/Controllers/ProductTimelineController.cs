@@ -6,7 +6,6 @@ namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/products")]
-[Authorize(Roles = "admin,manager,operator")]
 public class ProductTimelineController : ControllerBase
 {
     private readonly IProductTimelineService _service;

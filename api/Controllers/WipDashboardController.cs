@@ -6,7 +6,6 @@ namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/production-lines")]
-[Authorize(Roles = "admin,manager,operator")]
 public class WipDashboardController : ControllerBase
 {
     private readonly IWipDashboardService _service;

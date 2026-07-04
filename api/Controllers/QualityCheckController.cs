@@ -7,7 +7,6 @@ namespace Drivolution.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "admin,manager,operator")]
 public class QualityCheckController : ControllerBase
 {
     private readonly IQualityCheckService _service;

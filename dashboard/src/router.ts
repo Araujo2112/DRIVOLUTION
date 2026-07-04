@@ -61,9 +61,13 @@ const routes = [
     component: ClientLayout,
     meta: { requiresAuth: true, roles: ['client'] },
     children: [
-      { path: '', redirect: '/client/orders' },
+      { path: '', redirect: '/client/dashboard' },
+      { path: 'dashboard', name: 'ClientDashboard', component: () => import('./views/client/ClientDashboard.vue') },
       { path: 'orders', name: 'ClientOrdersPortal', component: () => import('./views/client/ClientOrders.vue') },
       { path: 'orders/:id', name: 'ClientOrderDetail', component: () => import('./views/client/ClientOrderDetail.vue') },
+      { path: 'vehicle-config', name: 'ClientVehicleConfig', component: () => import('./views/client/ClientVehicleConfig.vue') },
+      { path: 'support', name: 'ClientSupport', component: () => import('./views/client/ClientSupport.vue') },
+      { path: 'settings', name: 'ClientSettings', component: () => import('./views/client/ClientSettings.vue') },
     ],
   },
 ]

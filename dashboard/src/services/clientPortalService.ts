@@ -7,15 +7,24 @@ export interface ClientOrderSummary {
   totalCars: number
   completedCars: number
   status: string
+  modelName: string
+  etaUtc: string | null
+  etaIsMlPrediction: boolean
 }
 
 export interface ClientProduct {
   productId: number
   serialNumber: string
+  modelName: string
   currentPhase: string
   isCompleted: boolean
   etaUtc: string | null
   etaIsMlPrediction: boolean
+}
+
+export interface ClientVehicle extends ClientProduct {
+  orderId: number
+  orderNumber: string
 }
 
 export interface ClientOrderDetail {
@@ -49,6 +58,26 @@ export const clientPortalService = {
 
   getOrderDetail(orderId: number): Promise<ClientOrderDetail> {
     return axios.get(`/client/orders/${orderId}/products`).then(r => r.data)
+  },
+
+  // Não existe endpoint dedicado a "todos os veículos do cliente" — agrega-se
+  // aqui a partir das encomendas + detalhe de cada uma (N+1). Aceitável para
+  // o volume atual de encomendas por cliente; se crescer muito, isto devia
+  // passar a ser um endpoint próprio no backend (ex: GET /client/vehicles).
+  async getMyVehicles(): Promise<ClientVehicle[]> {
+    const orders = await this.getMyOrders()
+    const details = await Promise.all(
+      orders.map(o => this.getOrderDetail(o.id).catch(() => null))
+    )
+    const vehicles: ClientVehicle[] = []
+    details.forEach((detail, idx) => {
+      if (!detail) return
+      const order = orders[idx]
+      detail.products.forEach(p => {
+        vehicles.push({ ...p, orderId: order.id, orderNumber: order.orderNumber })
+      })
+    })
+    return vehicles
   },
 
   // Gestão de contas de cliente (admin/manager) — paginado, com busca por nome

@@ -15,8 +15,37 @@ namespace Drivolution.Services
             _eta = eta;
         }
 
-        public Task<List<ClientOrderSummaryDTO>> GetOrdersAsync(int appUserId)
-            => _repo.GetOrdersByClientAsync(appUserId);
+        public async Task<List<ClientOrderSummaryDTO>> GetOrdersAsync(int appUserId)
+        {
+            var orders = await _repo.GetOrdersByClientAsync(appUserId);
+
+            // Para cada encomenda com carros pendentes, prevê a conclusão de cada um
+            // e usa a mais tardia como "previsão de conclusão da encomenda".
+            var etaTasks = orders.Select(async o =>
+            {
+                if (o.PendingProductIds.Count == 0) return;
+
+                var predictions = await Task.WhenAll(o.PendingProductIds.Select(async pid =>
+                {
+                    try { return await _eta.PredictForProduct(pid); }
+                    catch { return null; }
+                }));
+
+                var latest = predictions
+                    .Where(p => p != null)
+                    .OrderByDescending(p => p!.EstimatedCompletion)
+                    .FirstOrDefault();
+
+                if (latest != null)
+                {
+                    o.EtaUtc = latest.EstimatedCompletion;
+                    o.EtaIsMlPrediction = latest.ModelTrainedAt != null;
+                }
+            });
+
+            await Task.WhenAll(etaTasks);
+            return orders;
+        }
 
         public async Task<ClientOrderDetailDTO?> GetOrderDetailAsync(int orderId, int appUserId)
         {

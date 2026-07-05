@@ -22,16 +22,32 @@ export interface ClientProduct {
   etaIsMlPrediction: boolean
 }
 
-export interface ClientVehicle extends ClientProduct {
-  orderId: number
-  orderNumber: string
-}
-
 export interface ClientOrderDetail {
   orderId: number
   orderNumber: string
   orderDate: string
   products: ClientProduct[]
+}
+
+export interface ClientCarModel {
+  id: number
+  name: string
+  version: string | null
+  type: string | null
+}
+
+export interface ClientConfigOption {
+  id: number
+  configId: number
+  value: string
+  isDefault: boolean
+}
+
+export interface ClientModelConfig {
+  id: number
+  item: string
+  allowMultiple: boolean
+  options: ClientConfigOption[]
 }
 
 export interface ClientAccount {
@@ -40,6 +56,16 @@ export interface ClientAccount {
   email: string
   role: string
   status: string
+  createdAt: string
+}
+
+export interface ClientNotification {
+  id: number
+  type: 'order_started' | 'order_completed' | 'car_completed'
+  message: string
+  clientOrderId: number | null
+  productId: number | null
+  isRead: boolean
   createdAt: string
 }
 
@@ -60,24 +86,17 @@ export const clientPortalService = {
     return axios.get(`/client/orders/${orderId}/products`).then(r => r.data)
   },
 
-  // Não existe endpoint dedicado a "todos os veículos do cliente" — agrega-se
-  // aqui a partir das encomendas + detalhe de cada uma (N+1). Aceitável para
-  // o volume atual de encomendas por cliente; se crescer muito, isto devia
-  // passar a ser um endpoint próprio no backend (ex: GET /client/vehicles).
-  async getMyVehicles(): Promise<ClientVehicle[]> {
-    const orders = await this.getMyOrders()
-    const details = await Promise.all(
-      orders.map(o => this.getOrderDetail(o.id).catch(() => null))
-    )
-    const vehicles: ClientVehicle[] = []
-    details.forEach((detail, idx) => {
-      if (!detail) return
-      const order = orders[idx]
-      detail.products.forEach(p => {
-        vehicles.push({ ...p, orderId: order.id, orderNumber: order.orderNumber })
-      })
-    })
-    return vehicles
+  // Fluxo "Nova Encomenda" — catálogo de modelos e respetivas configurações.
+  getModels(): Promise<ClientCarModel[]> {
+    return axios.get('/client/models').then(r => r.data?.$values ?? r.data ?? [])
+  },
+
+  getModel(modelId: number): Promise<ClientCarModel> {
+    return axios.get(`/client/models/${modelId}`).then(r => r.data)
+  },
+
+  getModelConfigs(modelId: number): Promise<ClientModelConfig[]> {
+    return axios.get(`/client/models/${modelId}/configs`).then(r => r.data?.$values ?? r.data ?? [])
   },
 
   // Gestão de contas de cliente (admin/manager) — paginado, com busca por nome
@@ -107,5 +126,25 @@ export const clientPortalService = {
   // Reset gera password temporária nova automaticamente — sem corpo no request.
   resetPassword(id: number): Promise<{ temporaryPassword: string }> {
     return axios.put(`/client-accounts/${id}/reset-password`).then(r => r.data)
+  },
+
+  // Sino de notificações (Card N) — encomenda iniciada/concluída, carro concluído.
+  getNotifications(): Promise<{ items: ClientNotification[]; unreadCount: number }> {
+    return axios.get('/client/notifications').then(r => ({
+      items: r.data?.items?.$values ?? r.data?.items ?? [],
+      unreadCount: r.data?.unreadCount ?? 0,
+    }))
+  },
+
+  markNotificationRead(id: number): Promise<void> {
+    return axios.post(`/client/notifications/${id}/read`)
+  },
+
+  markAllNotificationsRead(): Promise<void> {
+    return axios.post('/client/notifications/read-all')
+  },
+
+  clearAllNotifications(): Promise<void> {
+    return axios.delete('/client/notifications')
   }
 }

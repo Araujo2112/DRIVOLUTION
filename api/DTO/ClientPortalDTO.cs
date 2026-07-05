@@ -68,4 +68,13 @@ namespace Drivolution.DTO
     {
         public string NewPassword { get; set; } = string.Empty;
     }
+
+    // Resposta de GET /api/client/models/{id}/configs
+    public class ClientModelConfigDTO
+    {
+        public int Id { get; set; }
+        public string Item { get; set; } = string.Empty;
+        public bool AllowMultiple { get; set; }
+        public List<ConfigOptionDTO> Options { get; set; } = new();
+    }
 }

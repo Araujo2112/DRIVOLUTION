@@ -11,15 +11,18 @@ public class ProductPhaseService : IProductPhaseService
     private readonly IProductPhaseRepository _repo;
     private readonly IProductRepository _productRepo;
     private readonly IManufacturingOrderRepository _moRepo;
+    private readonly INotificationService _notificationService;
 
     public ProductPhaseService(
         IProductPhaseRepository repo,
         IProductRepository productRepo,
-        IManufacturingOrderRepository moRepo)
+        IManufacturingOrderRepository moRepo,
+        INotificationService notificationService)
     {
         _repo = repo;
         _productRepo = productRepo;
         _moRepo = moRepo;
+        _notificationService = notificationService;
     }
 
     public async Task<IEnumerable<ProductPhaseDTO>> GetByProduct(int productId)
@@ -36,11 +39,6 @@ public class ProductPhaseService : IProductPhaseService
 
     public async Task<ProductPhaseDTO> Create(CreateProductPhaseDTO dto)
     {
-        // Fechar TODAS as fases ainda em aberto deste produto antes de abrir uma nova.
-        // Importante: usa GetAllOpenByProduct (não GetCurrentByProduct) porque, devido a
-        // uma condição de corrida já observada em produção, é possível existir mais do
-        // que uma fase em aberto para o mesmo produto. Fechar só "a primeira que aparecer"
-        // deixava as restantes órfãs para sempre, agravando o problema a cada novo evento.
         var openPhases = await _repo.GetAllOpenByProduct(dto.ProductId);
         foreach (var open in openPhases)
         {
@@ -92,6 +90,7 @@ public class ProductPhaseService : IProductPhaseService
         // Se já está concluída ou cancelada, não tocar
         if (mo.Status == OrderStatus.Completed || mo.Status == OrderStatus.Cancelled) return;
 
+        var wasPending = mo.Status == OrderStatus.Pending;
         var allProducts = mo.Products.ToList();
 
         // Verificar se todos os produtos têm pelo menos uma fase aberta (sem DatetimeEnd)
@@ -114,6 +113,48 @@ public class ProductPhaseService : IProductPhaseService
         }
 
         await _moRepo.Update(mo);
+
+        var appUserId = mo.ClientOrder?.AppUserId;
+        if (appUserId == null) return;
+
+        if (wasPending && mo.Status == OrderStatus.InProgress)
+        {
+            await _notificationService.CreateAsync(
+                appUserId.Value,
+                "order_started",
+                $"A tua encomenda {mo.ClientOrder!.OrderNumber} foi iniciada.",
+                clientOrderId: mo.ClientOrderId);
+        }
+
+        var thisProduct = allProducts.FirstOrDefault(p => p.Id == productId);
+        if (thisProduct != null &&
+            thisProduct.ProductPhases.Any() &&
+            thisProduct.ProductPhases.All(pp => pp.DatetimeEnd != null))
+        {
+            await _notificationService.CreateAsync(
+                appUserId.Value,
+                "car_completed",
+                $"O carro {thisProduct.SerialNumber ?? "#" + thisProduct.Id} da encomenda {mo.ClientOrder!.OrderNumber} foi concluído.",
+                clientOrderId: mo.ClientOrderId,
+                productId: thisProduct.Id);
+        }
+
+        if (mo.Status == OrderStatus.Completed)
+        {
+            var siblingMos = await _moRepo.GetByClientOrderId(mo.ClientOrderId);
+            if (siblingMos.All(m => m.Status == OrderStatus.Completed))
+            {
+                var already = await _notificationService.ExistsAsync("order_completed", mo.ClientOrderId);
+                if (!already)
+                {
+                    await _notificationService.CreateAsync(
+                        appUserId.Value,
+                        "order_completed",
+                        $"A tua encomenda {mo.ClientOrder!.OrderNumber} foi concluída.",
+                        clientOrderId: mo.ClientOrderId);
+                }
+            }
+        }
     }
 
     private static ProductPhaseDTO ToDTO(ProductPhaseModel pp) =>

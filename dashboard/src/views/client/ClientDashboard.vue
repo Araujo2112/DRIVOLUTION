@@ -113,6 +113,7 @@ import { useI18n } from 'vue-i18n'
 import 'material-symbols'
 import { clientPortalService, type ClientOrderSummary } from '@/services/clientPortalService'
 import { relativeEtaLabel } from '@/utils/clientEta'
+import { toast } from '@/plugins/toast'
 
 const { t } = useI18n()
 
@@ -122,6 +123,8 @@ const loading = ref(true)
 onMounted(async () => {
   try {
     orders.value = await clientPortalService.getMyOrders()
+  } catch {
+    toast.error(t('errors.loadFailed'))
   } finally {
     loading.value = false
   }

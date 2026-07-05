@@ -10,4 +10,5 @@ public interface IManufacturingOrderRepository
     Task Update(ManufacturingOrderModel entity);
     Task Delete(int id);
     Task<bool> Exists(int id);
+    Task<IEnumerable<ManufacturingOrderModel>> GetByClientOrderId(int clientOrderId);
 }

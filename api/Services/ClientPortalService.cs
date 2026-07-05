@@ -8,11 +8,43 @@ namespace Drivolution.Services
     {
         private readonly IClientPortalRepository _repo;
         private readonly IEtaPredictionService _eta;
+        // Reutiliza o repositório de admin (só leitura aqui) em vez de duplicar
+        // acesso a dados de CarModel/Config — evita 2 caminhos para a mesma tabela.
+        private readonly ICarModelRepository _carModelRepo;
 
-        public ClientPortalService(IClientPortalRepository repo, IEtaPredictionService eta)
+        public ClientPortalService(IClientPortalRepository repo, IEtaPredictionService eta, ICarModelRepository carModelRepo)
         {
             _repo = repo;
             _eta = eta;
+            _carModelRepo = carModelRepo;
+        }
+
+        public async Task<List<CarModelDTO>> GetModelsAsync()
+        {
+            var models = await _carModelRepo.GetAll();
+            return models.Select(m => new CarModelDTO(m.Id, m.Name, m.Version, m.Type)).ToList();
+        }
+
+        public async Task<CarModelDTO?> GetModelAsync(int modelId)
+        {
+            var model = await _carModelRepo.GetById(modelId);
+            return model == null ? null : new CarModelDTO(model.Id, model.Name, model.Version, model.Type);
+        }
+
+        public async Task<List<ClientModelConfigDTO>?> GetModelConfigsAsync(int modelId)
+        {
+            if (!await _carModelRepo.Exists(modelId)) return null;
+
+            var configs = await _carModelRepo.GetConfigsWithOptions(modelId);
+            return configs.Select(c => new ClientModelConfigDTO
+            {
+                Id = c.Id,
+                Item = c.Item,
+                AllowMultiple = c.AllowMultiple,
+                Options = c.ConfigOptions
+                    .Select(o => new ConfigOptionDTO(o.Id, o.ConfigId, o.Value, o.IsDefault))
+                    .ToList()
+            }).ToList();
         }
 
         public async Task<List<ClientOrderSummaryDTO>> GetOrdersAsync(int appUserId)

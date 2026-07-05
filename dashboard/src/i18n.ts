@@ -749,6 +749,12 @@ export const messages = {
     client: {
       portal: 'Portal do Cliente',
       logout: 'Sair',
+      notifications: {
+        title: 'Notificações',
+        empty: 'Sem notificações.',
+        markAllRead: 'Marcar tudo como lido',
+        clearAll: 'Limpar tudo',
+      },
       orders: {
         title: 'As Minhas Encomendas',
         subtitle: 'Acompanhe o estado de produção dos seus veículos',
@@ -802,6 +808,7 @@ export const messages = {
         inProduction: 'Em produção',
         eta: 'Previsão',
         etaUnavailable: 'Previsão indisponível',
+        mlTooltip: 'Previsão Calculada com Base no Histórico de Produção',
         notStarted: 'Ainda não entrou em produção',
         notFound: 'Encomenda não encontrada.',
         status: {
@@ -811,10 +818,9 @@ export const messages = {
         },
       },
       nav: {
+        newOrder: 'Configurador de Veículos',
         overview: 'Visão Geral',
         orders: 'Encomendas',
-        myVehicles: 'Os Meus Veículos',
-        support: 'Suporte',
         settings: 'Definições',
       },
       dashboard: {
@@ -835,23 +841,32 @@ export const messages = {
           details: 'Ver Detalhes',
         },
       },
-      myVehicles: {
-        title: 'Os Meus Veículos',
-        subtitle: 'Consulte todos os veículos das suas encomendas, com o estado de produção atual.',
-        empty: 'Ainda não tem veículos associados a encomendas.',
-        noResults: 'Nenhum veículo corresponde aos filtros aplicados.',
-        searchPlaceholder: 'Pesquisar por VIN, modelo ou encomenda...',
-        allModels: 'Todos os Modelos',
-        unknownModel: 'Modelo não especificado',
-        viewOrder: 'Ver encomenda →',
-      },
-      support: {
-        title: 'Suporte',
-        subtitle: 'Esta secção ainda não está disponível. Contacte o seu gestor de conta em caso de dúvidas.',
-      },
       settings: {
         title: 'Definições',
-        subtitle: 'Esta secção ainda não está disponível.',
+        subtitle: 'Preferências da aplicação',
+        appearance: 'Aparência',
+        theme: 'Tema',
+        themeLight: 'Modo claro',
+        themeDark: 'Modo escuro',
+        language: 'Idioma',
+        languageLabel: 'Língua da interface',
+      },
+      newOrder: {
+        selection: {
+          title: 'Escolha o Modelo',
+          subtitle: 'Selecione o modelo de veículo que pretende encomendar.',
+          empty: 'Não há modelos disponíveis de momento.',
+          configure: 'Configurar',
+        },
+        configurator: {
+          back: 'Voltar aos modelos',
+          title: 'Configurar',
+          subtitle: 'Escolha as opções disponíveis para este modelo.',
+          noConfigs: 'Este modelo não tem opções de configuração disponíveis.',
+          summary: 'Resumo da Configuração',
+          notSelected: 'Por escolher',
+          notFound: 'Modelo não encontrado.',
+        },
       },
     },
 
@@ -1652,6 +1667,12 @@ export const messages = {
     client: {
       portal: 'Client Portal',
       logout: 'Logout',
+      notifications: {
+        title: 'Notifications',
+        empty: 'No notifications.',
+        markAllRead: 'Mark all as read',
+        clearAll: 'Clear all',
+      },
       orders: {
         title: 'My Orders',
         subtitle: 'Track the production status of your vehicles',
@@ -1705,6 +1726,7 @@ export const messages = {
         inProduction: 'In production',
         eta: 'ETA',
         etaUnavailable: 'ETA unavailable',
+        mlTooltip: 'Prediction Calculated Based on Production History',
         notStarted: 'Not yet in production',
         notFound: 'Order not found.',
         status: {
@@ -1714,10 +1736,9 @@ export const messages = {
         },
       },
       nav: {
+        newOrder: 'Vehicle Configurator',
         overview: 'Overview',
         orders: 'Orders',
-        myVehicles: 'My Vehicles',
-        support: 'Support',
         settings: 'Settings',
       },
       dashboard: {
@@ -1738,23 +1759,32 @@ export const messages = {
           details: 'View Details',
         },
       },
-      myVehicles: {
-        title: 'My Vehicles',
-        subtitle: 'View all vehicles across your orders, with their current production status.',
-        empty: 'You don\'t have any vehicles linked to orders yet.',
-        noResults: 'No vehicle matches the applied filters.',
-        searchPlaceholder: 'Search by VIN, model or order...',
-        allModels: 'All Models',
-        unknownModel: 'Model not specified',
-        viewOrder: 'View order →',
-      },
-      support: {
-        title: 'Support',
-        subtitle: 'This section is not available yet. Contact your account manager with any questions.',
-      },
       settings: {
         title: 'Settings',
-        subtitle: 'This section is not available yet.',
+        subtitle: 'Application preferences',
+        appearance: 'Appearance',
+        theme: 'Theme',
+        themeLight: 'Light mode',
+        themeDark: 'Dark mode',
+        language: 'Language',
+        languageLabel: 'Interface language',
+      },
+      newOrder: {
+        selection: {
+          title: 'Choose a Model',
+          subtitle: 'Select the vehicle model you want to order.',
+          empty: 'No models available at the moment.',
+          configure: 'Configure',
+        },
+        configurator: {
+          back: 'Back to models',
+          title: 'Configure',
+          subtitle: 'Choose the available options for this model.',
+          noConfigs: 'This model has no configuration options available.',
+          summary: 'Configuration Summary',
+          notSelected: 'Not selected',
+          notFound: 'Model not found.',
+        },
       },
     },
 

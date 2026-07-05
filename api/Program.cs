@@ -127,6 +127,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IWorkstationPresenceRepository, WorkstationPresenceRepository>();
 builder.Services.AddScoped<IAuditRepository, AuditRepository>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // --- JWT Authentication ---
 builder.Services.AddAuthentication(options =>

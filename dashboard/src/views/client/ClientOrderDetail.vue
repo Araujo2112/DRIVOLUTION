@@ -1,5 +1,5 @@
 <template>
-  <div class="px-8 py-8 max-w-4xl">
+  <div class="px-8 py-8 w-full">
     <!-- Voltar -->
     <button
       class="flex items-center gap-1.5 text-sm text-background-500 dark:text-background-400 hover:text-primary-500 dark:hover:text-primary-400 mb-6 transition-colors"
@@ -67,7 +67,7 @@
                   <span :title="absoluteEtaDate(car.etaUtc)">
                     {{ t('client.orders.etaReady', { time: relativeEtaLabel(car.etaUtc, t) }) }}
                   </span>
-                  <span v-if="car.etaIsMlPrediction" class="ml-1 text-primary-500 dark:text-primary-400 font-semibold">ML</span>
+                  <span v-if="car.etaIsMlPrediction" class="ml-1 text-primary-500 dark:text-primary-400 font-semibold" :title="t('client.detail.mlTooltip')">ML</span>
                 </template>
                 <template v-else>{{ t('client.detail.etaUnavailable') }}</template>
               </p>
@@ -123,6 +123,7 @@ import { useI18n } from 'vue-i18n'
 import 'material-symbols'
 import { clientPortalService, type ClientOrderDetail, type ClientProduct } from '@/services/clientPortalService'
 import { relativeEtaLabel, absoluteEtaDate } from '@/utils/clientEta'
+import { toast } from '@/plugins/toast'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -139,6 +140,8 @@ onMounted(async () => {
   const id = Number(route.params.id)
   try {
     detail.value = await clientPortalService.getOrderDetail(id)
+  } catch {
+    toast.error(t('errors.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -161,10 +164,6 @@ function stepState(car: ClientProduct, stepIdx: number): 'done' | 'current' | 'p
   return 'pending'
 }
 
-// Nota: o mockup aprovado tinha 4 estados (Em Produção / Aguardando / Concluído
-// / Em Fila), mas os dados reais só distinguem 3 — não há, na fase atual do
-// produto, uma diferença entre "em produção" e "à espera entre fases". Em vez
-// de inventar esse 4º estado sem dados por trás, uso só os 3 que a API suporta.
 function statusLabel(car: ClientProduct): string {
   if (car.isCompleted) return t('client.detail.status.completed')
   if (!hasStarted(car)) return t('client.detail.status.queued')

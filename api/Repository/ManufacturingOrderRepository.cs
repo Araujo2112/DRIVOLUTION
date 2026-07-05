@@ -92,4 +92,12 @@ public class ManufacturingOrderRepository : IManufacturingOrderRepository
 
     public async Task<bool> Exists(int id) =>
         await _context.ManufacturingOrders.AnyAsync(mo => mo.Id == id);
+
+    // Usado para verificar se TODAS as MOs de uma client_order estão
+    // concluídas (uma client_order pode ter mais do que uma MO) — necessário
+    // para disparar a notificação "encomenda concluída" ao nível certo.
+    public async Task<IEnumerable<ManufacturingOrderModel>> GetByClientOrderId(int clientOrderId) =>
+        await _context.ManufacturingOrders
+            .Where(mo => mo.ClientOrderId == clientOrderId)
+            .ToListAsync();
 }

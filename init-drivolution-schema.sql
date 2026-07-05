@@ -398,3 +398,37 @@ CREATE INDEX IF NOT EXISTS idx_wp_workstation ON workstation_presence(workstatio
 CREATE INDEX IF NOT EXISTS idx_wp_user        ON workstation_presence(app_user_id);
 CREATE INDEX IF NOT EXISTS idx_wp_active      ON workstation_presence(app_user_id, workstation_id)
     WHERE checked_out_at IS NULL;
+
+-- Notificações do portal do cliente (Card N — encomenda iniciada/concluída, carro concluído)
+CREATE TABLE IF NOT EXISTS notification (
+    id               SERIAL PRIMARY KEY,
+    app_user_id      INTEGER NOT NULL,
+    type             VARCHAR(30) NOT NULL,
+    message          VARCHAR(255) NOT NULL,
+    client_order_id  INTEGER,
+    product_id       INTEGER,
+    is_read          BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_notification_type
+        CHECK (type IN ('order_started', 'order_completed', 'car_completed')),
+
+    CONSTRAINT fk_notification_app_user
+        FOREIGN KEY (app_user_id)
+        REFERENCES app_user(id)
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_notification_client_order
+        FOREIGN KEY (client_order_id)
+        REFERENCES client_order(id)
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_notification_product
+        FOREIGN KEY (product_id)
+        REFERENCES product(id)
+        ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_user   ON notification(app_user_id);
+CREATE INDEX IF NOT EXISTS idx_notification_unread ON notification(app_user_id)
+    WHERE is_read = FALSE;

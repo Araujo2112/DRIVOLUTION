@@ -49,6 +49,9 @@ public class ApplicationDbContext : DbContext
     // --- Audit ---
     public DbSet<AuditLogModel> AuditLogs { get; set; }
 
+    // --- Notificações do Portal do Cliente (Card N) ---
+    public DbSet<NotificationModel> Notifications { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

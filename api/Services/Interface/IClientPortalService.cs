@@ -6,5 +6,8 @@ namespace Drivolution.Services.Interface
     {
         Task<List<ClientOrderSummaryDTO>> GetOrdersAsync(int appUserId);
         Task<ClientOrderDetailDTO?> GetOrderDetailAsync(int orderId, int appUserId);
+        Task<List<CarModelDTO>> GetModelsAsync();
+        Task<CarModelDTO?> GetModelAsync(int modelId);
+        Task<List<ClientModelConfigDTO>?> GetModelConfigsAsync(int modelId);
     }
 }

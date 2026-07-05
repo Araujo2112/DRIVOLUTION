@@ -5,9 +5,11 @@ Carrega skids e workstations dinamicamente da API.
 
 import argparse
 import json
+import os
 import time
-
 import requests
+from dotenv import load_dotenv
+load_dotenv()
 
 IOT_AGENT_URL = "http://localhost:7896/iot/json"
 API_BASE_URL  = "http://localhost:8080/api"
@@ -19,11 +21,63 @@ HEADERS_IOT = {
     "FIWARE-ServicePath": "/",
 }
 
+_cached_token = None
+
+
+def login():
+    """Mesmo padrão de drivolution_quality_agent.py:
+    DRIVOLUTION_EMAIL / DRIVOLUTION_PASSWORD, ou DRIVOLUTION_TOKEN direto."""
+    global _cached_token
+
+    if _cached_token:
+        return _cached_token
+
+    manual_token = os.getenv("DRIVOLUTION_TOKEN")
+    if manual_token:
+        _cached_token = manual_token.replace("Bearer ", "").strip()
+        return _cached_token
+
+    email = os.getenv("DRIVOLUTION_EMAIL")
+    password = os.getenv("DRIVOLUTION_PASSWORD")
+
+    if not email or not password:
+        print("   ⚠ Sem autenticação definida.")
+        print("   Define DRIVOLUTION_EMAIL e DRIVOLUTION_PASSWORD ou DRIVOLUTION_TOKEN.")
+        return None
+
+    r = requests.post(
+        f"{API_BASE_URL}/Auth/login",
+        json={"email": email, "password": password},
+        timeout=10,
+    )
+
+    if r.status_code not in (200, 201):
+        print(f"   ✗ Login falhou ({r.status_code}): {r.text}")
+        return None
+
+    token = r.json().get("token")
+    if not token:
+        print(f"   ✗ Login respondeu mas sem token: {r.json()}")
+        return None
+
+    _cached_token = token
+    print("   ✓ Login efetuado com sucesso.")
+    return _cached_token
+
+
+def api_headers():
+    h = {"Content-Type": "application/json"}
+    token = login()
+    if token:
+        h["Authorization"] = f"Bearer {token}"
+    return h
+
 
 def load_skids() -> list:
     """Carrega suportes da API."""
     try:
-        r = requests.get(f"{API_BASE_URL}/Support", timeout=5)
+        # /Support é paginado — /Support/all devolve lista, e precisa de token.
+        r = requests.get(f"{API_BASE_URL}/Support/all", headers=api_headers(), timeout=5)
         if r.status_code == 200:
             data = r.json()
             raw = data.get("$values", data) if isinstance(data, dict) else data
@@ -38,7 +92,7 @@ def load_skids() -> list:
 def load_workstations() -> list:
     """Carrega workstations da API."""
     try:
-        r = requests.get(f"{API_BASE_URL}/Workstation", timeout=5)
+        r = requests.get(f"{API_BASE_URL}/Workstation", headers=api_headers(), timeout=5)
         if r.status_code == 200:
             data = r.json()
             raw = data.get("$values", data) if isinstance(data, dict) else data
@@ -54,6 +108,7 @@ def get_current_product(support_id: int) -> int | None:
     try:
         r = requests.get(
             f"{API_BASE_URL}/SupportedProduct/support/{support_id}/current",
+            headers=api_headers(),
             timeout=5
         )
         return r.json().get("productId") if r.status_code == 200 else None

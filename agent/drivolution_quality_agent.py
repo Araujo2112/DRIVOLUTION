@@ -3,6 +3,8 @@ import os
 import random
 import time
 import requests
+from dotenv import load_dotenv
+load_dotenv()
 
 API_BASE_URL = os.getenv("DRIVOLUTION_API_URL", "http://localhost:8080/api")
 
@@ -200,7 +202,7 @@ def simulate_quality_result():
     )[0]
 
 
-def run_once(only_quality_phase: bool):
+def run_once():
     print("\n[Quality Agent] A procurar produtos em produção...")
 
     items = get_wip_items()
@@ -216,12 +218,6 @@ def run_once(only_quality_phase: bool):
 
         if not product_id:
             continue
-
-        if only_quality_phase:
-            name = phase_name.lower()
-            if "qual" not in name and "qc" not in name and "check" not in name:
-                print(f"   - Produto {serial} ignorado: fase '{phase_name}' não é de qualidade.")
-                continue
 
         current_phase = get_current_phase_from_timeline(product_id)
 
@@ -258,7 +254,6 @@ def main():
     parser = argparse.ArgumentParser(description="DRIVOLUTION - Agente de Visão Simulada para Quality Check")
     parser.add_argument("--once", action="store_true", help="Executa uma vez e termina.")
     parser.add_argument("--interval", type=int, default=10, help="Intervalo entre verificações em segundos.")
-    parser.add_argument("--only-quality-phase", action="store_true", help="Só cria QC em fases cujo nome pareça qualidade/QC/check.")
     args = parser.parse_args()
 
     print("=" * 60)
@@ -268,11 +263,11 @@ def main():
 
     try:
         if args.once:
-            run_once(args.only_quality_phase)
+            run_once()
             return
 
         while True:
-            run_once(args.only_quality_phase)
+            run_once()
             time.sleep(args.interval)
 
     except requests.HTTPError as e:

@@ -2,8 +2,11 @@
 DRIVOLUTION - FIWARE Setup corrigido
 """
 
+import os
 import requests
 import json
+from dotenv import load_dotenv
+load_dotenv()
 
 ORION_URL = "http://localhost:1026"
 IOT_AGENT_URL = "http://localhost:4041"
@@ -18,6 +21,60 @@ FIWARE_SERVICE = "drivolution"
 FIWARE_SERVICEPATH = "/"
 APIKEY = "drivolution-key"
 RESOURCE = "/iot/json"
+
+_cached_token = None
+
+
+def login():
+    """Autentica contra a API DRIVOLUTION e devolve um JWT.
+    Mesmo padrão já usado em drivolution_quality_agent.py:
+    DRIVOLUTION_EMAIL / DRIVOLUTION_PASSWORD, ou DRIVOLUTION_TOKEN direto."""
+    global _cached_token
+
+    if _cached_token:
+        return _cached_token
+
+    manual_token = os.getenv("DRIVOLUTION_TOKEN")
+    if manual_token:
+        _cached_token = manual_token.replace("Bearer ", "").strip()
+        return _cached_token
+
+    email = os.getenv("DRIVOLUTION_EMAIL")
+    password = os.getenv("DRIVOLUTION_PASSWORD")
+
+    if not email or not password:
+        print("   ⚠ Sem autenticação definida.")
+        print("   Define DRIVOLUTION_EMAIL e DRIVOLUTION_PASSWORD ou DRIVOLUTION_TOKEN.")
+        return None
+
+    r = requests.post(
+        f"{API_BASE_URL}/Auth/login",
+        json={"email": email, "password": password},
+        timeout=10,
+    )
+
+    if r.status_code not in (200, 201):
+        print(f"   ✗ Login falhou ({r.status_code}): {r.text}")
+        return None
+
+    token = r.json().get("token")
+    if not token:
+        print(f"   ✗ Login respondeu mas sem token: {r.json()}")
+        return None
+
+    _cached_token = token
+    print("   ✓ Login efetuado com sucesso.")
+    return _cached_token
+
+
+def api_headers():
+    """Headers para chamadas à API DRIVOLUTION (não ao Orion/IoT Agent)."""
+    h = {"Content-Type": "application/json"}
+    token = login()
+    if token:
+        h["Authorization"] = f"Bearer {token}"
+    return h
+
 
 HEADERS_LD = {
     "Content-Type": "application/ld+json",
@@ -40,7 +97,9 @@ IOT_HEADERS = {
 def load_skids() -> list:
     print("\n[0/6] A carregar suportes da API...")
     try:
-        r = requests.get(f"{API_BASE_URL}/Support", timeout=5)
+        # /Support é paginado (Data/Total/Page/PageSize) — /Support/all devolve
+        # mesmo uma lista, que é o que este script precisa.
+        r = requests.get(f"{API_BASE_URL}/Support/all", headers=api_headers(), timeout=5)
         if r.status_code == 200:
             data = r.json()
             skids = data.get("$values", data) if isinstance(data, dict) else data

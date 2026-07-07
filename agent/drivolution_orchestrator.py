@@ -1,27 +1,5 @@
 """
 DRIVOLUTION - Orquestrador de Simulação Completa da Linha
-
-Simula, em loop contínuo e sem qualquer intervenção manual, o comportamento
-de uma fábrica com leitores RFID físicos e sensores de visão de qualidade
-reais. Isto é um agente académico (não existe hardware real) que:
-
-  1. Atribui produtos livres (sem skid) a skids livres — reaproveitando
-     apenas os skids/produtos já existentes na BD.
-  2. Avança cada skid ocupado pela sequência de fases do modelo do seu
-     produto, enviando o mesmo tipo de evento que um leitor RFID físico
-     enviaria (via FIWARE IoT Agent JSON -> Orion -> subscrição -> API).
-  3. Gera o Quality Check de cada fase antes de deixar o skid avançar
-     (reaproveita a lógica do drivolution_quality_agent.py).
-  4. Ao chegar à última fase do modelo, fecha essa fase (ProductPhase.Close)
-     com o resultado do Quality Check, e liberta o skid para poder ser
-     reutilizado por outro produto.
-
-Importante: este agente fala com os MESMOS endpoints que um sensor real
-usaria (IoT Agent JSON para o RFID, /api/QualityCheck para a visão). O
-FIWARE/Orion e a API não sabem, nem precisam de saber, que quem gerou o
-evento foi este script e não um leitor físico — no dia em que existir
-hardware real, este agente deixa de ser necessário e nada muda no resto
-do sistema.
 """
 
 import argparse
@@ -29,6 +7,7 @@ import os
 import time
 import requests
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from drivolution_quality_agent import (
@@ -38,7 +17,6 @@ from drivolution_quality_agent import (
     get_existing_quality_checks,
     create_quality_check,
     simulate_quality_result,
-    already_checked,
     get_current_phase_from_timeline,
 )
 
@@ -52,7 +30,6 @@ HEADERS_IOT = {
     "FIWARE-ServicePath": "/",
 }
 
-# Cache simples em memória, por tick, para não repetir pedidos GET desnecessários.
 _model_phase_sequence_cache = {}
 
 
@@ -99,18 +76,13 @@ def get_product(product_id: int):
 
 
 def is_eligible_for_new_skid(product_id: int) -> bool:
-    """Um produto só deve ser atribuído a um skid novo se nunca tiver passado
-    por nenhuma fase. Produtos já concluídos (todas as fases fechadas) não
-    devem ser reatribuídos - ficam 'waiting_support' na query só porque o
-    skid foi libertado no fim, à espera que os produtos-irmãos da mesma
-    encomenda também terminem."""
     r = requests.get(f"{API_BASE_URL}/products/{product_id}/timeline", headers=headers(), timeout=10)
 
-    if r.status_code == 400 or r.status_code == 404:
-        return True  # sem timeline ainda -> produto nunca começou
+    if r.status_code in (400, 404):
+        return True
 
     if r.status_code != 200:
-        return False  # por segurança, não mexe
+        return False
 
     data = r.json()
     return data.get("status") not in ("completed", "in_progress")
@@ -119,8 +91,10 @@ def is_eligible_for_new_skid(product_id: int) -> bool:
 def assign_product_to_skid(support_id: int, product_id: int):
     payload = {"supportId": support_id, "productId": product_id}
     r = requests.post(f"{API_BASE_URL}/SupportedProduct", headers=headers(), json=payload, timeout=10)
+
     if r.status_code in (200, 201):
         return r.json()
+
     print(f"   ✗ Erro ao associar produto {product_id} ao skid {support_id} ({r.status_code}): {r.text}")
     return None
 
@@ -135,25 +109,26 @@ def get_current_supported_product(support_id: int):
 
 def close_supported_product(supported_product_id: int):
     r = requests.put(f"{API_BASE_URL}/SupportedProduct/{supported_product_id}/close", headers=headers(), timeout=10)
+
     if r.status_code not in (200, 204):
         print(f"   ✗ Erro ao libertar skid (SupportedProduct {supported_product_id}): {r.status_code} {r.text}")
         return False
+
     return True
 
 
 def close_product_phase(product_phase_id: int, result: str, quality_id: int | None):
     payload = {"result": result, "qualityId": quality_id}
     r = requests.put(f"{API_BASE_URL}/ProductPhase/{product_phase_id}/close", headers=headers(), json=payload, timeout=10)
+
     if r.status_code not in (200, 204):
         print(f"   ✗ Erro ao fechar ProductPhase {product_phase_id}: {r.status_code} {r.text}")
         return False
+
     return True
 
 
 def send_rfid_event(skid: dict, workstation: dict) -> bool:
-    """Envia o mesmo tipo de evento que um leitor RFID físico enviaria:
-    passa pelo IoT Agent JSON -> Orion -> subscrição -> API, tal como o
-    drivolution_agent.py."""
     payload = {
         "currentWorkstation": workstation["id"],
         "productId": skid.get("currentProductId"),
@@ -163,25 +138,26 @@ def send_rfid_event(skid: dict, workstation: dict) -> bool:
 
     url = f"{IOT_AGENT_URL}?i=skid-{skid.get('rfidTag')}&k={API_KEY}"
 
-    print(f"   📡 Skid {skid.get('rfidTag')} -> Workstation {workstation['id']} "
-          f"({workstation.get('phaseName', '?')})")
+    print(
+        f"   📡 Skid {skid.get('rfidTag')} -> Workstation {workstation['id']} "
+        f"({workstation.get('phaseName', '?')})"
+    )
 
     try:
         r = requests.post(url, headers=HEADERS_IOT, json=payload, timeout=10)
+
         if r.status_code in (200, 201, 204):
             return True
+
         print(f"   ✗ IoT Agent rejeitou ({r.status_code}): {r.text}")
         return False
+
     except Exception as e:
         print(f"   ✗ Erro ao enviar evento RFID: {e}")
         return False
 
 
 def start_journey(skid: dict, product_id: int) -> bool:
-    """Envia o primeiro evento RFID para um produto (já associado a um
-    skid) a caminho da 1ª fase do seu modelo. Usado tanto para produtos
-    acabados de atribuir a um skid livre, como para produtos que já tinham
-    skid mas nunca chegaram a arrancar (queueReason 'waiting_line')."""
     product = get_product(product_id)
     if not product:
         return False
@@ -193,10 +169,12 @@ def start_journey(skid: dict, product_id: int) -> bool:
 
     first_phase = phase_seq[0]
     line_ws = get_workstations_by_line(skid["productionLineId"])
+
     target_ws = next(
         (w for w in line_ws if w.get("manufacturingPhaseId") == first_phase.get("manufacturingPhaseId")),
         None,
     )
+
     if not target_ws:
         print(f"   ✗ Linha {skid['productionLineId']} não tem workstation para a 1ª fase do modelo.")
         return False
@@ -209,13 +187,14 @@ def assign_free_products(waiting_items: list):
     waiting_for_skid = [w for w in waiting_items if w.get("queueReason") == "waiting_support"]
     waiting_for_line = [w for w in waiting_items if w.get("queueReason") == "waiting_line"]
 
-    # --- Caso 1: produtos sem qualquer skid -> atribuir um skid livre e arrancar ---
     if waiting_for_skid:
         free_skids = get_supports(occupied=False)
+
         if not free_skids:
             print("   - Há produtos à espera de skid, mas não há skids livres.")
         else:
             skid_index = 0
+
             for item in waiting_for_skid:
                 if skid_index >= len(free_skids):
                     print("   - Sem mais skids livres neste ciclo.")
@@ -229,16 +208,18 @@ def assign_free_products(waiting_items: list):
 
                 skid = free_skids[skid_index]
                 assigned = assign_product_to_skid(skid["id"], product_id)
+
                 if not assigned:
                     continue
 
                 print(f"   ✓ Produto {serial} associado ao skid {skid.get('rfidTag')} (linha {skid.get('productionLineId')})")
+
                 skid_index += 1
                 start_journey(skid, product_id)
 
-    # --- Caso 2: produtos já têm skid, mas nunca receberam o 1º evento RFID ---
     if waiting_for_line:
         occupied_skids = get_supports(occupied=True)
+
         for item in waiting_for_line:
             product_id = item.get("productId")
             serial = item.get("serialNumber")
@@ -249,6 +230,7 @@ def assign_free_products(waiting_items: list):
                 continue
 
             skid = next((s for s in occupied_skids if s.get("id") == support_id), None)
+
             if not skid:
                 print(f"   ✗ Produto {serial}: skid {support_id} não encontrado entre os ocupados.")
                 continue
@@ -258,30 +240,35 @@ def assign_free_products(waiting_items: list):
 
 
 def adopt_orphan_product(item: dict, product_id: int, serial: str):
-    """Um produto pode aparecer 'em progresso' (tem uma fase aberta numa
-    workstation) sem nunca ter passado pelo fluxo normal de associação a
-    skid — normalmente dados de teste/seed antigos, criados diretamente na
-    BD. Sem skid não há tag RFID para ler, por isso este produto ficaria
-    preso para sempre. Em vez de falhar silenciosamente em todos os ciclos,
-    o orquestrador adota-o: associa-o a um skid livre da MESMA linha onde já
-    está fisicamente (sem o mover, só a criar o vínculo em falta)."""
     line_id = item.get("productionLineId")
+
     if not line_id:
         print(f"   ✗ Produto {serial} em progresso sem skid e sem linha conhecida — não é possível adotar.")
         return None
 
     free_skids = [s for s in get_supports(occupied=False) if s.get("productionLineId") == line_id]
+
     if not free_skids:
         print(f"   ⚠ Produto {serial} em progresso sem skid, e não há skids livres na linha {line_id} para adotar.")
         return None
 
     skid = free_skids[0]
     assigned = assign_product_to_skid(skid["id"], product_id)
+
     if not assigned:
         return None
 
-    print(f"   🩹 Produto {serial} (órfão, sem skid) adotado pelo skid {skid.get('rfidTag')} da linha {line_id}.")
+    print(f"   🩹 Produto {serial} adotado pelo skid {skid.get('rfidTag')} da linha {line_id}.")
     return skid
+
+
+def get_quality_check_for_phase(product_id: int, manufacturing_phase_id: int):
+    checks = get_existing_quality_checks(product_id)
+
+    return next(
+        (c for c in checks if c.get("manufacturingPhaseId") == manufacturing_phase_id),
+        None,
+    )
 
 
 def advance_in_progress_products(wip_items: list):
@@ -290,32 +277,48 @@ def advance_in_progress_products(wip_items: list):
         serial = item.get("serialNumber")
 
         active_phase = get_current_phase_from_timeline(product_id)
+
         if not active_phase:
             continue
 
         manufacturing_phase_id = active_phase.get("manufacturingPhaseId")
         product_phase_id = active_phase.get("productPhaseId")
 
-        if not already_checked(product_id, manufacturing_phase_id):
+        check = get_quality_check_for_phase(product_id, manufacturing_phase_id)
+
+        if not check:
             severity = simulate_quality_result()
+
             print(f"   🔍 Produto {serial} | Fase {item.get('currentPhase')} | Quality Check: {severity}")
+
             create_quality_check(
                 product_id=product_id,
                 manufacturing_phase_id=manufacturing_phase_id,
                 severity=severity,
                 notes=f"Quality Check automático gerado pelo orquestrador. Severidade observada: {severity}",
             )
-            continue  # só avança no próximo tick, depois de ter QC
+
+            continue
+
+        if check.get("status") != "passed":
+            print(
+                f"   ⛔ Produto {serial} bloqueado na fase {item.get('currentPhase')} "
+                f"porque o Quality Check está '{check.get('status')}'."
+            )
+            continue
 
         product = get_product(product_id)
+
         if not product:
             continue
 
         phase_seq = get_phase_sequence(product["modelId"])
+
         current_order = next(
             (p.get("order") for p in phase_seq if p.get("manufacturingPhaseId") == manufacturing_phase_id),
             None,
         )
+
         if current_order is None:
             continue
 
@@ -326,34 +329,38 @@ def advance_in_progress_products(wip_items: list):
 
         if not skid:
             skid = adopt_orphan_product(item, product_id, serial)
+
             if not skid:
                 continue
-            # Acabou de ser adotado agora — só volta a ser processado no próximo ciclo,
-            # para dar tempo à API a refletir a nova associação.
+
             continue
 
         if next_entry is None:
-            # Última fase do modelo — finalizar e libertar o skid.
-            checks = get_existing_quality_checks(product_id)
-            check = next((c for c in checks if c.get("manufacturingPhaseId") == manufacturing_phase_id), None)
-            if not check:
-                continue
-
             print(f"   🏁 Produto {serial} concluiu a última fase — a finalizar.")
-            closed = close_product_phase(product_phase_id, result=check.get("status"), quality_id=check.get("id"))
+
+            closed = close_product_phase(
+                product_phase_id,
+                result=check.get("status"),
+                quality_id=check.get("id"),
+            )
+
             if not closed:
                 continue
 
             supported_product = get_current_supported_product(skid["id"])
+
             if supported_product:
                 close_supported_product(supported_product["id"])
                 print(f"   ✓ Skid {skid.get('rfidTag')} libertado para reutilização.")
+
         else:
             line_ws = get_workstations_by_line(skid["productionLineId"])
+
             target_ws = next(
                 (w for w in line_ws if w.get("manufacturingPhaseId") == next_entry.get("manufacturingPhaseId")),
                 None,
             )
+
             if not target_ws:
                 print(f"   ✗ Linha {skid['productionLineId']} não tem workstation para a próxima fase.")
                 continue
@@ -402,6 +409,7 @@ def main():
 
     except requests.HTTPError as e:
         print(f"   ✗ Erro HTTP: {e}")
+
     except Exception as e:
         print(f"   ✗ Erro: {e}")
 

@@ -35,8 +35,19 @@ public class ProductPhaseController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProductPhaseDTO dto)
     {
-        var created = await _service.Create(dto);
-        return CreatedAtAction(nameof(GetCurrent), new { productId = created.ProductId }, created);
+        try
+        {
+            var created = await _service.Create(dto);
+            return CreatedAtAction(nameof(GetCurrent), new { productId = created.ProductId }, created);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     [HttpPut("{id}/close")]

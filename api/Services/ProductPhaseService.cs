@@ -12,17 +12,20 @@ public class ProductPhaseService : IProductPhaseService
     private readonly IProductRepository _productRepo;
     private readonly IManufacturingOrderRepository _moRepo;
     private readonly INotificationService _notificationService;
+    private readonly IQualityCheckRepository _qualityRepo;
 
     public ProductPhaseService(
         IProductPhaseRepository repo,
         IProductRepository productRepo,
         IManufacturingOrderRepository moRepo,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IQualityCheckRepository qualityRepo)
     {
         _repo = repo;
         _productRepo = productRepo;
         _moRepo = moRepo;
         _notificationService = notificationService;
+        _qualityRepo = qualityRepo;
     }
 
     public async Task<IEnumerable<ProductPhaseDTO>> GetByProduct(int productId)
@@ -38,30 +41,52 @@ public class ProductPhaseService : IProductPhaseService
     }
 
     public async Task<ProductPhaseDTO> Create(CreateProductPhaseDTO dto)
+{
+    var openPhases = await _repo.GetAllOpenByProduct(dto.ProductId);
+
+    foreach (var open in openPhases)
     {
-        var openPhases = await _repo.GetAllOpenByProduct(dto.ProductId);
-        foreach (var open in openPhases)
+        if (open.ManufacturingPhaseId == dto.ManufacturingPhaseId)
         {
-            open.DatetimeEnd = DateTime.UtcNow;
-            await _repo.Update(open);
+            throw new InvalidOperationException(
+                "Este produto já está nesta fase."
+            );
         }
 
-        var entity = new ProductPhaseModel
+        var hasPassedQuality = await _qualityRepo.HasPassedForProductPhaseAsync(
+            dto.ProductId,
+            open.ManufacturingPhaseId
+        );
+
+        if (!hasPassedQuality)
         {
-            ProductId = dto.ProductId,
-            ManufacturingPhaseId = dto.ManufacturingPhaseId,
-            WorkstationId = dto.WorkstationId,
-            Notes = dto.Notes,
-            DatetimeIni = DateTime.UtcNow
-        };
-
-        var created = await _repo.Create(entity);
-
-        // ── Atualizar status da MO para InProgress ────────────────────────────
-        await UpdateMoStatus(dto.ProductId);
-
-        return ToDTO(created);
+            throw new InvalidOperationException(
+                $"Produto bloqueado: a fase anterior ({open.ManufacturingPhase?.Name ?? open.ManufacturingPhaseId.ToString()}) não tem QualityCheck com estado 'passed'."
+            );
+        }
     }
+
+    foreach (var open in openPhases)
+    {
+        open.DatetimeEnd = DateTime.UtcNow;
+        await _repo.Update(open);
+    }
+
+    var entity = new ProductPhaseModel
+    {
+        ProductId = dto.ProductId,
+        ManufacturingPhaseId = dto.ManufacturingPhaseId,
+        WorkstationId = dto.WorkstationId,
+        Notes = dto.Notes,
+        DatetimeIni = DateTime.UtcNow
+    };
+
+    var created = await _repo.Create(entity);
+
+    await UpdateMoStatus(dto.ProductId);
+
+    return ToDTO(created);
+}
 
     public async Task Close(int id, CloseProductPhaseDTO dto)
     {
@@ -74,11 +99,9 @@ public class ProductPhaseService : IProductPhaseService
 
         await _repo.Update(entity);
 
-        // ── Verificar se todos os produtos da MO estão concluídos ─────────────
         await UpdateMoStatus(entity.ProductId);
     }
 
-    // ── Lógica de atualização automática do status da MO ─────────────────────
     private async Task UpdateMoStatus(int productId)
     {
         var product = await _productRepo.GetById(productId);
@@ -87,17 +110,14 @@ public class ProductPhaseService : IProductPhaseService
         var mo = await _moRepo.GetByIdWithDetails(product.ManufacturingOrderId);
         if (mo == null) return;
 
-        // Se já está concluída ou cancelada, não tocar
         if (mo.Status == OrderStatus.Completed || mo.Status == OrderStatus.Cancelled) return;
 
         var wasPending = mo.Status == OrderStatus.Pending;
         var allProducts = mo.Products.ToList();
 
-        // Verificar se todos os produtos têm pelo menos uma fase aberta (sem DatetimeEnd)
         bool anyInProgress = allProducts.Any(p =>
             p.ProductPhases.Any(pp => pp.DatetimeEnd == null));
 
-        // Verificar se todos os produtos têm fases e todas fechadas
         bool allCompleted = allProducts.All(p =>
             p.ProductPhases.Any() &&
             p.ProductPhases.All(pp => pp.DatetimeEnd != null));

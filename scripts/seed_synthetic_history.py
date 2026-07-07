@@ -29,16 +29,53 @@ DB_CONFIG = {
     "password": "drivolution",
 }
 
-PRODUCTS_PER_MODEL = 50
+PRODUCTS_PER_MODEL = 200
 ACCESSORY_PROB = 0.35
 NOISE_STD_PCT = 0.15
 HANDOVER_MIN_MINUTES = 5
 HANDOVER_MAX_MINUTES = 25
 ORDER_SPREAD_DAYS = 60
 
+# Durações BASE realistas (segundos), usadas para gerar o histórico sintético.
+# Propositadamente independentes de manufacturing_phase.estimated_duration na BD —
+# o histórico de treino do ML reflete a realidade de fábrica, não o valor
+# administrativo usado só para o alerta de tempo excedido.
+# Referência: proporção real de fábricas de grande volume (pintura ~metade do
+# tempo total de produção; estampagem/soldadura mais rápidas; ver CSV de
+# referência partilhado à parte).
+REALISTIC_PHASE_DURATIONS_SECONDS = {
+    "Estampagem": 20 * 60,
+    "Soldadura": 40 * 60,
+    "Pintura": 90 * 60,
+    "Montagem": 60 * 60,
+    "Inspeção": 30 * 60,
+}
+
 DELTAS_FILE = os.path.join(os.path.dirname(__file__), "time-deltas-by-option-phase.json")
 
 random.seed(42)
+
+
+def print_coverage_report(model_name, configs):
+    """Mostra quantas vezes cada ConfigOption deste modelo vai
+    aparecer nos dados sintéticos, dado o PRODUCTS_PER_MODEL atual.
+    Regra prática: <15 amostras é fraco para o Ridge estimar um peso
+    fiável para essa opção; 25+ já é sólido."""
+    print(f"   Cobertura esperada por opção (modelo: {model_name}, {PRODUCTS_PER_MODEL} produtos):")
+    for item, cfg in configs.items():
+        n_options = len(cfg["options"])
+        if not n_options:
+            continue
+
+        if cfg["allow_multiple"]:
+            expected = PRODUCTS_PER_MODEL * ACCESSORY_PROB
+            kind = "multi-select"
+        else:
+            expected = PRODUCTS_PER_MODEL / n_options
+            kind = "single-select"
+
+        flag = "⚠ fraco" if expected < 15 else ("ok" if expected < 25 else "✓ sólido")
+        print(f"     - {item} ({kind}, {n_options} opções): ~{expected:.0f} amostras/opção [{flag}]")
 
 
 def main():
@@ -69,6 +106,7 @@ def main():
             configs = load_configs_with_options(cur, model_id)
             base_deltas = model_base_deltas.get(model_name, {})
             print(f"\n=== Gerando histórico para {model_name} (id={model_id}) ===")
+            print_coverage_report(model_name, configs)
             create_history_for_model(
                 cur, model_name, model_id, configs, deltas[model_name], base_deltas,
                 phases, workstations, lines, client_user_id
@@ -212,7 +250,7 @@ def create_history_for_model(cur, model_name, model_id, configs, model_deltas, b
 
         for phase_name in phase_order:
             phase = phases[phase_name]
-            base_seconds = phase["duration"] or 1800
+            base_seconds = REALISTIC_PHASE_DURATIONS_SECONDS.get(phase_name, phase["duration"] or 1800)
 
             delta_minutes_total = base_deltas.get(phase_name, 0)
             for item, chosen_options in selections.items():

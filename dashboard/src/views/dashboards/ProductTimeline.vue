@@ -83,6 +83,41 @@
                     <span class="text-sm font-medium text-background-900 dark:text-background-50">{{ phase.phaseName }}</span>
                     <span v-if="sequenceStatus(index) === 'unknown'" class="text-xs px-1.5 py-0.5 rounded bg-background-200 dark:bg-background-700 text-background-500">?</span>
                   </div>
+                  <div
+  v-if="!phase.endedAt"
+  class="flex items-center gap-2 shrink-0"
+>
+  <span
+    v-if="qcByPhase[phase.manufacturingPhaseId]"
+    class="text-xs font-medium px-2 py-1 rounded-full bg-success-100 text-success-700"
+  >
+    QC: {{ qcByPhase[phase.manufacturingPhaseId].status }}
+  </span>
+
+  <template v-else>
+    <select
+      v-model="qcSeverityByPhase[phase.productPhaseId]"
+      class="text-xs rounded-lg border border-background-300 dark:border-background-700 bg-background-50 dark:bg-background-900 text-background-700 dark:text-background-200 px-2 py-1"
+    >
+      <option
+        v-for="severity in severityOptions"
+        :key="severity"
+        :value="severity"
+      >
+        {{ severityLabel(severity) }}
+      </option>
+    </select>
+
+    <button
+      @click="submitQualityCheck(phase)"
+      :disabled="qcSubmittingByPhase[phase.productPhaseId]"
+      class="flex items-center gap-1 bg-success-500 hover:bg-success-600 disabled:opacity-60 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+    >
+      <span class="material-symbols-rounded text-sm">fact_check</span>
+      {{ qcSubmittingByPhase[phase.productPhaseId] ? t('common.loading') : t('timeline.quality.button') }}
+    </button>
+  </template>
+</div>
                   <div class="text-xs text-background-400 mt-0.5">
                     {{ t('timeline.fields.phase') }} #{{ index + 1 }}
                     <span v-if="expectedOrderLabel(index)" class="ml-1 opacity-70">· {{ t('timeline.expectedOrder') }} {{ expectedOrderLabel(index) }}</span>
@@ -266,6 +301,12 @@ const phaseSequence = ref<PhaseSequence[]>([])
 const showTable     = ref(false)
 const viewMode      = ref<'timeline' | 'graph'>('timeline')
 
+const qcSeverityByPhase = ref<Record<number, string>>({})
+const qcSubmittingByPhase = ref<Record<number, boolean>>({})
+const qcByPhase = ref<Record<number, any>>({})
+
+const severityOptions = ['none', 'minor', 'major', 'critical']
+
 const clientOrder        = ref<any>(null)
 const manufacturingOrder = ref<any>(null)
 const skidData           = ref<any>(null)
@@ -325,7 +366,12 @@ function resetGraphView() {
 // ── Load ───────────────────────────────────────────────────────────────────────
 async function loadTimeline() {
   loading.value = true
-  timeline.value = []; product.value = null; phaseSequence.value = []
+  timeline.value = []
+  product.value = null
+  phaseSequence.value = []
+  qcByPhase.value = {}
+  qcSeverityByPhase.value = {}
+  qcSubmittingByPhase.value = {}
   modelId.value = null; clientOrder.value = null
   manufacturingOrder.value = null; skidData.value = null
   viewMode.value = 'timeline'
@@ -350,8 +396,10 @@ async function loadTimeline() {
       status: res.data.status,
       modelId: res.data.modelId,
     }
-    timeline.value = res.data.phases?.$values ?? res.data.phases ?? []
-    modelId.value  = res.data.modelId ?? null
+timeline.value = res.data.phases?.$values ?? res.data.phases ?? []
+modelId.value = res.data.modelId ?? null
+
+await loadQualityChecks(product.value.id)
 
     if (timeline.value.some((p: any) => !p.endedAt)) {
       startTicking()
@@ -369,10 +417,83 @@ async function loadTimeline() {
     }
 
     await loadExtraData()
-  } catch {
+  } catch (err: any) {
+    console.error('Erro ao carregar timeline:', err)
+    console.error('Resposta backend:', err?.response)
+    console.error('Dados:', err?.response?.data)
+
+    const msg = err?.response?.data
+
+    if (typeof msg === 'string' && msg.includes('Product has no timeline')) {
+      timeline.value = []
+      product.value = null
+      toast.error('Este produto ainda não tem fases na timeline.')
+      return
+    }
+
     toast.error(t('errors.loadFailed'))
   } finally {
     loading.value = false
+  }
+}  
+
+async function loadQualityChecks(productId: number) {
+  try {
+    const res = await axios.get(`/QualityCheck/product/${productId}`)
+    const checks: any[] = res.data?.$values ?? res.data ?? []
+
+    const map: Record<number, any> = {}
+    for (const check of checks) {
+      map[check.manufacturingPhaseId] = check
+    }
+
+    qcByPhase.value = map
+  } catch {
+    qcByPhase.value = {}
+  }
+}
+
+function severityLabel(severity: string) {
+  switch (severity) {
+    case 'none': return t('timeline.quality.severity.none')
+    case 'minor': return t('timeline.quality.severity.minor')
+    case 'major': return t('timeline.quality.severity.major')
+    case 'critical': return t('timeline.quality.severity.critical')
+    default: return severity
+  }
+}
+
+async function submitQualityCheck(phase: any) {
+  if (!product.value?.id) return
+
+  const phaseId = phase.manufacturingPhaseId
+
+  if (qcByPhase.value[phaseId]) {
+    toast.error(t('timeline.quality.alreadyExists'))
+    return
+  }
+
+  const severity = qcSeverityByPhase.value[phase.productPhaseId] ?? 'none'
+  qcSubmittingByPhase.value[phase.productPhaseId] = true
+
+  try {
+    await axios.post('/QualityCheck', {
+      productId: product.value.id,
+      manufacturingPhaseId: phaseId,
+      notes: `Quality Check manual registado pelo operador. Severidade observada: ${severity}`,
+      status: null,
+      severity
+    })
+
+    toast.success(t('timeline.quality.created'))
+try {
+  await loadQualityChecks(product.value.id)
+} catch {
+  qcByPhase.value = {}
+}  } catch {
+    toast.error(t('errors.saveFailed'))
+  } finally {
+    qcSubmittingByPhase.value[phase.productPhaseId] = false
   }
 }
 
@@ -663,8 +784,8 @@ function initHierarchyGraph() {
       nameLabel: wsName,
       tooltipRows: occs.map((o, i) => ({
         label: `${t('timeline.visit')} ${i + 1}`,
-        value: `${formatDate(o.startedAt)} → ${formatDate(o.endedAt)}`,
-      })),
+        value: `${formatDate(o.startedAt)} → ${formatDate(o.endedAt)}`
+    })),
     })
     addEdge({ source: phId, target: wsId, label: t('timeline.graphEdges.section'), color: C.ws })
   }

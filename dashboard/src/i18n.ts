@@ -583,6 +583,17 @@ export const messages = {
       skippedPhases: 'Fases saltadas',
       showTable: 'Ver tabela detalhada',
       hideTable: 'Esconder tabela',
+      quality: {
+        button: 'Quality Check',
+        created: 'Quality Check criado com sucesso.',
+      alreadyExists: 'Já existe Quality Check para esta fase.',
+      severity: {
+        none: 'Sem defeitos',
+        minor: 'Ligeira',
+        major: 'Grave',
+        critical: 'Crítica',
+      },
+    },
       status: {
         completed: 'Concluído',
         inProgress: 'Em produção',
@@ -1501,6 +1512,17 @@ export const messages = {
       skippedPhases: 'Skipped phases',
       showTable: 'Show detailed table',
       hideTable: 'Hide table',
+      quality: {
+        button: 'Quality Check',
+        created: 'Quality Check created successfully.',
+        alreadyExists: 'A Quality Check already exists for this phase.',
+        severity: {
+          none: 'No defects',
+          minor: 'Minor',
+          major: 'Major',
+          critical: 'Critical',
+      },
+    },
       status: {
         completed: 'Completed',
         inProgress: 'In production',

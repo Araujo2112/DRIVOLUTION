@@ -13,8 +13,16 @@ services:
       - DB_NAME=drivolution
       - DB_USER=${POSTGRESQL_USER}
       - DB_PASSWORD=${POSTGRESQL_PASSWORD}
+      - ML_SERVICE_URL=http://ml-service:8000
     depends_on:
       - db
+      - ml-service
+
+  ml-service:
+    build: ml-service/
+    container_name: drivolution-ml-service
+    ports:
+      - "8001:8000"
 
   orion:
     platform: linux/x86_64

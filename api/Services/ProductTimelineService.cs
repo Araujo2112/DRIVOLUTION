@@ -40,17 +40,29 @@ public class ProductTimelineService : IProductTimelineService
             return null;
 
         var openPhase = timeline.FirstOrDefault(t => t.EndedAt == null);
+
         if (openPhase != null)
         {
             try
             {
-                openPhase.EstimatedFinish = await _etaService.PredictCurrentPhaseFinish(openPhase.ProductId);
+                var prediction = await _etaService.PredictCurrentPhaseDurationSeconds(openPhase.ProductId);
+
+                if (prediction != null)
+                {
+                    var estimatedFinish = openPhase.StartedAt.AddSeconds(prediction.Seconds);
+
+                    if (estimatedFinish < DateTime.UtcNow)
+                        estimatedFinish = DateTime.UtcNow;
+
+                    openPhase.EstimatedFinish = estimatedFinish;
+                }
+                else
+                {
+                    openPhase.EstimatedFinish = null;
+                }
             }
-            catch (Exception)
+            catch
             {
-                // A previsão de ETA é informação complementar — se o modelo de ML
-                // falhar ou não tiver dados suficientes, a timeline continua válida
-                // sem essa estimativa, em vez de derrubar o pedido todo.
                 openPhase.EstimatedFinish = null;
             }
         }

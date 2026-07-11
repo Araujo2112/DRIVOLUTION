@@ -16,6 +16,7 @@ Para os scripts Python, instalar as dependências uma vez:
 
 ```bash
 pip install psycopg2-binary scikit-learn requests --break-system-packages
+python -m pip install bcrypt
 ```
 
 ---
@@ -24,12 +25,13 @@ pip install psycopg2-binary scikit-learn requests --break-system-packages
 
 ```
 0. docker compose up -d
-1. python scripts/setup_environment.py       ← NOVO — cria TUDO do zero
-2. .\scripts\seed-fake-models.ps1            (criar modelos de carro)
-3. python scripts/seed_synthetic_history.py  (histórico para ML)
-4. curl -X POST http://localhost:8080/api/ml/retrain
-5. python scripts/seed_wip_state.py          (estado demo WIP)
-6. python agent/drivolution_agent.py --auto  (simular RFID)
+1. python scripts/create_admin.py         
+2. python scripts/setup_environment.py
+3. .\scripts\seed-fake-models.ps1
+4. python scripts/seed_synthetic_history.py
+5. curl -X POST http://localhost:8080/api/ml/retrain
+6. python scripts/seed_wip_state.py
+7. python agent/drivolution_agent.py --auto
 ```
 
 ---

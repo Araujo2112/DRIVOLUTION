@@ -26,6 +26,7 @@ do sistema.
 
 import argparse
 import os
+import random
 import time
 import requests
 from dotenv import load_dotenv
@@ -38,7 +39,6 @@ from drivolution_quality_agent import (
     get_existing_quality_checks,
     create_quality_check,
     simulate_quality_result,
-    already_checked,
     get_current_phase_from_timeline,
 )
 
@@ -54,6 +54,49 @@ HEADERS_IOT = {
 
 # Cache simples em memória, por tick, para não repetir pedidos GET desnecessários.
 _model_phase_sequence_cache = {}
+
+# Um QualityCheck não guarda a que ProductPhase pertence (só a manufacturing_phase_id),
+# por isso, para saber se já inspecionámos ESTA tentativa em concreto (e não só "alguma
+# vez, nesta fase"), guardamos localmente quais os productPhaseId já inspecionados.
+_inspected_phase_instances = set()
+
+
+def format_duration(seconds: float) -> str:
+    seconds = max(0, int(seconds))
+    m, s = divmod(seconds, 60)
+    return f"{m}m{s:02d}s"
+
+
+def completion_probability(elapsed: float, predicted: float, fixed_estimated: float, threshold_pct: float) -> float:
+    """Sistema 'anti-azar': a probabilidade de terminar a fase neste ciclo
+    sobe sempre com o tempo, nunca desce, e nunca chega a 100% antes do
+    limite de alerta de tempo excedido (150% da duração FIXA, a mesma
+    referência usada pelo AlertBackgroundService) — para garantir que uma
+    fatia realista de carros dispara mesmo esse alerta.
+
+        0% ─────────────── 40% da duração prevista: nunca termina (carência)
+       40% ── sobe até 85% ── 150% da duração FIXA (limite de alerta)
+      150% ── sobe até 99% ── 200% da duração FIXA (quase-certeza, evita
+                                                     ficar preso para sempre)
+    """
+    grace = predicted * 0.40
+    if elapsed < grace:
+        return 0.0
+
+    threshold_seconds = fixed_estimated * (threshold_pct / 100.0)
+    ceiling_seconds = fixed_estimated * 2.0
+
+    if elapsed <= threshold_seconds:
+        span = max(threshold_seconds - grace, 1)
+        progress = (elapsed - grace) / span
+        return min(0.85, 0.85 * progress)
+
+    if elapsed >= ceiling_seconds:
+        return 0.99
+
+    span = max(ceiling_seconds - threshold_seconds, 1)
+    progress = (elapsed - threshold_seconds) / span
+    return 0.85 + 0.14 * progress
 
 
 def get_wip():
@@ -284,10 +327,23 @@ def adopt_orphan_product(item: dict, product_id: int, serial: str):
     return skid
 
 
+def find_skid_for_product(product_id: int):
+    occupied_skids = get_supports(occupied=True)
+    return next((s for s in occupied_skids if s.get("currentProductId") == product_id), None)
+
+
+def release_skid(skid: dict):
+    supported_product = get_current_supported_product(skid["id"])
+    if supported_product:
+        close_supported_product(supported_product["id"])
+        print(f"   ✓ Skid {skid.get('rfidTag')} libertado para reutilização.")
+
+
 def advance_in_progress_products(wip_items: list):
     for item in wip_items:
         product_id = item.get("productId")
         serial = item.get("serialNumber")
+        phase_label = item.get("currentPhase")
 
         active_phase = get_current_phase_from_timeline(product_id)
         if not active_phase:
@@ -296,17 +352,78 @@ def advance_in_progress_products(wip_items: list):
         manufacturing_phase_id = active_phase.get("manufacturingPhaseId")
         product_phase_id = active_phase.get("productPhaseId")
 
-        if not already_checked(product_id, manufacturing_phase_id):
+        # --- Portão de tempo "anti-azar": probabilidade crescente de terminar,
+        # nunca 100% antes do limite de alerta (150% da duração fixa). ---
+        elapsed = item.get("elapsedSeconds") or 0
+        predicted = item.get("predictedPhaseDurationSeconds") or 1800
+        fixed_estimated = item.get("estimatedDuration") or 1800
+        threshold_pct = item.get("timeThresholdPct") or 150
+        is_ml = item.get("predictedPhaseDurationIsMl", False)
+
+        prob = completion_probability(elapsed, predicted, fixed_estimated, threshold_pct)
+
+        if random.random() >= prob:
+            source = "ML" if is_ml else "fixo"
+            print(f"   ⏳ Produto {serial} | Fase {phase_label} | {format_duration(elapsed)} "
+                  f"(previsto {format_duration(predicted)}, {source}) | prob. de terminar: {prob * 100:.0f}%")
+            continue
+
+        # --- Ainda não inspecionámos ESTA tentativa (productPhaseId) desta fase ---
+        if product_phase_id not in _inspected_phase_instances:
             severity = simulate_quality_result()
-            print(f"   🔍 Produto {serial} | Fase {item.get('currentPhase')} | Quality Check: {severity}")
+            print(f"   🔍 Produto {serial} | Fase {phase_label} | Quality Check: {severity}")
             create_quality_check(
                 product_id=product_id,
                 manufacturing_phase_id=manufacturing_phase_id,
                 severity=severity,
                 notes=f"Quality Check automático gerado pelo orquestrador. Severidade observada: {severity}",
             )
-            continue  # só avança no próximo tick, depois de ter QC
+            _inspected_phase_instances.add(product_phase_id)
+            continue
 
+        checks_for_phase = [
+            c for c in get_existing_quality_checks(product_id)
+            if c.get("manufacturingPhaseId") == manufacturing_phase_id
+        ]
+        latest_check = max(checks_for_phase, key=lambda c: c.get("id", 0)) if checks_for_phase else None
+        if latest_check is None:
+            continue  # inconsistência momentânea (API ainda a processar) — tenta no próximo ciclo
+
+        status = latest_check.get("status")
+
+        # --- Scrapped: sai definitivamente da linha ---
+        if status == "scrapped":
+            print(f"   💥 Produto {serial} foi sucateado na fase {phase_label} — a sair da linha.")
+            closed = close_product_phase(product_phase_id, result="scrapped", quality_id=latest_check.get("id"))
+            if not closed:
+                continue
+
+            skid = find_skid_for_product(product_id)
+            if skid:
+                release_skid(skid)
+            continue
+
+        # --- Rework: repete o trabalho na mesma fase (reinicia o relógio) ---
+        if status == "rework":
+            print(f"   🔁 Produto {serial} em rework na fase {phase_label} — a repetir o trabalho nesta fase.")
+
+            skid = find_skid_for_product(product_id)
+            if not skid:
+                continue
+
+            line_ws = get_workstations_by_line(skid["productionLineId"])
+            same_ws = next(
+                (w for w in line_ws if w.get("manufacturingPhaseId") == manufacturing_phase_id),
+                None,
+            )
+            if not same_ws:
+                print(f"   ✗ Linha {skid['productionLineId']} não tem workstation para repetir esta fase.")
+                continue
+
+            send_rfid_event(skid, same_ws)  # reabre a fase com um novo startedAt
+            continue
+
+        # --- Passed: pode avançar (ou finalizar, se for a última fase) ---
         product = get_product(product_id)
         if not product:
             continue
@@ -321,33 +438,20 @@ def advance_in_progress_products(wip_items: list):
 
         next_entry = next((p for p in phase_seq if p.get("order") == current_order + 1), None)
 
-        occupied_skids = get_supports(occupied=True)
-        skid = next((s for s in occupied_skids if s.get("currentProductId") == product_id), None)
-
+        skid = find_skid_for_product(product_id)
         if not skid:
             skid = adopt_orphan_product(item, product_id, serial)
-            if not skid:
-                continue
             # Acabou de ser adotado agora — só volta a ser processado no próximo ciclo,
             # para dar tempo à API a refletir a nova associação.
             continue
 
         if next_entry is None:
-            # Última fase do modelo — finalizar e libertar o skid.
-            checks = get_existing_quality_checks(product_id)
-            check = next((c for c in checks if c.get("manufacturingPhaseId") == manufacturing_phase_id), None)
-            if not check:
-                continue
-
+            # Última fase do modelo, e passou -> finalizar e libertar o skid.
             print(f"   🏁 Produto {serial} concluiu a última fase — a finalizar.")
-            closed = close_product_phase(product_phase_id, result=check.get("status"), quality_id=check.get("id"))
+            closed = close_product_phase(product_phase_id, result=status, quality_id=latest_check.get("id"))
             if not closed:
                 continue
-
-            supported_product = get_current_supported_product(skid["id"])
-            if supported_product:
-                close_supported_product(supported_product["id"])
-                print(f"   ✓ Skid {skid.get('rfidTag')} libertado para reutilização.")
+            release_skid(skid)
         else:
             line_ws = get_workstations_by_line(skid["productionLineId"])
             target_ws = next(

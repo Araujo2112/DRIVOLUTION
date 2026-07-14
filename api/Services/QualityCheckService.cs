@@ -76,8 +76,8 @@ public class QualityCheckService : IQualityCheckService
                 "Fase de fabrico não encontrada."
             );
 
-        // 2. Lógica de decisão automática usando os pesos das constantes
 
+        // 2. Lógica de decisão automática usando os pesos das constantes
         // Converte a severidade observada num valor numérico
         int weightObserved = Severity.GetWeight(dto.Severity);
 

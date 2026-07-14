@@ -24,7 +24,7 @@ public class ProductPhaseService : IProductPhaseService
     // Repository usado para verificar os controlos de qualidade
     private readonly IQualityCheckRepository _qualityRepo;
 
-    // O ASP.NET injeta automaticamente todos os repositories e services necessários
+    // O ASP.NET injeta automaticamente todos os repositorios e services necessários
     public ProductPhaseService(
         IProductPhaseRepository repo,
         IProductRepository productRepo,

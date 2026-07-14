@@ -134,13 +134,21 @@ Ficheiro de configuração usado internamente pelo `seed_synthetic_history.py`. 
 
 ### `agent/fiware_setup.py` — Re-registar FIWARE (sem criar infra)
 
-Usa-se quando a infra já existe na BD mas o FIWARE foi reiniciado e perdeu o estado (devices, entidades, subscrições). Lê os suportes existentes da API e re-regista tudo.
+Usa-se quando a infra já existe na BD mas o FIWARE foi reiniciado e perdeu o estado (devices, entidades, subscrições). Lê os suportes existentes da API e re-regista tudo — **skids e crachás (Badge)**.
 
 ```bash
 python agent/fiware_setup.py
 ```
 
-### `agent/drivolution_agent.py` — Simular leituras RFID
+Além dos skids, o script agora também:
+- Carrega utilizadores com role `operator`/`manager` (precisa de conta `admin` no `.env`).
+- Cria um service group `Badge` no IoT Agent (apikey `drivolution-badge-key`).
+- Regista um device `badge-{userId}` por utilizador e a respetiva entidade `Badge` no Orion (atributo estático `appUserId`).
+- Cria uma 3ª subscrição: `Badge.currentWorkstation` → `FiwareNotificationController`.
+
+Se não houver utilizadores `operator`/`manager`, o passo dos crachás é ignorado sem falhar o resto do script.
+
+### `agent/drivolution_agent.py` — Simular leituras RFID (skids)
 
 ```bash
 # Modo automático — percorre workstations aleatoriamente em loop
@@ -149,6 +157,24 @@ python agent/drivolution_agent.py --auto
 # Modo manual — envia uma leitura específica
 python agent/drivolution_agent.py --tag 3542100258 --ws 1
 ```
+
+### `agent/drivolution_badge_agent.py` — Simular leituras de crachá (presença)
+
+Simula um operador a "passar o cartão" num leitor associado a uma workstation Humana/Híbrida. Mesmo padrão do `drivolution_agent.py`: envia para o IoT Agent → Orion → notifica a API, que faz check-in/check-out em `WorkstationPresence` **sem precisar de sessão/JWT do operador**.
+
+Toggle: ler o crachá na mesma workstation onde já está presente faz check-out; numa workstation diferente faz check-out automático da anterior (se existir) e check-in na nova.
+
+```bash
+# Modo automático — 1 operador faz check-in e check-out na 1ª workstation elegível
+python agent/drivolution_badge_agent.py --auto
+
+# Modo manual — leitura específica (user id + workstation id)
+python agent/drivolution_badge_agent.py --user 3 --ws 1
+
+# Modo interativo
+python agent/drivolution_badge_agent.py
+```
+
 
 ### `agent/fiware_diagnose.py` — Diagnosticar estado do FIWARE
 

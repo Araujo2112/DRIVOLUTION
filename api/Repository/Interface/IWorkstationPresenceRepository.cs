@@ -8,6 +8,7 @@ public interface IWorkstationPresenceRepository
     Task<IEnumerable<WorkstationPresenceModel>> GetByWorkstation(int workstationId);
     Task<IEnumerable<WorkstationPresenceModel>> GetByUser(int appUserId);
     Task<WorkstationPresenceModel?> GetActiveByUserAndWorkstation(int appUserId, int workstationId);
+    Task<WorkstationPresenceModel?> GetActiveByUser(int appUserId);
     Task<WorkstationPresenceModel> Create(WorkstationPresenceModel entity);
     Task Update(WorkstationPresenceModel entity);
 }

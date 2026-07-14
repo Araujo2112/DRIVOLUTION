@@ -102,6 +102,31 @@ public class WorkstationPresenceService : IWorkstationPresenceService
         return active == null ? null : ToDTO(active);
     }
 
+    // ─── Evento FIWARE (Badge) ────────────────────────────────────────────────
+
+    public async Task<(bool Success, string? Error, string Action)> ProcessBadgeScan(int appUserId, int workstationId)
+    {
+        // 1. Tap no mesmo posto onde já está presente → saída
+        var activeHere = await _presenceRepo.GetActiveByUserAndWorkstation(appUserId, workstationId);
+        if (activeHere != null)
+        {
+            var (ok, err) = await CheckOut(appUserId, workstationId);
+            return (ok, err, "checkout");
+        }
+
+        // 2. Presença ativa noutra workstation → sai automaticamente de lá primeiro
+        //    (o operador "levou o crachá" para o novo posto sem passar antes na saída)
+        var activeElsewhere = await _presenceRepo.GetActiveByUser(appUserId);
+        if (activeElsewhere != null)
+        {
+            await CheckOut(appUserId, activeElsewhere.WorkstationId);
+        }
+
+        // 3. Entrada no novo posto
+        var (success, error, _) = await CheckIn(appUserId, workstationId);
+        return (success, error, "checkin");
+    }
+
     // ─── Cruzamento presença ↔ produtos ──────────────────────────────────────
 
     private async Task<IEnumerable<PresenceProductCrossDTO>> GetCrossedProducts(WorkstationPresenceModel presence)

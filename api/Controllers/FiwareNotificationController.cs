@@ -22,6 +22,7 @@ public class FiwareNotificationController : ControllerBase
     private readonly IProductRepository _productRepo;
     private readonly IAlertRepository _alertRepo;
     private readonly IAlertService _alertService;
+    private readonly IWorkstationPresenceService _presenceService;
     private readonly ILogger<FiwareNotificationController> _logger;
 
     public FiwareNotificationController(
@@ -35,6 +36,7 @@ public class FiwareNotificationController : ControllerBase
         IProductRepository productRepo,
         IAlertRepository alertRepo,
         IAlertService alertService,
+        IWorkstationPresenceService presenceService,
         ILogger<FiwareNotificationController> logger)
     {
         _supportRepo          = supportRepo;
@@ -47,6 +49,7 @@ public class FiwareNotificationController : ControllerBase
         _productRepo          = productRepo;
         _alertRepo            = alertRepo;
         _alertService         = alertService;
+        _presenceService      = presenceService;
         _logger               = logger;
     }
 
@@ -65,7 +68,19 @@ public class FiwareNotificationController : ControllerBase
 
             foreach (var entity in dataArray.EnumerateArray())
             {
-                await ProcessSkidEvent(entity);
+                var entityType = entity.TryGetProperty("type", out var typeProp) ? typeProp.GetString() : null;
+
+                switch (entityType)
+                {
+                    case "Badge":
+                        await ProcessBadgeEvent(entity);
+                        break;
+                    case "Skid":
+                    default:
+                        // Notificações antigas/sem 'type' assumem Skid, para compatibilidade.
+                        await ProcessSkidEvent(entity);
+                        break;
+                }
             }
 
             return Ok();
@@ -135,6 +150,35 @@ public class FiwareNotificationController : ControllerBase
             supportedProduct.ProductId.Value,
             newPhase.Id,
             workstation.ManufacturingPhaseId.Value);
+    }
+
+    // Recebe a notificação Orion quando a entidade Badge (crachá simulado) muda de
+    // 'currentWorkstation'. Ao contrário do check-in manual (que usa o JWT do
+    // utilizador logado), aqui o appUserId vem de um atributo estático do device
+    // FIWARE — simula um crachá físico lido num leitor, independente de sessão.
+    private async Task ProcessBadgeEvent(JsonElement entity)
+    {
+        if (!TryGetPropertyValue(entity, "appUserId", out int appUserId) ||
+            !TryGetPropertyValue(entity, "currentWorkstation", out int workstationId))
+        {
+            _logger.LogWarning("Entidade Badge sem appUserId ou currentWorkstation. A ignorar.");
+            return;
+        }
+
+        var (success, error, action) = await _presenceService.ProcessBadgeScan(appUserId, workstationId);
+
+        if (success)
+        {
+            _logger.LogInformation(
+                "Badge: utilizador {UserId} — {Action} na workstation {WsId}.",
+                appUserId, action == "checkin" ? "check-in" : "check-out", workstationId);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Badge: falha ao processar utilizador {UserId} na workstation {WsId}: {Error}",
+                appUserId, workstationId, error);
+        }
     }
 
     // Verifica se a transição de fase respeita a sequência esperada do modelo.

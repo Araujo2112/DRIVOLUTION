@@ -49,6 +49,16 @@ public class WorkstationPresenceRepository : IWorkstationPresenceRepository
                 p.WorkstationId == workstationId &&
                 p.CheckedOutAt == null);
 
+    // Presença ativa do utilizador, independentemente da workstation.
+    // Usado pelo fluxo FIWARE (badge) para saber se o operador tem de fazer
+    // check-out automático de um posto anterior antes de entrar noutro.
+    public async Task<WorkstationPresenceModel?> GetActiveByUser(int appUserId)
+        => await _db.WorkstationPresences
+            .Include(p => p.AppUser)
+            .Include(p => p.Workstation)
+                .ThenInclude(w => w.ManufacturingPhase)
+            .FirstOrDefaultAsync(p => p.AppUserId == appUserId && p.CheckedOutAt == null);
+
     public async Task<WorkstationPresenceModel> Create(WorkstationPresenceModel entity)
     {
         _db.WorkstationPresences.Add(entity);

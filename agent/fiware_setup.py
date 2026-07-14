@@ -22,6 +22,9 @@ FIWARE_SERVICEPATH = "/"
 APIKEY = "drivolution-key"
 RESOURCE = "/iot/json"
 
+# Badge (Card L — Presença por Workstation via FIWARE)
+BADGE_APIKEY = "drivolution-badge-key"
+
 _cached_token = None
 
 
@@ -114,23 +117,52 @@ def load_skids() -> list:
         return []
 
 
+def load_users() -> list:
+    """Carrega utilizadores com role operator/manager — só estes fazem sentido
+    ter um crachá simulado (admin/client não pisam o chão de fábrica)."""
+    print("\n[0/6] A carregar utilizadores (operator/manager) da API...")
+    try:
+        users = []
+        for role in ("operator", "manager"):
+            r = requests.get(
+                f"{API_BASE_URL}/User",
+                headers=api_headers(),
+                params={"role": role, "pageSize": 100},
+                timeout=5,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                items = data.get("data") or data.get("Data") or data.get("$values", data)
+                items = items if isinstance(items, list) else []
+                users.extend(items)
+            else:
+                print(f"   ✗ Erro ao carregar role '{role}': {r.status_code}")
+
+        print(f"   ✓ {len(users)} utilizador(es) elegível(eis) para crachá.")
+        return users
+    except Exception as e:
+        print(f"   ✗ {e}")
+        return []
+
+
 def clean_all():
     print("\n[1/6] A limpar estado anterior...")
 
-    # Apagar entidades Skid no Orion
-    r = requests.get(
-        f"{ORION_URL}/ngsi-ld/v1/entities?type=Skid&limit=100",
-        headers=HEADERS_JSON,
-    )
+    # Apagar entidades Skid e Badge no Orion
+    for entity_type in ("Skid", "Badge"):
+        r = requests.get(
+            f"{ORION_URL}/ngsi-ld/v1/entities?type={entity_type}&limit=100",
+            headers=HEADERS_JSON,
+        )
 
-    if r.status_code == 200:
-        for entity in r.json():
-            eid = entity.get("id", "")
-            rd = requests.delete(
-                f"{ORION_URL}/ngsi-ld/v1/entities/{eid}",
-                headers=HEADERS_JSON,
-            )
-            print(f"   {'✓' if rd.status_code in (200, 204) else '✗'} Entidade: {eid}")
+        if r.status_code == 200:
+            for entity in r.json():
+                eid = entity.get("id", "")
+                rd = requests.delete(
+                    f"{ORION_URL}/ngsi-ld/v1/entities/{eid}",
+                    headers=HEADERS_JSON,
+                )
+                print(f"   {'✓' if rd.status_code in (200, 204) else '✗'} Entidade: {eid}")
 
     # Apagar subscrições Orion
     r = requests.get(
@@ -150,7 +182,7 @@ def clean_all():
             )
             print(f"   {'✓' if rd.status_code in (200, 204) else f'✗({rd.status_code})'} Sub: {sid[-20:]}")
 
-    # Apagar devices IoT Agent
+    # Apagar devices IoT Agent (skids e badges, todos vêm no mesmo /iot/devices)
     r = requests.get(
         f"{IOT_AGENT_URL}/iot/devices?limit=100",
         headers=IOT_HEADERS,
@@ -168,18 +200,19 @@ def clean_all():
             )
             print(f"   {'✓' if rd.status_code in (200, 204) else f'✗({rd.status_code})'} Device: {device_id}")
 
-    # Apagar service group IoT Agent
-    rd = requests.delete(
-        f"{IOT_AGENT_URL}/iot/services?resource={RESOURCE}&apikey={APIKEY}",
-        headers=IOT_HEADERS,
-    )
+    # Apagar service groups IoT Agent (skid + badge)
+    for apikey in (APIKEY, BADGE_APIKEY):
+        rd = requests.delete(
+            f"{IOT_AGENT_URL}/iot/services?resource={RESOURCE}&apikey={apikey}",
+            headers=IOT_HEADERS,
+        )
 
-    if rd.status_code in (200, 204):
-        print("   ✓ Service group IoT removido.")
-    elif rd.status_code == 404:
-        print("   - Service group IoT não existia.")
-    else:
-        print(f"   ⚠ Service group IoT não removido ({rd.status_code}): {rd.text[:120]}")
+        if rd.status_code in (200, 204):
+            print(f"   ✓ Service group IoT removido ({apikey}).")
+        elif rd.status_code == 404:
+            print(f"   - Service group IoT não existia ({apikey}).")
+        else:
+            print(f"   ⚠ Service group IoT não removido ({apikey}, {rd.status_code}): {rd.text[:120]}")
 
 
 def create_iot_service_group():
@@ -208,6 +241,34 @@ def create_iot_service_group():
         print("   ✓ Service group já existia.")
     else:
         print(f"   ✗ Erro ao criar service group ({r.status_code}): {r.text}")
+
+
+def create_badge_iot_service_group():
+    print("\n[2b/6] A criar service group de Badges no IoT Agent...")
+
+    payload = {
+        "services": [
+            {
+                "apikey": BADGE_APIKEY,
+                "cbroker": "http://orion:1026",
+                "entity_type": "Badge",
+                "resource": RESOURCE,
+            }
+        ]
+    }
+
+    r = requests.post(
+        f"{IOT_AGENT_URL}/iot/services",
+        headers=IOT_HEADERS,
+        json=payload,
+    )
+
+    if r.status_code in (200, 201):
+        print("   ✓ Service group de Badges criado.")
+    elif r.status_code == 409:
+        print("   ✓ Service group de Badges já existia.")
+    else:
+        print(f"   ✗ Erro ao criar service group de Badges ({r.status_code}): {r.text}")
 
 
 def register_iot_devices(skids: list):
@@ -265,6 +326,52 @@ def register_iot_devices(skids: list):
         print(f"   {'✓' if r.status_code in (200, 201) else f'✗({r.status_code}) ' + r.text[:120]} {device_id}")
 
 
+def register_badge_devices(users: list):
+    print("\n[3b/6] A registar crachás (Badge) no IoT Agent...")
+
+    for user in users:
+        device_id = f"badge-{user['id']}"
+
+        payload = {
+            "devices": [
+                {
+                    "device_id": device_id,
+                    "entity_name": f"urn:ngsi-ld:Badge:{device_id}",
+                    "entity_type": "Badge",
+                    "protocol": "PDI-IoTA-JSON",
+                    "transport": "HTTP",
+                    "attributes": [
+                        {
+                            "object_id": "currentWorkstation",
+                            "name": "currentWorkstation",
+                            "type": "Integer",
+                        }
+                    ],
+                    "static_attributes": [
+                        {
+                            "name": "appUserId",
+                            "type": "Integer",
+                            "value": int(user["id"]),
+                        },
+                        {
+                            "name": "userName",
+                            "type": "Text",
+                            "value": user.get("name", ""),
+                        },
+                    ],
+                }
+            ]
+        }
+
+        r = requests.post(
+            f"{IOT_AGENT_URL}/iot/devices",
+            headers=IOT_HEADERS,
+            json=payload,
+        )
+
+        print(f"   {'✓' if r.status_code in (200, 201) else f'✗({r.status_code}) ' + r.text[:120]} {device_id} ({user.get('name', '?')})")
+
+
 def create_entities(skids: list):
     print("\n[4/6] A criar entidades no Orion...")
 
@@ -293,6 +400,40 @@ def create_entities(skids: list):
             "skidType": {
                 "type": "Property",
                 "value": skid.get("type", ""),
+            },
+        }
+
+        r = requests.post(
+            f"{ORION_URL}/ngsi-ld/v1/entities",
+            headers=HEADERS_LD,
+            data=json.dumps(payload),
+        )
+
+        print(f"   {'✓' if r.status_code in (200, 201) else f'✗({r.status_code}) ' + r.text[:120]} {entity_id}")
+
+
+def create_badge_entities(users: list):
+    print("\n[4b/6] A criar entidades Badge no Orion...")
+
+    for user in users:
+        entity_id = f"urn:ngsi-ld:Badge:badge-{user['id']}"
+
+        payload = {
+            "@context": CONTEXT_URL,
+            "id": entity_id,
+            "type": "Badge",
+            "appUserId": {
+                "type": "Property",
+                "value": int(user["id"]),
+            },
+            "userName": {
+                "type": "Property",
+                "value": user.get("name", ""),
+            },
+            # 0 = fora do chão de fábrica (sem presença ativa)
+            "currentWorkstation": {
+                "type": "Property",
+                "value": 0,
             },
         }
 
@@ -382,6 +523,42 @@ def create_subscriptions():
     else:
         print(f"   ✗ Subscrição QuantumLeap erro {r2.status_code}: {r2.text}")
 
+    sub_badge = {
+        "@context": CONTEXT_URL,
+        "description": "DRIVOLUTION: crachá muda de workstation → notifica API (presença)",
+        "type": "Subscription",
+        "entities": [
+            {
+                "type": "Badge"
+            }
+        ],
+        "watchedAttributes": [
+            "currentWorkstation"
+        ],
+        "notification": {
+            "endpoint": {
+                "uri": API_NOTIFY_URL,
+                "accept": "application/json",
+            },
+            "attributes": [
+                "appUserId",
+                "userName",
+                "currentWorkstation",
+            ],
+        },
+    }
+
+    r3 = requests.post(
+        f"{ORION_URL}/ngsi-ld/v1/subscriptions",
+        headers=HEADERS_LD,
+        data=json.dumps(sub_badge),
+    )
+
+    if r3.status_code in (200, 201):
+        print(f"   ✓ Subscrição Badge → API criada: {r3.headers.get('Location', '?')[-30:]}")
+    else:
+        print(f"   ✗ Subscrição Badge erro {r3.status_code}: {r3.text}")
+
 
 def verify():
     print("\n[6/6] Verificação final...")
@@ -413,7 +590,19 @@ def verify():
 
     if r.status_code == 200:
         entities = r.json()
-        print(f"   Entidades Orion: {len(entities)}")
+        print(f"   Entidades Orion (Skid): {len(entities)}")
+        for e in entities:
+            ws = e.get("currentWorkstation", {}).get("value", "?")
+            print(f"   - {e.get('id')} | WS: {ws}")
+
+    r = requests.get(
+        f"{ORION_URL}/ngsi-ld/v1/entities?type=Badge&limit=50",
+        headers=HEADERS_JSON,
+    )
+
+    if r.status_code == 200:
+        entities = r.json()
+        print(f"   Entidades Orion (Badge): {len(entities)}")
         for e in entities:
             ws = e.get("currentWorkstation", {}).get("value", "?")
             print(f"   - {e.get('id')} | WS: {ws}")
@@ -425,7 +614,7 @@ def verify():
 
     if r.status_code == 200:
         n = len(r.json())
-        print(f"   Subscrições Orion: {n} (deve ser 2)")
+        print(f"   Subscrições Orion: {n} (deve ser 3 — API/Skid, QuantumLeap/Skid, API/Badge)")
 
     try:
         r = requests.get("http://localhost:8668/version", timeout=3)
@@ -443,16 +632,26 @@ if __name__ == "__main__":
     print("=" * 55)
 
     skids = load_skids()
+    users = load_users()
 
     if not skids:
         print("\n✗ Sem suportes. Cria suportes no dashboard primeiro.")
         exit(1)
 
+    if not users:
+        print("⚠ Sem utilizadores operator/manager — crachás não serão criados (skids continuam a funcionar).")
+
     clean_all()
     create_iot_service_group()
     register_iot_devices(skids)
     create_entities(skids)
+
+    if users:
+        create_badge_iot_service_group()
+        register_badge_devices(users)
+        create_badge_entities(users)
+
     create_subscriptions()
     verify()
 
-    print("\n✅ Setup completo. Próximo: python drivolution_agent.py")
+    print("\n✅ Setup completo. Próximo: python drivolution_agent.py / python drivolution_badge_agent.py")

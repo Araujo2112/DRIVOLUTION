@@ -5,17 +5,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Drivolution.Repository;
 
+// Repository responsável por obter métricas e indicadores analíticos da produção
 public class AnalyticsRepository : IAnalyticsRepository
 {
+    // Contexto da base de dados
     private readonly ApplicationDbContext _context;
 
+    // O ASP.NET injeta automaticamente o DbContext
     public AnalyticsRepository(ApplicationDbContext context)
     {
         _context = context;
     }
 
+    // Calcula a duração média de cada fase de fabrico
     public async Task<List<PhaseDurationDTO>> GetPhaseDurationsAsync()
     {
+        // Executa diretamente uma query SQL para calcular
+        // a duração média (em minutos) e o número de execuções
         return await _context.Database
             .SqlQueryRaw<PhaseDurationDTO>(
                 """
@@ -34,8 +40,11 @@ public class AnalyticsRepository : IAnalyticsRepository
             .ToListAsync();
     }
 
+    // Calcula a taxa de retrabalho (rework) por fase de fabrico
     public async Task<List<ReworkRateDTO>> GetReworkRatesAsync()
     {
+        // Conta o número total de Quality Checks e quantos falharam,
+        // calculando depois a respetiva percentagem
         return await _context.Database
             .SqlQueryRaw<ReworkRateDTO>(
                 """
@@ -74,8 +83,11 @@ public class AnalyticsRepository : IAnalyticsRepository
             .ToListAsync();
     }
 
+    // Calcula o throughput da produção ao longo do tempo
     public async Task<List<ThroughputDTO>> GetThroughputAsync()
     {
+        // Considera apenas produtos que terminaram todas as fases
+        // e agrupa-os por dia de conclusão
         return await _context.Database
             .SqlQueryRaw<ThroughputDTO>(
                 """

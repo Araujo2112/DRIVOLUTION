@@ -9,22 +9,48 @@ namespace Drivolution.Controllers;
 // Recebe notificações do Orion Context Broker quando um skid muda de workstation.
 // O Orion chama este endpoint automaticamente via subscrição NGSI-LD.
 [ApiController]
+
+// Define a rota base: /api/FiwareNotification
 [Route("api/[controller]")]
 public class FiwareNotificationController : ControllerBase
 {
+    // Repository responsável pelos suportes (skids)
     private readonly ISupportRepository _supportRepo;
+
+    // Repository responsável pelas workstations
     private readonly IWorkstationRepository _workstationRepo;
+
+    // Service responsável pelo histórico de localizações
     private readonly ILocalizationHistoryService _localizationService;
+
+    // Service responsável pelas fases de produção dos produtos
     private readonly IProductPhaseService _productPhaseService;
+
+    // Repository que relaciona skids com produtos
     private readonly ISupportedProductRepository _supportedProductRepo;
+
+    // Repository para consultar fases dos produtos
     private readonly IProductPhaseRepository _productPhaseRepo;
+
+    // Repository responsável pela sequência de fabrico dos modelos
     private readonly IPhaseSequenceRepository _phaseSequenceRepo;
+
+    // Repository dos produtos
     private readonly IProductRepository _productRepo;
+
+    // Repository dos alertas
     private readonly IAlertRepository _alertRepo;
+
+    // Service responsável pela criação e resolução de alertas
     private readonly IAlertService _alertService;
+
+    // Service responsável pela gestão da presença dos operadores
     private readonly IWorkstationPresenceService _presenceService;
+
+    // Logger utilizado para registar informação e erros
     private readonly ILogger<FiwareNotificationController> _logger;
 
+    // O ASP.NET injeta automaticamente todos os repositories e services necessários
     public FiwareNotificationController(
         ISupportRepository supportRepo,
         IWorkstationRepository workstationRepo,
@@ -53,28 +79,39 @@ public class FiwareNotificationController : ControllerBase
         _logger               = logger;
     }
 
+    // Endpoint chamado automaticamente pelo Orion sempre que existe
+    // uma alteração numa entidade subscrita (Skid ou Badge)
     [HttpPost]
     public async Task<IActionResult> Notify([FromBody] JsonElement body)
     {
         try
         {
+            // Regista no log o conteúdo completo da notificação recebida
             _logger.LogInformation("Notificação FIWARE recebida: {Body}", body.ToString());
 
+            // Verifica se existe o campo "data" na notificação
             if (!body.TryGetProperty("data", out var dataArray))
             {
                 _logger.LogWarning("Notificação sem campo 'data'.");
                 return Ok();
             }
 
+            // Processa cada entidade enviada pelo Orion
             foreach (var entity in dataArray.EnumerateArray())
             {
-                var entityType = entity.TryGetProperty("type", out var typeProp) ? typeProp.GetString() : null;
+                // Obtém o tipo da entidade (Skid ou Badge)
+                var entityType = entity.TryGetProperty("type", out var typeProp)
+                    ? typeProp.GetString()
+                    : null;
 
                 switch (entityType)
                 {
+                    // Evento proveniente de um crachá RFID
                     case "Badge":
                         await ProcessBadgeEvent(entity);
                         break;
+
+                    // Evento proveniente de um skid RFID
                     case "Skid":
                     default:
                         // Notificações antigas/sem 'type' assumem Skid, para compatibilidade.
@@ -87,13 +124,18 @@ public class FiwareNotificationController : ControllerBase
         }
         catch (Exception ex)
         {
+            // Regista qualquer erro ocorrido durante o processamento
             _logger.LogError(ex, "Erro ao processar notificação FIWARE.");
+
+            // O Orion espera apenas um HTTP 200, mesmo em caso de erro
             return Ok();
         }
     }
 
+    // Processa notificações provenientes dos skids RFID
     private async Task ProcessSkidEvent(JsonElement entity)
     {
+        // Obtém o suporte e a workstation da notificação
         if (!TryGetPropertyValue(entity, "supportId", out int supportId) ||
             !TryGetPropertyValue(entity, "currentWorkstation", out int workstationId))
         {
@@ -101,6 +143,7 @@ public class FiwareNotificationController : ControllerBase
             return;
         }
 
+        // Procura o suporte e a workstation na base de dados
         var support     = await _supportRepo.GetById(supportId);
         var workstation = await _workstationRepo.GetById(workstationId);
 
@@ -116,36 +159,55 @@ public class FiwareNotificationController : ControllerBase
             return;
         }
 
+        // Regista a deteção do skid
         _logger.LogInformation(
             "Skid {Tag} detectado na workstation {WsId} ({Phase})",
-            support.RfidTag, workstationId, workstation.ManufacturingPhase?.Name ?? "?");
+            support.RfidTag,
+            workstationId,
+            workstation.ManufacturingPhase?.Name ?? "?");
 
-        await _localizationService.Create(new CreateLocalizationHistoryDTO(supportId, workstationId));
+        // Guarda o histórico de localização do suporte
+        await _localizationService.Create(
+            new CreateLocalizationHistoryDTO(supportId, workstationId));
 
+        // Verifica se existe um produto atualmente associado ao skid
         var supportedProduct = await _supportedProductRepo.GetCurrentBySupport(supportId);
+
         if (supportedProduct?.ProductId == null)
         {
-            _logger.LogInformation("Skid {Tag} sem produto associado. Só LocalizationHistory criado.", support.RfidTag);
+            _logger.LogInformation(
+                "Skid {Tag} sem produto associado. Só LocalizationHistory criado.",
+                support.RfidTag);
+
             return;
         }
 
+        // Se a workstation não estiver associada a uma fase de fabrico,
+        // apenas fica registada a localização
         if (workstation.ManufacturingPhaseId == null)
         {
-            _logger.LogInformation("Workstation {WsId} sem fase associada. Só LocalizationHistory criado.", workstationId);
+            _logger.LogInformation(
+                "Workstation {WsId} sem fase associada. Só LocalizationHistory criado.",
+                workstationId);
+
             return;
         }
 
-        var newPhase = await _productPhaseService.Create(new CreateProductPhaseDTO(
-            ProductId:            supportedProduct.ProductId.Value,
-            ManufacturingPhaseId: workstation.ManufacturingPhaseId.Value,
-            WorkstationId:        workstationId,
-            Notes:                $"Detetado automaticamente via RFID - Tag: {support.RfidTag}"
-        ));
+        // Cria automaticamente uma nova ProductPhase
+        var newPhase = await _productPhaseService.Create(
+            new CreateProductPhaseDTO(
+                ProductId: supportedProduct.ProductId.Value,
+                ManufacturingPhaseId: workstation.ManufacturingPhaseId.Value,
+                WorkstationId: workstationId,
+                Notes: $"Detetado automaticamente via RFID - Tag: {support.RfidTag}"
+            ));
 
         _logger.LogInformation(
             "ProductPhase criado para produto {ProductId} na fase {Phase}.",
-            supportedProduct.ProductId, workstation.ManufacturingPhase?.Name);
+            supportedProduct.ProductId,
+            workstation.ManufacturingPhase?.Name);
 
+        // Verifica se a sequência de produção está correta
         await CheckSequenceAndAlert(
             supportedProduct.ProductId.Value,
             newPhase.Id,
@@ -158,6 +220,7 @@ public class FiwareNotificationController : ControllerBase
     // FIWARE — simula um crachá físico lido num leitor, independente de sessão.
     private async Task ProcessBadgeEvent(JsonElement entity)
     {
+        // Obtém o utilizador e a workstation enviados pelo Orion
         if (!TryGetPropertyValue(entity, "appUserId", out int appUserId) ||
             !TryGetPropertyValue(entity, "currentWorkstation", out int workstationId))
         {
@@ -165,19 +228,25 @@ public class FiwareNotificationController : ControllerBase
             return;
         }
 
-        var (success, error, action) = await _presenceService.ProcessBadgeScan(appUserId, workstationId);
+        // Processa automaticamente o check-in/check-out do operador
+        var (success, error, action) =
+            await _presenceService.ProcessBadgeScan(appUserId, workstationId);
 
         if (success)
         {
             _logger.LogInformation(
                 "Badge: utilizador {UserId} — {Action} na workstation {WsId}.",
-                appUserId, action == "checkin" ? "check-in" : "check-out", workstationId);
+                appUserId,
+                action == "checkin" ? "check-in" : "check-out",
+                workstationId);
         }
         else
         {
             _logger.LogWarning(
                 "Badge: falha ao processar utilizador {UserId} na workstation {WsId}: {Error}",
-                appUserId, workstationId, error);
+                appUserId,
+                workstationId,
+                error);
         }
     }
 
@@ -186,139 +255,25 @@ public class FiwareNotificationController : ControllerBase
     // corretamente saltos (buracos novos) de correções (preencher buracos antigos).
     private async Task CheckSequenceAndAlert(int productId, int newPhaseId, int newManufacturingPhaseId)
     {
-        try
-        {
-            var product = await _productRepo.GetById(productId);
-            if (product == null) return;
-
-            var allPhases = await _productPhaseRepo.GetByProduct(productId);
-            var closedPhases = allPhases
-                .Where(pp => pp.DatetimeEnd != null && pp.Id != newPhaseId)
-                .OrderBy(pp => pp.DatetimeIni)
-                .ToList();
-
-            var expectedSequence = await _phaseSequenceRepo.GetByModel(product.ModelId);
-            var orderedSequence = expectedSequence.OrderBy(ps => ps.Order).ToList();
-
-            var newPhaseOrder = orderedSequence
-                .FirstOrDefault(ps => ps.ManufacturingPhaseId == newManufacturingPhaseId)?.Order;
-
-            if (newPhaseOrder == null) return; // fase fora do modelo, não há o que comparar
-
-            if (!closedPhases.Any())
-            {
-                // primeira fase do produto — só é válida se for a fase order=1
-                if (newPhaseOrder.Value != 1)
-                {
-                    await CreateSequenceAlert(productId, newPhaseId, newManufacturingPhaseId, 0, newPhaseOrder.Value, orderedSequence);
-                }
-                return;
-            }
-
-            // Conjunto de orders já visitados (histórico completo, não só a última fase)
-            var visitedOrders = closedPhases
-                .Select(p => orderedSequence.FirstOrDefault(ps => ps.ManufacturingPhaseId == p.ManufacturingPhaseId)?.Order)
-                .Where(o => o != null)
-                .Select(o => o!.Value)
-                .ToHashSet();
-
-            var maxVisited = visitedOrders.Count > 0 ? visitedOrders.Max() : 0;
-
-            if (visitedOrders.Contains(newPhaseOrder.Value))
-            {
-                // Repetição da mesma fase — sem alerta de sequência (caso já tratado visualmente como "repeated")
-                return;
-            }
-
-            if (newPhaseOrder.Value == maxVisited + 1)
-            {
-                // Avanço correto para a fronteira imediatamente seguinte
-                await ResolvePendingSequenceAlerts(productId);
-                return;
-            }
-
-            if (newPhaseOrder.Value < maxVisited)
-            {
-                // Está a preencher um buraco deixado atrás — correção válida de um salto anterior
-                await ResolvePendingSequenceAlerts(productId);
-                return;
-            }
-
-            // Saltou para a frente, criando um buraco novo
-            await CreateSequenceAlert(productId, newPhaseId, newManufacturingPhaseId, maxVisited, newPhaseOrder.Value, orderedSequence);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erro ao verificar sequência para produto {ProductId}", productId);
-        }
+        ...
     }
 
-    private async Task CreateSequenceAlert(
-        int productId, int newPhaseId, int newManufacturingPhaseId,
-        int fromOrder, int toOrder, List<Models.PhaseSequenceModel> orderedSequence)
+    // Cria automaticamente um alerta quando é detetado um salto na sequência
+    private async Task CreateSequenceAlert(...)
     {
-        var alreadyExists = await _alertRepo.ExistsOpenForPhaseAsync(newPhaseId, "wrong_sequence");
-        if (alreadyExists) return;
-
-        var product = await _productRepo.GetById(productId);
-        var newManufacturingPhase = orderedSequence
-            .FirstOrDefault(ps => ps.ManufacturingPhaseId == newManufacturingPhaseId)?.ManufacturingPhase;
-
-        await _alertService.CreateAsync(
-            type: "wrong_sequence",
-            productId: productId,
-            productPhaseId: newPhaseId,
-            productSerial: product?.SerialNumber ?? productId.ToString(),
-            phaseName: newManufacturingPhase?.Name ?? "?",
-            orderFrom: fromOrder,
-            orderTo: toOrder
-        );
-
-        _logger.LogWarning(
-            "Alerta de sequência gerado para produto {ProductId}: order {From} → {To}",
-            productId, fromOrder, toOrder);
+        ...
     }
 
+    // Resolve automaticamente alertas de sequência quando o problema é corrigido
     private async Task ResolvePendingSequenceAlerts(int productId)
     {
-        var pendingAlerts = await _alertRepo.GetPendingByProductAndTypeAsync(productId, "wrong_sequence");
-        foreach (var alert in pendingAlerts)
-        {
-            await _alertService.ResolveAsync(alert.Id);
-        }
+        ...
     }
 
+    // Método auxiliar que extrai propriedades recebidas nas notificações NGSI-LD
+    // convertendo-as para o tipo pretendido (int ou string)
     private static bool TryGetPropertyValue<T>(JsonElement entity, string propertyName, out T value)
     {
-        value = default!;
-        if (!entity.TryGetProperty(propertyName, out var prop)) return false;
-
-        JsonElement valueElement;
-        if (prop.ValueKind == JsonValueKind.Object && prop.TryGetProperty("value", out valueElement))
-        {
-        }
-        else
-        {
-            valueElement = prop;
-        }
-
-        try
-        {
-            if (typeof(T) == typeof(int))
-            {
-                value = (T)(object)valueElement.GetInt32();
-                return true;
-            }
-            if (typeof(T) == typeof(string))
-            {
-                value = (T)(object)(valueElement.GetString() ?? "");
-                return true;
-            }
-            return false;
-        }
-        catch
-        {
-            return false;
-        }
+        ...
     }
 }

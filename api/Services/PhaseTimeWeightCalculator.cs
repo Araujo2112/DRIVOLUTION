@@ -4,6 +4,8 @@ using Drivolution.Services.Interface;
 namespace Drivolution.Services;
 
 /// <inheritdoc />
+// Service responsável por calcular a duração prevista de uma fase
+// com base nos coeficientes aprendidos pelo modelo de Machine Learning
 public class PhaseTimeWeightCalculator : IPhaseTimeWeightCalculator
 {
     // Piso de segurança para a previsão estática de duração de uma fase
@@ -15,6 +17,7 @@ public class PhaseTimeWeightCalculator : IPhaseTimeWeightCalculator
     public const int MinDurationSecondsPerPhase = 60;
 
     /// <inheritdoc />
+    // Calcula a duração prevista de uma fase
     public decimal PredictPhaseDurationSeconds(
         int phaseId,
         int modelId,
@@ -23,9 +26,14 @@ public class PhaseTimeWeightCalculator : IPhaseTimeWeightCalculator
         List<PhaseTimeCoefficientModel> coefficients,
         int fallbackSeconds)
     {
+        // Procura o intercepto da fase.
+        // O intercepto representa a duração base da fase,
+        // antes de aplicar quaisquer ajustes.
         var intercept = coefficients.FirstOrDefault(c =>
             c.ManufacturingPhaseId == phaseId &&
-            c.ConfigOptionId == null && c.ProductionLineId == null && c.ModelId == null
+            c.ConfigOptionId == null &&
+            c.ProductionLineId == null &&
+            c.ModelId == null
         );
 
         // Sem coeficientes treinados para esta fase ainda (ex: fase nova, nunca treinada) —
@@ -33,39 +41,61 @@ public class PhaseTimeWeightCalculator : IPhaseTimeWeightCalculator
         if (intercept == null)
             return fallbackSeconds;
 
+        // Começa pela duração base (intercepto)
         decimal total = intercept.WeightSeconds;
 
+        // Procura o peso específico do modelo de veículo
         var modelWeight = coefficients.FirstOrDefault(c =>
-            c.ManufacturingPhaseId == phaseId && c.ModelId == modelId &&
-            c.ConfigOptionId == null && c.ProductionLineId == null
+            c.ManufacturingPhaseId == phaseId &&
+            c.ModelId == modelId &&
+            c.ConfigOptionId == null &&
+            c.ProductionLineId == null
         )?.WeightSeconds ?? 0;
+
+        // Soma esse peso ao valor total
         total += modelWeight;
 
+        // Se existir uma linha de produção, procura também o peso dessa linha
         if (lineId.HasValue)
         {
             var lineWeight = coefficients.FirstOrDefault(c =>
-                c.ManufacturingPhaseId == phaseId && c.ProductionLineId == lineId &&
-                c.ConfigOptionId == null && c.ModelId == null
+                c.ManufacturingPhaseId == phaseId &&
+                c.ProductionLineId == lineId &&
+                c.ConfigOptionId == null &&
+                c.ModelId == null
             )?.WeightSeconds ?? 0;
+
             total += lineWeight;
         }
 
+        // Para cada opção de configuração escolhida,
+        // soma o respetivo peso aprendido pelo modelo
         foreach (var optionId in selectedOptionIds)
         {
             var optionWeight = coefficients.FirstOrDefault(c =>
-                c.ManufacturingPhaseId == phaseId && c.ConfigOptionId == optionId
+                c.ManufacturingPhaseId == phaseId &&
+                c.ConfigOptionId == optionId
             )?.WeightSeconds ?? 0;
+
             total += optionWeight;
         }
 
-        return total < MinDurationSecondsPerPhase ? MinDurationSecondsPerPhase : total;
+        // Nunca devolve uma duração inferior ao mínimo definido
+        return total < MinDurationSecondsPerPhase
+            ? MinDurationSecondsPerPhase
+            : total;
     }
 
-    public bool HasTrainedIntercept(int phaseId, List<PhaseTimeCoefficientModel> coefficients)
+    // Verifica se já existe um intercepto treinado para uma determinada fase
+    public bool HasTrainedIntercept(
+        int phaseId,
+        List<PhaseTimeCoefficientModel> coefficients)
     {
         return coefficients.Any(c =>
             c.ManufacturingPhaseId == phaseId &&
-            c.ConfigOptionId == null && c.ProductionLineId == null && c.ModelId == null
+            c.ConfigOptionId == null &&
+            c.ProductionLineId == null &&
+            c.ModelId == null
         );
     }
 }
